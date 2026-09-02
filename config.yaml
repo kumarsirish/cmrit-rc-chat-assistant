@@ -1,0 +1,68 @@
+# Configuration for the CMRIT College Policies RAG application.
+# Every tunable value used by the application lives here so that
+# components (Ollama model, embedding model, Chroma DB, etc.) can be
+# swapped later without touching any Python code.
+
+ollama:
+  base_url: "http://localhost:11434"
+  model: "llama3.2:3b"
+  temperature: 0
+  request_timeout_seconds: 300
+  # CPU threads llama.cpp (inside Ollama) uses for inference. Set this
+  # to the number of CPU cores available (e.g. `nproc`); Ollama's
+  # auto-detection can undershoot the real core count on WSL2.
+  num_thread: 8
+
+embedding:
+  # Local sentence-transformers model used to embed chunks and queries.
+  model_name: "all-MiniLM-L6-v2"
+  # Chunks are embedded in batches of this size during ingestion,
+  # instead of one at a time, to reclaim CPU throughput.
+  batch_size: 64
+
+chroma:
+  persist_directory: "./chroma_store"
+  collection_name: "college_policies"
+
+documents:
+  source_directory: "./policies_docs"
+
+chunking:
+  # Recursive splitter: tries paragraph breaks first, then line breaks,
+  # then sentence stops, then hard character limit as a last resort.
+  chunk_size: 1000
+  chunk_overlap: 120
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - " "
+
+retrieval:
+  top_k: 4
+  # Chunks whose similarity score falls below this value are treated
+  # as "not relevant enough" so the assistant can refuse to answer
+  # instead of guessing from unrelated context.
+  min_relevance_score: 0.35
+
+session:
+  timeout_minutes: 3
+  # A countdown warning is shown once idle time reaches
+  # (timeout_minutes * 60 - warning_seconds_before_timeout) seconds,
+  # i.e. this many seconds before the session actually resets.
+  warning_seconds_before_timeout: 60
+  # How many of the most recent chat messages (user + assistant turns
+  # combined) are sent to the LLM as conversation context for a new
+  # question. Capped so a long-running session doesn't keep growing
+  # the prompt (and generation time) indefinitely.
+  max_history_messages: 6
+
+database:
+  # Session/history storage in MySQL. The password can be overridden
+  # with the RAG_DB_PASSWORD environment variable instead of editing
+  # this file.
+  host: "127.0.0.1"
+  port: 3306
+  user: "sirkumar"
+  password: "Issa123#"
+  database: "rag_sessions"

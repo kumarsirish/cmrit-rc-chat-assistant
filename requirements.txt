@@ -1,0 +1,12 @@
+streamlit
+# Pinned: `chroma --version` on this machine reports "1.4.4", but that
+# is a CLI version-string quirk in this chromadb release, not a real
+# published package version (there is no chromadb==1.4.4 on PyPI).
+# 1.5.9 is the actual installed/tested version (`chromadb.__version__`).
+chromadb==1.5.9
+sentence-transformers
+pypdf
+ollama
+mysql-connector-python
+PyYAML
+pytest

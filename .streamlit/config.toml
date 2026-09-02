@@ -1,0 +1,5 @@
+# Streamlit's dev file-watcher otherwise reloads/logs on every write
+# Chroma makes to its on-disk database, which is noisy and irrelevant
+# to app code changes.
+[server]
+folderWatchBlacklist = ["chroma_store"]
