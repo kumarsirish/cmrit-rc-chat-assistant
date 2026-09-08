@@ -26,6 +26,22 @@ class OllamaConfig:
 
 
 @dataclass
+class GroqConfig:
+    model: str
+    temperature: float
+    request_timeout_seconds: int
+    max_tokens: int
+    api_key_env: str
+
+
+@dataclass
+class LlmConfig:
+    provider: str
+    ollama: OllamaConfig
+    groq: GroqConfig
+
+
+@dataclass
 class EmbeddingConfig:
     model_name: str
     batch_size: int
@@ -113,7 +129,7 @@ class DatabaseConfig:
 
 @dataclass
 class AppConfig:
-    ollama: OllamaConfig
+    llm: LlmConfig
     embedding: EmbeddingConfig
     chroma: ChromaConfig
     documents: DocumentsConfig
@@ -141,7 +157,10 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     with open(config_path, "r", encoding="utf-8") as config_file:
         raw = yaml.safe_load(config_file)
 
-    ollama_cfg = OllamaConfig(**raw["ollama"])
+    llm_raw = dict(raw["llm"])
+    llm_raw["ollama"] = OllamaConfig(**llm_raw["ollama"])
+    llm_raw["groq"] = GroqConfig(**llm_raw["groq"])
+    llm_cfg = LlmConfig(**llm_raw)
     embedding_cfg = EmbeddingConfig(**raw["embedding"])
 
     chroma_raw = raw["chroma"]
@@ -180,7 +199,7 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     database_cfg = DatabaseConfig(**database_raw)
 
     return AppConfig(
-        ollama=ollama_cfg,
+        llm=llm_cfg,
         embedding=embedding_cfg,
         chroma=chroma_cfg,
         documents=documents_cfg,

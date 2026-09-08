@@ -12,12 +12,18 @@ pytest
 
 # LangChain: document loading, text splitting, embeddings, vector
 # store, and LLM chat client all go through these instead of talking
-# to chromadb/sentence-transformers/ollama directly.
+# to chromadb/sentence-transformers/ollama/groq directly.
 langchain-community
 langchain-text-splitters
 langchain-huggingface
 langchain-chroma
 langchain-ollama
+
+# init_chat_model() (rag/generation/llm_client.py) is what makes the
+# answer LLM provider-agnostic — it dispatches to whichever of
+# langchain-ollama / langchain-groq config.yaml's llm.provider selects.
+langchain
+langchain-groq
 
 # RAGAS: LLM-judged evaluation of the RAG pipeline's answers against
 # the reference Q&A pairs in tests/test-question-qnswers.json (see

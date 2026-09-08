@@ -120,14 +120,7 @@ def pipeline_and_retriever(config):
         doc_topics=doc_topics,
     )
     capturing_retriever = _CapturingRetriever(retriever)
-    llm_client = LlmClient(
-        base_url=config.ollama.base_url,
-        model=config.ollama.model,
-        temperature=config.ollama.temperature,
-        timeout_seconds=config.ollama.request_timeout_seconds,
-        num_thread=config.ollama.num_thread,
-        num_predict=config.ollama.num_predict,
-    )
+    llm_client = LlmClient.from_config(config.llm)
     pipeline = RagPipeline(retriever=capturing_retriever, llm_client=llm_client, doc_topics=doc_topics)
     return pipeline, capturing_retriever
 
@@ -144,7 +137,7 @@ def judge_llm(config):
         )
     elif provider == "ollama":
         chat = ChatOllama(
-            base_url=config.ollama.base_url,
+            base_url=config.llm.ollama.base_url,
             model=config.evaluation.judge_model,
             temperature=config.evaluation.judge_temperature,
             # qwen3 is a reasoning model that emits an extended <think>
@@ -180,9 +173,17 @@ def evaluation_dataset(config, pipeline_and_retriever):
     test_cases = _load_test_cases(config.evaluation.test_data_path)
 
     rows = []
-    for case in test_cases:
+    total = len(test_cases)
+    for case_index, case in enumerate(test_cases, start=1):
         question = case["question"]
+        # This loop runs the real (possibly CPU-bound) generation
+        # pipeline once per test case before RAGAS's own judging step
+        # even starts, so it's the part most likely to look "stuck" —
+        # print progress as each answer completes rather than only
+        # after all of them are done.
+        print(f"\n[{case_index}/{total}] answering: {question[:80]}", flush=True)
         result = pipeline.answer(question)
+        print(f"[{case_index}/{total}] answered ({len(result.answer_text)} chars)", flush=True)
         chunks = capturing_retriever.last_chunks
         rows.append(
             {

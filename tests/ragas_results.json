@@ -1,13 +1,13 @@
 {
-  "run_at": "2026-09-08T02:00:29.291923+00:00",
+  "run_at": "2026-09-08T08:10:59.475470+00:00",
   "judge_provider": "gemini",
   "judge_model": "gemini-2.5-flash",
   "min_score": 0.5,
   "mean_scores": {
-    "faithfulness": 0.7279411764705882,
-    "answer_relevancy": 0.5514650236838206,
-    "answer_correctness": 0.40573154293496705,
-    "context_precision": 0.9999999999,
-    "context_recall": 0.46875
+    "faithfulness": 0.7142857142857143,
+    "answer_relevancy": 0.4256128384872966,
+    "answer_correctness": 0.7676315508657905,
+    "context_precision": 0.7843749999566406,
+    "context_recall": 0.875
   }
 }
