@@ -8,6 +8,7 @@ def _make_client():
     # this is safe to build without a running Ollama instance; only
     # .invoke() would actually make a network call.
     return LlmClient(
+        provider="ollama",
         base_url="http://localhost:11434",
         model="llama3.1:8b",
         temperature=0,
@@ -24,7 +25,7 @@ def test_generate_answer_wraps_a_failed_ollama_call(monkeypatch):
 
     monkeypatch.setattr(type(client._llm), "invoke", _raise)
 
-    with pytest.raises(LlmGenerationError, match="Ollama call failed"):
+    with pytest.raises(LlmGenerationError, match="ollama call failed"):
         client.generate_answer("system prompt", "user prompt")
 
 

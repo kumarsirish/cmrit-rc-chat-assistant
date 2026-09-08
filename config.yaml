@@ -1,32 +1,52 @@
 # Configuration for the CMRIT College Policies RAG application.
 # Every tunable value used by the application lives here so that
-# components (Ollama model, embedding model, Chroma DB, etc.) can be
+# components (answer LLM, embedding model, Chroma DB, etc.) can be
 # swapped later without touching any Python code.
 
-ollama:
-  base_url: "http://localhost:11434"
-  #model: "llama3.2:3b"
-  model: "llama3.1:8b"
-  temperature: 0
-  request_timeout_seconds: 300
-  # CPU threads llama.cpp (inside Ollama) uses for inference. Set this
-  # to the number of CPU cores available (e.g. `nproc`); Ollama's
-  # auto-detection can undershoot the real core count on WSL2.
-  num_thread: 8
-  # Hard cap on generated tokens per answer. Without this, generation
-  # only stops at a natural end-of-response or the model's context
-  # limit — on slow CPU inference that makes worst-case latency
-  # unbounded for no benefit, since a policy answer never legitimately
-  # needs more than a few hundred tokens. Kept low (not e.g. 512): at
-  # this machine's measured ~3.8 tokens/sec CPU inference speed, 512
-  # tokens (~135s) leaves too little margin under a contended/slower
-  # moment before request_timeout_seconds kills the call outright
-  # (observed: a real request ran past 300s and errored while Ollama
-  # kept generating in the background, orphaned). 220 tokens (~58s at
-  # the measured rate) leaves several times that margin; risks
-  # truncating an unusually long answer, but a client-side timeout
-  # error is worse than a shorter one.
-  num_predict: 220
+llm:
+  # Which provider generates real user-facing answers. Switching this
+  # (and, if needed, adding a section below for the new provider) is
+  # the only change required to move the answer LLM — rag_pipeline.py
+  # and everything above it only ever calls LlmClient.generate_answer().
+  provider: "groq"  # "ollama" or "groq"
+
+  ollama:
+    base_url: "http://localhost:11434"
+    #model: "llama3.2:3b"
+    model: "llama3.1:8b"
+    temperature: 0
+    request_timeout_seconds: 300
+    # CPU threads llama.cpp (inside Ollama) uses for inference. Set this
+    # to the number of CPU cores available (e.g. `nproc`); Ollama's
+    # auto-detection can undershoot the real core count on WSL2.
+    num_thread: 8
+    # Hard cap on generated tokens per answer. Without this, generation
+    # only stops at a natural end-of-response or the model's context
+    # limit — on slow CPU inference that makes worst-case latency
+    # unbounded for no benefit, since a policy answer never legitimately
+    # needs more than a few hundred tokens. Kept low (not e.g. 512): at
+    # this machine's measured ~3.8 tokens/sec CPU inference speed, 512
+    # tokens (~135s) leaves too little margin under a contended/slower
+    # moment before request_timeout_seconds kills the call outright
+    # (observed: a real request ran past 300s and errored while Ollama
+    # kept generating in the background, orphaned). 220 tokens (~58s at
+    # the measured rate) leaves several times that margin; risks
+    # truncating an unusually long answer, but a client-side timeout
+    # error is worse than a shorter one.
+    num_predict: 220
+
+  groq:
+    model: "qwen/qwen3.8-27b"
+    temperature: 0
+    request_timeout_seconds: 300
+    # Groq is hosted (no CPU inference budget to protect), so this is
+    # just an answer-length cap, not a latency safety valve like
+    # ollama.num_predict.
+    max_tokens: 220
+    # Name of the environment variable holding the Groq API key. Kept
+    # configurable (rather than hard-coding GROQ_API_KEY) because this
+    # deployment's key is already set as GROQ_KEY.
+    api_key_env: "GROQ_KEY"
 
 embedding:
   # Local sentence-transformers model used to embed chunks and queries.
@@ -112,7 +132,7 @@ session:
   # combined) are sent to the LLM as conversation context for a new
   # question. Capped so a long-running session doesn't keep growing
   # the prompt (and generation time) indefinitely.
-  max_history_messages: 2
+  max_history_messages: 1
 
 evaluation:
   # RAGAS judge: scores answers the live RAG pipeline produces for the

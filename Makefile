@@ -31,7 +31,11 @@ test:
 # evaluation.judge_model pulled) and an ingested Chroma store (`make
 # ingest`), so it's excluded from the default `make test`.
 test-ragas:
-	pytest tests/evaluation/test_ragas_judge.py -m ragas -v
+	# -s disables pytest's output capture so the per-question progress
+	# prints in test_ragas_judge.py (and RAGAS's own progress bar during
+	# judging) show up live instead of only appearing after the run
+	# finishes (or gets silently buffered on failure).
+	pytest tests/evaluation/test_ragas_judge.py -m ragas -v -s
 
 # Retrieval-only evaluation: Recall/Precision/MRR/NDCG @ top_k for
 # test cases with a "relevant_sources" ground truth, scored against

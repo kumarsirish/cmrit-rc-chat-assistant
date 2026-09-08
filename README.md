@@ -39,13 +39,18 @@ user question
                           GLOBAL rather than returning nothing)
     -> rag_pipeline.py  (if nothing relevant survived: refuse, no LLM call.
                           otherwise: build a numbered context block from the
-                          retrieved chunks and send it + a strict system prompt,
-                          via LangChain's ChatOllama, to Ollama)
-    -> llm_client.py    (LangChain ChatOllama chat call)
+                          retrieved chunks and send it + a strict system prompt
+                          to whichever LLM provider config.yaml selects)
+    -> llm_client.py    (provider-agnostic: builds a LangChain chat model via
+                          init_chat_model() for config.yaml's llm.provider —
+                          "ollama" (local) or "groq" (hosted) — so the rest of
+                          the app never touches a provider-specific client)
     -> response_processor.py (validate/normalize the model's "[N]" citations,
                           map each retrieved chunk to a source reference)
-    -> rag/dashboard.py (render the answer + cited sources, each linking to its
-                          source PDF/page)
+    -> rag/dashboard.py (render the answer + cited sources — chunks from the
+                          same source document are merged into one citation
+                          spanning their combined page range — each linking to
+                          its source PDF/page)
 ```
 
 Session/auth is a side channel that wraps the query above:
@@ -73,7 +78,7 @@ tested, and swapped independently:
 | 4. Retrieval (topic-mapped-document or hybrid dense+BM25 fallback + rerank) | `rag/retriever.py` |
 | 5. Session & chat history (MySQL, 5 min timeout) | `rag/session_store.py` |
 | — Email validation (identifies each user) | `rag/user_identity.py` |
-| 6. LLM chat client (LangChain ChatOllama) | `rag/llm_client.py` |
+| 6. LLM chat client (provider-agnostic: Ollama or Groq, via LangChain `init_chat_model`) | `rag/llm_client.py` |
 | 6. Context block formatting | `rag/context_builder.py` |
 | 6. Citation validation / answer assembly | `rag/response_processor.py` |
 | 7. Grounded answer orchestration | `rag/rag_pipeline.py` |
@@ -171,14 +176,14 @@ entirely rather than trying to out-tune it.
 | Topic detection from `docs-metadata.json` (`docs_metadata.py`) | The college already maintains a topic -> canonical-URL/filename mapping; reusing it as a lightweight keyword-overlap signal restricts retrieval to the right document for on-topic queries, and lets the app surface a source link even for topics with no locally-ingested PDF. |
 | A topic match restricts search to the mapped document (MAPPED_DOCUMENT mode), not an additive score boost | An earlier design boosted a topic-matched chunk's score *after* global search, but reranking then fully rescored the pool and could still bury a correct topic match under an unrelated document — the boost only affected who got a chance in front of the reranker, not who won. Restricting the search itself to the mapped document removes cross-document competition entirely: nothing (fusion, threshold, or reranking) can substitute a different document once one is trusted. |
 | MAPPED_DOCUMENT mode falls back to GLOBAL search if the mapped document has nothing above the relevance threshold | Topic detection is a lightweight keyword-overlap heuristic and can pick the wrong topic (e.g. a generic word like "details" ties across topics). Trusting a wrong mapping with no escape hatch would turn a bad topic match into a hard refusal; falling back to a normal global search only when the trusted document comes up genuinely empty keeps the common case strict without making a heuristic's mistake fatal. |
-| Local Ollama for generation, via LangChain's `ChatOllama` | Runs fully offline/on-prem — no policy data leaves the machine. The model is a config value (`ollama.model`), not hard-coded, so swapping it later is a one-line change. LangChain gives a uniform message/chat interface that's also reused by the RAGAS judge harness. |
+| Answer LLM is provider-agnostic (`llm.provider: "ollama"` or `"groq"`), built via LangChain's `init_chat_model()` | `llm_client.py` never imports a provider-specific chat class — `init_chat_model(model, model_provider=...)` dispatches to `ChatOllama` or `ChatGroq` based on `config.yaml`, so switching providers (or adding another LangChain-supported one) is a config change, not a code change. Ollama runs fully offline/on-prem (no policy data leaves the machine); Groq is a hosted, much faster option for the same role, authenticated via an API key in the environment (`llm.groq.api_key_env`, default-configured as `GROQ_KEY`). Both providers' models are config values, not hard-coded. |
 | Local `sentence-transformers` (`all-MiniLM-L6-v2`) for embeddings, not an Ollama embedding model | Keeps embedding independent of whatever LLM is configured, runs in-process (no extra network hop), and is small/fast enough to embed every chunk and every query on CPU. |
 | Recursive, separator-cascade chunker (`chunker.py`) instead of a fixed character splitter | Tries paragraph breaks first, then line breaks, then sentence stops, and only hard-cuts by character count as a last resort — so a chunk boundary lands on a natural break in the text instead of mid-sentence whenever possible. |
 | URLs are masked before sentence-stop splitting | Policy PDFs contain reference URLs (e.g. login portals). Splitting naively on `". "` would cut a URL in half at any `.` in the domain/path. The chunker temporarily replaces each URL with a placeholder, splits, then restores the URL — so links always survive intact in a single chunk. |
 | `temperature: 0` | Deterministic, repeatable answers for the same question — appropriate for a policy lookup tool where consistency matters more than creative phrasing. |
 | Strict system prompt + inline `[N]` citations (`rag_pipeline.py`, `response_processor.py`) | Second layer of grounding on top of the relevance-threshold refusal: the LLM is told to answer only from the supplied numbered context, cite every claim by source number, and say so explicitly if the context doesn't answer the question. `response_processor.py` then normalizes/strips any citation the model invents or writes in prose instead of `[N]`, so a citation left in the final answer is always real. |
 | Conversation history passed to the LLM but never to retrieval | Retrieval always runs on the current question alone, so it stays deterministic and easy to evaluate independent of session state; history is only given to the LLM so it can resolve references like "it"/"that leave type" in its reply. |
-| `ollama.num_thread: 8`, set explicitly | On this machine (Ollama on CPU inside WSL2), Ollama's thread auto-detection undershot the available 8 cores. Pinning `num_thread` to the real core count (`nproc`) noticeably cut generation latency. Passed through per-request via `ChatOllama`'s `num_thread`; adjust to match whatever machine runs this. |
+| `llm.ollama.num_thread: 8`, set explicitly | On this machine (Ollama on CPU inside WSL2), Ollama's thread auto-detection undershot the available 8 cores. Pinning `num_thread` to the real core count (`nproc`) noticeably cut generation latency. Passed through per-request via `ChatOllama`'s `num_thread`; adjust to match whatever machine runs this. |
 | Chroma, local/persistent (not an in-memory or hosted vector DB) | Matches the "local chroma db" requirement; index survives app restarts; no external service dependency. |
 | BM25 index rebuilt in-memory at startup, not persisted separately | The corpus is small (a few hundred chunks), so `BM25Okapi` over every chunk in the Chroma collection builds fast enough to redo on every process start rather than maintaining a second on-disk index that could drift from Chroma. |
 | MySQL for sessions instead of only in-memory Streamlit state | Streamlit's `session_state` is per-browser-tab and lost on refresh/restart; MySQL gives durable session/chat history across restarts and a shared store that scales to the expected <50 concurrent users. |
@@ -188,6 +193,7 @@ entirely rather than trying to out-tune it.
 | RAGAS judge is Gemini (`gemini-2.5-flash`), not the same Ollama model that answers | A judge grading its own generations is a biased signal (it tends to rate its own phrasing/reasoning favorably). Gemini also runs faster/more capably than the local CPU-bound Ollama model would for a judge role. |
 | No lambdas; plain functions/classes everywhere | Readability requirement — every transformation has a name and can be stepped through or unit-tested directly. |
 | Configuration centralized in `config.yaml` | Every tunable (model names, chunk size/overlap, retrieval/rerank/hybrid settings, evaluation thresholds, timeouts, DB connection) lives in one file, loaded by `rag/config.py` into typed dataclasses — no magic numbers scattered through the code. |
+| Citations from the same source document are merged, not just deduplicated | Chunking can split one document into overlapping/adjacent pieces (e.g. p. 40 and p. 40-41), which otherwise showed up as two separate numbered citations for the same file. `dashboard.py`'s `render_sources()` merges all cited chunks that share a `source_file` into one citation, using the first citation number and a page range spanning every merged chunk. |
 
 ## Setup
 
@@ -222,12 +228,26 @@ separate server you install or start. The first time anything opens
 the collection (`make ingest`, or the app itself), Chroma creates
 `chroma_store/` on disk automatically if it doesn't exist yet.
 
-### 3. Ollama
+### 3. Answer LLM (Ollama or Groq)
 
-Make sure Ollama is running locally with the configured model pulled:
+Which provider answers real user questions is `llm.provider` in
+`config.yaml` — `"ollama"` (local, default) or `"groq"` (hosted).
+Only the selected provider needs to actually be reachable at runtime;
+the other provider's config block can stay in `config.yaml` unused.
+
+**Ollama** (`llm.provider: "ollama"`) — make sure Ollama is running
+locally with the configured model pulled:
 
 ```bash
 ollama pull llama3.1:8b
+```
+
+**Groq** (`llm.provider: "groq"`) — no local server needed; export an
+API key under the environment variable named by `llm.groq.api_key_env`
+(default `GROQ_KEY`) before running the app or tests:
+
+```bash
+export GROQ_KEY="gsk_..."
 ```
 
 ### 4. Download/verify the local embedding model
@@ -291,11 +311,18 @@ typed dataclasses — no code changes needed to retune the system:
 
 | Section | Key | Current value | Meaning |
 |---|---|---|---|
-| `ollama` | `base_url` | `http://localhost:11434` | Ollama server address |
-| `ollama` | `model` | `llama3.1:8b` | Generation model; swap to any pulled Ollama model |
-| `ollama` | `temperature` | `0` | Sampling temperature — `0` for deterministic answers |
-| `ollama` | `request_timeout_seconds` | `300` | HTTP timeout for a generation call (CPU inference can be slow) |
-| `ollama` | `num_thread` | `8` | CPU threads Ollama uses per generation call; set to your machine's core count (`nproc`) |
+| `llm` | `provider` | `ollama` | Which provider answers real user questions — `"ollama"` or `"groq"`. `rag_pipeline.py` and everything above it only ever call `LlmClient.generate_answer()`, so this is the only line that needs to change to switch providers |
+| `llm.ollama` | `base_url` | `http://localhost:11434` | Ollama server address |
+| `llm.ollama` | `model` | `llama3.1:8b` | Generation model; swap to any pulled Ollama model |
+| `llm.ollama` | `temperature` | `0` | Sampling temperature — `0` for deterministic answers |
+| `llm.ollama` | `request_timeout_seconds` | `300` | HTTP timeout for a generation call (CPU inference can be slow) |
+| `llm.ollama` | `num_thread` | `8` | CPU threads Ollama uses per generation call; set to your machine's core count (`nproc`) |
+| `llm.ollama` | `num_predict` | `220` | Hard cap on generated tokens per answer, so worst-case CPU-inference latency stays bounded |
+| `llm.groq` | `model` | `qwen/qwen3.8-27b` | Generation model on Groq's hosted API |
+| `llm.groq` | `temperature` | `0` | Sampling temperature — `0` for deterministic answers |
+| `llm.groq` | `request_timeout_seconds` | `300` | HTTP timeout for a generation call |
+| `llm.groq` | `max_tokens` | `220` | Answer-length cap (Groq is hosted, so this isn't a latency safety valve like `ollama.num_predict`, just a length cap) |
+| `llm.groq` | `api_key_env` | `GROQ_KEY` | Name of the environment variable holding the Groq API key |
 | `embedding` | `model_name` | `all-MiniLM-L6-v2` | Local sentence-transformers model for chunk/query embeddings |
 | `embedding` | `batch_size` | `64` | Chunks embedded per batch during ingestion |
 | `chroma` | `persist_directory` | `./chroma_store` | On-disk location of the vector index |
@@ -314,7 +341,7 @@ typed dataclasses — no code changes needed to retune the system:
 | `retrieval.rerank` | `candidates` | `8` | Top N of the candidate pool handed to the reranker; the final `top_k` is chosen from these |
 | `session` | `timeout_minutes` | `5` | Inactivity timeout before a session is treated as expired |
 | `session` | `max_history_messages` | `2` | Most recent chat turns sent to the LLM as conversation context |
-| `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `test-ragas`, kept separate from `ollama.model` so it isn't grading its own generations |
+| `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `test-ragas`, kept separate from whichever `llm.provider` answers real questions so it isn't grading its own generations |
 | `evaluation` | `test_data_path` | `./tests/test-question-qnswers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both eval suites |
 | `evaluation` | `min_score` | `0.5` | Minimum mean RAGAS metric score to pass `test-ragas` |
 | `evaluation.retrieval` | `min_recall` / `min_mrr` | `0.6` / `0.5` | Minimum mean Recall@k / MRR to pass `test-retrieval-eval` |
@@ -329,11 +356,17 @@ make test
 
 Tests that need a live MySQL server are skipped automatically if one
 is not reachable. `test_retrieval_eval.py` and `test_ragas_judge.py`
-need a live Ollama server and/or an ingested Chroma store and are
-excluded from `make test` by default (`pytest.ini`); run them via
-`make test-retrieval-eval` / `make test-ragas` / `make metrics`.
-`rag_pipeline` and `retriever` unit tests use fakes instead of real
-network calls.
+need a live answer-LLM provider (whichever `llm.provider` selects)
+and/or an ingested Chroma store and are excluded from `make test` by
+default (`pytest.ini`); run them via `make test-retrieval-eval` /
+`make test-ragas` / `make metrics`. `rag_pipeline` and `retriever`
+unit tests use fakes instead of real network calls.
+
+`make test-ragas` runs `pytest -s` so its progress is visible live
+instead of only appearing after the run finishes: a `[i/N] answering:
+...` / `[i/N] answered (... chars)` line per test case while the real
+pipeline generates each answer, then RAGAS's own progress bar while
+the judge model scores them.
 
 ## Current metrics — what they say, and what's still weak
 

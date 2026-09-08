@@ -74,11 +74,23 @@ def _format_bytes(num_bytes: int) -> str:
 
 def _render_models_section(config):
     st.subheader("Models")
+    provider = config.llm.provider
+    if provider == "ollama":
+        answer_llm_line = (
+            f"- **Answer LLM:** `{config.llm.ollama.model}` "
+            f"(temperature={config.llm.ollama.temperature}, via Ollama at "
+            f"`{config.llm.ollama.base_url}`)\n"
+        )
+    else:
+        provider_cfg = getattr(config.llm, provider)
+        answer_llm_line = (
+            f"- **Answer LLM:** `{provider_cfg.model}` "
+            f"(temperature={provider_cfg.temperature}, via "
+            f"{provider.capitalize()})\n"
+        )
     st.markdown(
-        f"- **Answer LLM:** `{config.ollama.model}` "
-        f"(temperature={config.ollama.temperature}, via Ollama at "
-        f"`{config.ollama.base_url}`)\n"
-        f"- **Embedding model:** `{config.embedding.model_name}`\n"
+        answer_llm_line
+        + f"- **Embedding model:** `{config.embedding.model_name}`\n"
         f"- **RAGAS judge model:** `{config.evaluation.judge_model}` "
         f"(temperature={config.evaluation.judge_temperature}) — deliberately "
         f"a different model than the answer LLM, so it isn't grading its "

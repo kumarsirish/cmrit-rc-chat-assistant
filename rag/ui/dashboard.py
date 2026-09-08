@@ -7,6 +7,7 @@ module is a plain Python component that this module calls into.
 
 import logging
 import os
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
@@ -148,14 +149,7 @@ def get_rag_pipeline():
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
     )
-    llm_client = LlmClient(
-        base_url=config.ollama.base_url,
-        model=config.ollama.model,
-        temperature=config.ollama.temperature,
-        timeout_seconds=config.ollama.request_timeout_seconds,
-        num_thread=config.ollama.num_thread,
-        num_predict=config.ollama.num_predict,
-    )
+    llm_client = LlmClient.from_config(config.llm)
     return RagPipeline(retriever=retriever, llm_client=llm_client, doc_topics=doc_topics)
 
 
@@ -275,20 +269,36 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
     else:
         shown = list(enumerate(sources[:TOP_SOURCES_SHOWN], start=1))
 
-    # Different retrieved chunks can point at the same document/page
-    # (e.g. two chunks off the same page, or a page-spanning chunk
-    # that overlaps a single-page one), which would otherwise list an
-    # identical citation more than once. Keep only the first rank seen
-    # for each (source_file, page_number, page_end).
-    seen_locations = set()
-    deduped_shown = []
+    # Different retrieved chunks can point at the same source document
+    # (e.g. two chunks off the same page, or adjacent/overlapping page
+    # ranges from splitting that document into chunks), which would
+    # otherwise list the same file more than once. Merge all chunks
+    # from the same source_file into a single citation, using the
+    # first rank seen and a page range spanning every page any of its
+    # chunks covered.
+    merged_by_file = {}
+    file_order = []
     for rank, source in shown:
-        location = (source.source_file, source.page_number, source.page_end)
-        if location in seen_locations:
-            continue
-        seen_locations.add(location)
-        deduped_shown.append((rank, source))
-    shown = deduped_shown
+        entry = merged_by_file.get(source.source_file)
+        if entry is None:
+            merged_by_file[source.source_file] = {
+                "rank": rank,
+                "source": source,
+                "page_start": source.page_number,
+                "page_end": source.page_end,
+            }
+            file_order.append(source.source_file)
+        else:
+            entry["page_start"] = min(entry["page_start"], source.page_number)
+            entry["page_end"] = max(entry["page_end"], source.page_end)
+
+    shown = []
+    for source_file in file_order:
+        entry = merged_by_file[source_file]
+        merged_source = replace(
+            entry["source"], page_number=entry["page_start"], page_end=entry["page_end"]
+        )
+        shown.append((entry["rank"], merged_source))
 
     st.caption("Sources:")
     for rank, source in shown:
