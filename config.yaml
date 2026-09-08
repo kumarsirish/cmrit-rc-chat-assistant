@@ -5,13 +5,28 @@
 
 ollama:
   base_url: "http://localhost:11434"
-  model: "llama3.2:3b"
+  #model: "llama3.2:3b"
+  model: "llama3.1:8b"
   temperature: 0
   request_timeout_seconds: 300
   # CPU threads llama.cpp (inside Ollama) uses for inference. Set this
   # to the number of CPU cores available (e.g. `nproc`); Ollama's
   # auto-detection can undershoot the real core count on WSL2.
   num_thread: 8
+  # Hard cap on generated tokens per answer. Without this, generation
+  # only stops at a natural end-of-response or the model's context
+  # limit — on slow CPU inference that makes worst-case latency
+  # unbounded for no benefit, since a policy answer never legitimately
+  # needs more than a few hundred tokens. Kept low (not e.g. 512): at
+  # this machine's measured ~3.8 tokens/sec CPU inference speed, 512
+  # tokens (~135s) leaves too little margin under a contended/slower
+  # moment before request_timeout_seconds kills the call outright
+  # (observed: a real request ran past 300s and errored while Ollama
+  # kept generating in the background, orphaned). 220 tokens (~58s at
+  # the measured rate) leaves several times that margin; risks
+  # truncating an unusually long answer, but a client-side timeout
+  # error is worse than a shorter one.
+  num_predict: 220
 
 embedding:
   # Local sentence-transformers model used to embed chunks and queries.
@@ -26,11 +41,15 @@ chroma:
 
 documents:
   source_directory: "./policies_docs"
+  # Topic -> canonical URL (and, for most topics, local PDF filename)
+  # lookup. Used to tag ingested chunks with their source URL and to
+  # detect which topic a query is about at retrieval/answer time.
+  metadata_file: "./docs-metadata.json"
 
 chunking:
   # Recursive splitter: tries paragraph breaks first, then line breaks,
   # then sentence stops, then hard character limit as a last resort.
-  chunk_size: 1000
+  chunk_size: 800
   chunk_overlap: 120
   separators:
     - "\n\n"
@@ -39,14 +58,52 @@ chunking:
     - " "
 
 retrieval:
-  top_k: 4
+  # Final number of chunks sent to the LLM. Applies to GLOBAL-mode
+  # queries directly, and is the overall budget MAPPED_DOCUMENT-mode
+  # queries split between the mapped document's own chunks (PRIMARY,
+  # up to MAPPED_DOCUMENT_PRIMARY_TOP_K in retriever.py) and a
+  # secondary cross-document search that fills whatever's left
+  # (SECONDARY) — see retriever.py's module docstring. Bumped from 3
+  # to 5 so a mapped-document query has room for both, instead of
+  # PRIMARY alone consuming the entire budget and leaving no slots for
+  # a second, genuinely relevant document on multi-document questions.
+  top_k: 5
   # Chunks whose similarity score falls below this value are treated
   # as "not relevant enough" so the assistant can refuse to answer
   # instead of guessing from unrelated context.
-  min_relevance_score: 0.35
+  min_relevance_score: 0.40
+  hybrid:
+    # GLOBAL mode (fallback) only — see rag/retriever.py. When a query
+    # matches a topic with a locally-indexed document (docs-metadata.json),
+    # retrieval is restricted to that document instead (MAPPED_DOCUMENT
+    # mode) and this hybrid/RRF path isn't used at all.
+    #
+    # When enabled, GLOBAL-mode retrieval runs dense (embedding) search
+    # and BM25 (lexical/keyword) search in parallel over the whole
+    # collection and combines both result lists with Reciprocal Rank
+    # Fusion. When disabled, GLOBAL-mode retrieval is dense-only (BM25
+    # index is not queried).
+    enabled: true
+    candidates: 10   # chunks fetched from EACH of dense/lexical search before fusion
+  rerank:
+    # When enabled, the candidate pool (fused dense+lexical for GLOBAL
+    # mode, or the small mapped-document dense pool for MAPPED_DOCUMENT
+    # mode) is over-fetched to `candidates` chunks (instead of just
+    # top_k), scores each (question, chunk) pair jointly with a
+    # cross-encoder, and keeps only the best top_k of those.
+    # Cross-encoders are far more accurate than comparing two
+    # independent embeddings, but too slow to run over the whole
+    # collection, hence the two-stage retrieve-then-rerank shape. In
+    # MAPPED_DOCUMENT mode the candidate pool only ever contains
+    # chunks from the mapped document, so reranking can reorder within
+    # it but can never replace it with a different document.
+    enabled: true
+    model: "BAAI/bge-reranker-base"   # or ms-marco-MiniLM-L-6-v2
+    #model: "cross-encoder/ms-marco-MiniLM-L-6-v2" # pre-trained for small queries
+    candidates: 10                      # rerank top 10 of the fused pool, keep top_k
 
 session:
-  timeout_minutes: 3
+  timeout_minutes: 5
   # A countdown warning is shown once idle time reaches
   # (timeout_minutes * 60 - warning_seconds_before_timeout) seconds,
   # i.e. this many seconds before the session actually resets.
@@ -55,7 +112,55 @@ session:
   # combined) are sent to the LLM as conversation context for a new
   # question. Capped so a long-running session doesn't keep growing
   # the prompt (and generation time) indefinitely.
-  max_history_messages: 6
+  max_history_messages: 2
+
+evaluation:
+  # RAGAS judge: scores answers the live RAG pipeline produces for the
+  # question/reference-answer pairs in test_data_path, using a second,
+  # separate model as the judge (kept distinct from ollama.model, the
+  # one that answers real user questions, so the judge doesn't grade
+  # its own generations).
+  # judge_provider selects which client tests/evaluation/test_ragas_judge.py
+  # builds for judge_model: "ollama" (local, via ollama.base_url) or
+  # "gemini" (hosted, needs GOOGLE_API_KEY in the environment).
+  judge_provider: "gemini"
+  judge_model: "gemini-2.5-flash"
+  judge_temperature: 0
+  # Gemini free-tier quota is rate-limited per minute, not CPU-bound —
+  # too much concurrency (judge_max_workers) triggers throttling that
+  # shows up as silent per-call timeouts (a timed-out row becomes NaN,
+  # which poisons the metric's mean). A generous timeout absorbs
+  # queuing/backoff from the API instead of failing the row outright.
+  judge_timeout_seconds: 300
+  # Keep this low for a Gemini free-tier key. RAGAS's default of 16
+  # concurrent calls (and even 4) reliably hits per-minute rate limits
+  # and causes calls to return truncated results or time out.
+  judge_max_workers: 1
+  test_data_path: "./tests/test-question-qnswers.json"
+  metrics:
+    - faithfulness
+    - answer_relevancy
+    - answer_correctness
+    - context_precision
+    - context_recall
+  # A metric's mean score across all test cases must be at least this
+  # to pass. RAGAS metrics are on a [0, 1] scale.
+  min_score: 0.5
+  # tests/evaluation/test_ragas_judge.py writes the mean score per metric here
+  # after each `make test-ragas` run, so the System Info page can show
+  # the latest scores without re-running the (slow) evaluation.
+  results_path: "./tests/ragas_results.json"
+
+  retrieval:
+    # tests/evaluation/test_retrieval_eval.py: classic IR metrics (Recall/
+    # Precision/MRR/NDCG @ retrieval.top_k) for test cases that carry
+    # a ground-truth "relevant_sources" list, scored against the real
+    # retriever with no LLM involved — separate from the LLM-judged
+    # RAGAS metrics above, which conflate retrieval and generation
+    # quality into one score.
+    min_recall: 0.6
+    min_mrr: 0.5
+    results_path: "./tests/retrieval_results.json"
 
 database:
   # Session/history storage in MySQL. The password can be overridden

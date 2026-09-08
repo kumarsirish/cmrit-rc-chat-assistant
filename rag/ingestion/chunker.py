@@ -1,18 +1,38 @@
 """Step 2: Chunking.
 
-Splits page text into overlapping chunks using a recursive strategy:
-try to split on paragraph breaks first, then line breaks, then
-sentence stops, and only fall back to a hard character cut if a piece
-is still too large. This keeps related sentences together instead of
-cutting text at an arbitrary character offset.
+Splits a document's text into overlapping chunks with LangChain's
+RecursiveCharacterTextSplitter: try to split on detected section
+headings first, then paragraph breaks, then line breaks, then sentence
+stops, and only fall back to a hard character cut if a piece is still
+too large. This keeps related sentences together instead of cutting
+text at an arbitrary character offset.
+
+Chunking runs over a whole document's text at once (all of its pages
+joined together), not one page at a time, so a sentence, table, or
+policy section that happens to straddle a page break is no longer cut
+in half between two unrelated chunks. Each chunk still carries the
+page(s) it came from (page_number/page_end) and, where one could be
+detected, the section heading it falls under (section_title).
+
+Heading and table detection are heuristic, regex-based pattern
+matches over the plain extracted text — PyPDFLoader's extraction
+carries no font size/boldness/layout info, so this can't recognize a
+heading or table the way a human looking at the PDF would. It reduces
+mid-section and mid-table splitting; it doesn't guarantee it.
 
 URLs are masked before splitting on sentence stops (". ") so that a
 period inside a URL (e.g. "https://cmrit.ac.in/policy.pdf") is never
 mistaken for a sentence boundary and does not get split apart.
 """
 
+import itertools
+import logging
 import re
 from dataclasses import dataclass
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+logger = logging.getLogger(__name__)
 
 URL_PATTERN = re.compile(r"https?://[^\s]+|www\.[^\s]+")
 
@@ -22,6 +42,39 @@ URL_PATTERN = re.compile(r"https?://[^\s]+|www\.[^\s]+")
 # matches it. Left alone, this lets unrelated sections get merged into
 # the same chunk across what should be a hard paragraph break.
 _BLANK_LINE_PATTERN = re.compile(r"\n[ \t]+\n")
+
+# A line is treated as a probable section heading if it starts with
+# one of these prefixes ("1. ", "1.2 ", "Section 3", "Annexure A",
+# "Chapter 4") ...
+_NUMBERED_HEADING_PREFIX_PATTERN = re.compile(
+    r"^(?:\d+(?:\.\d+)*\.?\s|[A-Za-z]\.\s|Section\s+\d+|Annexure\s+[A-Za-z0-9]+|Chapter\s+\d+)",
+    re.IGNORECASE,
+)
+# ... or doesn't end in sentence punctuation and is either mostly
+# uppercase ("MANDATORY TRAINING FOR NEW FACULTY") or short Title Case
+# ("Roles And Responsibilities") — the shape of a heading, not a
+# sentence.
+_HEADING_TRAILING_PUNCTUATION_PATTERN = re.compile(r"[.,;]\s*$")
+_MAX_HEADING_LENGTH = 80
+_MAX_HEADING_WORDS = 10
+
+# Nesting depth of a numbered heading: "1. " is level 1, "1.2 " is
+# level 2, "1.2.3 " is level 3. Headings with no numeric prefix
+# (all-caps or Title Case) are always level 1 — there is no reliable
+# way to tell "MANDATORY TRAINING" apart from a subsection by text
+# shape alone, so it resets the hierarchy back to the top.
+_NUMERIC_HEADING_LEVEL_PATTERN = re.compile(r"^(\d+(?:\.\d+)*)\.?\s")
+
+HEADING_MARKER = "\x00HEADING_BREAK\x00"
+PAGE_JOIN_SEPARATOR = "\n\n"
+
+# A line with two or more runs of 2+ spaces between non-space text
+# looks like a table row (column-aligned plain-text extraction of a
+# table). Two or more such lines in a row are masked as a single
+# opaque block before splitting, so the splitter can't carve a table
+# apart unless the whole table alone exceeds chunk_size.
+_TABLE_LINE_PATTERN = re.compile(r"\S {2,}\S")
+_MIN_TABLE_BLOCK_LINES = 2
 
 
 def _normalize_blank_lines(text: str) -> str:
@@ -36,6 +89,12 @@ class Chunk:
     source_file: str
     page_number: int
     chunk_index: int
+    page_end: int = None
+    section_title: str = ""
+
+    def __post_init__(self):
+        if self.page_end is None:
+            self.page_end = self.page_number
 
 
 def _mask_urls(text: str) -> tuple:
@@ -61,90 +120,258 @@ def _unmask_urls(text: str, placeholder_map: dict) -> str:
     return restored_text
 
 
-def _split_on_separator(text: str, separator: str) -> list:
-    if separator == "":
-        return list(text)
-    pieces = text.split(separator)
-    # Re-attach the separator so downstream joins reproduce the
-    # original text faithfully (important for ". " sentence stops).
-    rejoined = []
-    for index, piece in enumerate(pieces):
-        if index < len(pieces) - 1:
-            rejoined.append(piece + separator)
-        elif piece:
-            rejoined.append(piece)
-    return rejoined
+def _mask_tables(text: str) -> tuple:
+    """Replaces runs of table-like lines with a single placeholder
+    token each, so the splitter treats a whole table as one
+    indivisible unit instead of many short, unrelated-looking lines.
 
-
-def _recursive_split(text: str, separators: list, chunk_size: int) -> list:
-    """Recursively splits text using the first separator that yields
-    pieces small enough to fit in chunk_size, falling back to the
-    next separator (and eventually raw characters) when needed.
+    Returns the masked text plus a mapping from placeholder to the
+    original block of lines, so tables can be restored after
+    splitting.
     """
-    if len(text) <= chunk_size:
-        return [text] if text else []
+    lines = text.split("\n")
+    result_lines = []
+    placeholder_map = {}
+    index = 0
+    table_count = 0
+    while index < len(lines):
+        if not _TABLE_LINE_PATTERN.search(lines[index]):
+            result_lines.append(lines[index])
+            index += 1
+            continue
 
-    if not separators:
-        # No separators left: hard-cut by character count.
-        return [
-            text[start : start + chunk_size]
-            for start in range(0, len(text), chunk_size)
-        ]
+        start = index
+        while index < len(lines) and (
+            _TABLE_LINE_PATTERN.search(lines[index]) or lines[index].strip() == ""
+        ):
+            index += 1
+        end = index
+        while end > start and lines[end - 1].strip() == "":
+            end -= 1
 
-    separator, remaining_separators = separators[0], separators[1:]
-    pieces = _split_on_separator(text, separator)
-
-    result = []
-    for piece in pieces:
-        if len(piece) <= chunk_size:
-            result.append(piece)
+        block_lines = lines[start:end]
+        table_line_count = sum(1 for line in block_lines if _TABLE_LINE_PATTERN.search(line))
+        if table_line_count >= _MIN_TABLE_BLOCK_LINES:
+            placeholder = f"__TABLE_PLACEHOLDER_{table_count}__"
+            placeholder_map[placeholder] = "\n".join(block_lines)
+            result_lines.append(placeholder)
+            table_count += 1
         else:
-            result.extend(_recursive_split(piece, remaining_separators, chunk_size))
-    return result
+            result_lines.extend(block_lines)
+        index = end
+    return "\n".join(result_lines), placeholder_map
 
 
-def _merge_pieces(pieces: list, chunk_size: int, chunk_overlap: int) -> list:
-    """Greedily combines small pieces into chunks close to chunk_size,
-    carrying a small overlap from the end of one chunk into the next
-    so context is not lost at chunk boundaries.
+def _unmask_tables(text: str, placeholder_map: dict) -> str:
+    restored_text = text
+    for placeholder, block in placeholder_map.items():
+        restored_text = restored_text.replace(placeholder, block)
+    return restored_text
+
+
+def _looks_like_heading(line: str) -> bool:
+    if not line or len(line) > _MAX_HEADING_LENGTH:
+        return False
+    if _HEADING_TRAILING_PUNCTUATION_PATTERN.search(line):
+        return False
+    if _NUMBERED_HEADING_PREFIX_PATTERN.match(line):
+        return True
+
+    letters = [character for character in line if character.isalpha()]
+    if not letters:
+        return False
+
+    uppercase_ratio = sum(1 for character in letters if character.isupper()) / len(letters)
+    if uppercase_ratio > 0.8:
+        return True
+
+    words = line.split()
+    if 1 <= len(words) <= _MAX_HEADING_WORDS and all(
+        word[0].isupper() for word in words if word[0].isalpha()
+    ):
+        return True
+    return False
+
+
+def _heading_level(heading_text: str) -> int:
+    match = _NUMERIC_HEADING_LEVEL_PATTERN.match(heading_text)
+    if not match:
+        return 1
+    return match.group(1).count(".") + 1
+
+
+def _detect_headings(text: str) -> list:
+    """Scans text line by line for heading-like lines that sit alone,
+    surrounded by blank lines (or the start/end of the text).
+
+    Returns [(offset, heading_text, level), ...] in text's own
+    coordinates, in ascending offset order. level is the heading's
+    nesting depth (see _heading_level) and is used to build a
+    "Section > Subsection" path for chunks that fall under nested
+    headings, rather than just the single nearest one.
     """
-    chunks = []
-    current = ""
-    for piece in pieces:
-        if current and len(current) + len(piece) > chunk_size:
-            chunks.append(current.strip())
-            overlap_text = current[-chunk_overlap:] if chunk_overlap > 0 else ""
-            current = overlap_text + piece
-        else:
-            current += piece
-    if current.strip():
-        chunks.append(current.strip())
-    return chunks
+    headings = []
+    offset = 0
+    lines = text.split("\n")
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped and _looks_like_heading(stripped):
+            previous_blank = index == 0 or lines[index - 1].strip() == ""
+            next_blank = index == len(lines) - 1 or lines[index + 1].strip() == ""
+            if previous_blank and next_blank:
+                headings.append(
+                    (offset + line.index(stripped), stripped, _heading_level(stripped))
+                )
+        offset += len(line) + 1  # +1 accounts for the '\n' split on
+    return headings
+
+
+def _insert_heading_markers(text: str, headings: list) -> str:
+    """Inserts HEADING_MARKER right before each detected heading's
+    offset in text, so the splitter can use it as a hard split point.
+    """
+    if not headings:
+        return text
+    parts = []
+    cursor = 0
+    for offset, _, _ in headings:
+        parts.append(text[cursor:offset])
+        parts.append(HEADING_MARKER)
+        cursor = offset
+    parts.append(text[cursor:])
+    return "".join(parts)
+
+
+def _heading_paths(headings: list) -> list:
+    """Turns the flat, ascending-offset heading list into
+    [(offset, path), ...], where path is a " > "-joined chain from the
+    top-level heading active at that point down to the heading itself
+    (e.g. "1. Leave Policy > 1.2 Casual Leave").
+
+    A heading whose level is <= an ancestor still on the stack closes
+    that ancestor (and anything nested under it) first, so the stack
+    always reflects genuine nesting rather than every heading seen
+    so far.
+    """
+    paths = []
+    stack = []  # [(level, text), ...], outermost first
+    for offset, text, level in headings:
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        stack.append((level, text))
+        paths.append((offset, " > ".join(heading_text for _, heading_text in stack)))
+    return paths
+
+
+def _section_title_for_offset(heading_paths: list, offset: int) -> str:
+    """Returns the section/subsection path active at or before offset,
+    or "" if no heading precedes it."""
+    section_title = ""
+    for heading_offset, path in heading_paths:
+        if heading_offset > offset:
+            break
+        section_title = path
+    return section_title
+
+
+def _join_pages(pages: list) -> tuple:
+    """Joins a document's pages into one continuous string.
+
+    Returns (full_text, page_spans), where page_spans is a list of
+    (start_offset, end_offset, page_number) tuples in full_text's own
+    coordinates, in page order.
+    """
+    text_parts = []
+    page_spans = []
+    offset = 0
+    for index, page in enumerate(pages):
+        start = offset
+        text_parts.append(page.text)
+        offset += len(page.text)
+        page_spans.append((start, offset, page.page_number))
+        if index < len(pages) - 1:
+            offset += len(PAGE_JOIN_SEPARATOR)
+    return PAGE_JOIN_SEPARATOR.join(text_parts), page_spans
+
+
+def _pages_for_span(page_spans: list, start: int, end: int) -> tuple:
+    """Returns (start_page, end_page) covering the [start, end) span."""
+    start_page = page_spans[0][2]
+    for span_start, span_end, page_number in page_spans:
+        if start < span_end:
+            start_page = page_number
+            break
+
+    end_page = page_spans[-1][2]
+    for span_start, span_end, page_number in page_spans:
+        end_page = page_number
+        if end <= span_end:
+            break
+    return start_page, end_page
 
 
 def chunk_text(text: str, chunk_size: int, chunk_overlap: int, separators: list) -> list:
-    """Splits a single block of text into overlapping chunks, preserving URLs."""
+    """Splits a single block of text into overlapping chunks, preserving
+    URLs and table-like line blocks."""
     text = _normalize_blank_lines(text)
-    masked_text, placeholder_map = _mask_urls(text)
-    pieces = _recursive_split(masked_text, separators, chunk_size)
-    masked_chunks = _merge_pieces(pieces, chunk_size, chunk_overlap)
-    return [_unmask_urls(chunk, placeholder_map) for chunk in masked_chunks]
+    text, table_placeholder_map = _mask_tables(text)
+    masked_text, url_placeholder_map = _mask_urls(text)
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=separators
+    )
+    masked_chunks = splitter.split_text(masked_text)
+    chunks = [_unmask_urls(chunk, url_placeholder_map) for chunk in masked_chunks]
+    return [_unmask_tables(chunk, table_placeholder_map) for chunk in chunks]
 
 
 def chunk_documents(
     pages: list, chunk_size: int, chunk_overlap: int, separators: list
 ) -> list:
-    """Chunks every PageDocument and returns a flat list of Chunk objects."""
+    """Chunks every document (all of its pages joined together) and
+    returns a flat list of Chunk objects."""
+    logger.info(
+        "Chunking %d pages with chunk_size=%d, chunk_overlap=%d ...", len(pages), chunk_size, chunk_overlap
+    )
     all_chunks = []
-    for page in pages:
-        page_chunks = chunk_text(page.text, chunk_size, chunk_overlap, separators)
-        for chunk_index, chunk_text_value in enumerate(page_chunks):
+    for source_file, file_pages in itertools.groupby(pages, key=lambda page: page.source_file):
+        file_pages = list(file_pages)
+        logger.debug("Chunking %s (%d pages) ...", source_file, len(file_pages))
+
+        full_text, page_spans = _join_pages(file_pages)
+        headings = _detect_headings(full_text)
+        heading_paths = _heading_paths(headings)
+        marked_text = _insert_heading_markers(full_text, headings)
+        chunk_separators = [HEADING_MARKER] + list(separators)
+
+        raw_chunks = chunk_text(marked_text, chunk_size, chunk_overlap, chunk_separators)
+
+        search_from = 0
+        chunk_index = 0
+        for raw_chunk in raw_chunks:
+            cleaned_text = raw_chunk.replace(HEADING_MARKER, "").strip()
+            if not cleaned_text:
+                continue
+
+            start = full_text.find(cleaned_text, search_from)
+            if start == -1:
+                start = full_text.find(cleaned_text)
+            if start == -1:
+                start = search_from
+            end = start + len(cleaned_text)
+            search_from = start
+
+            page_number, page_end = _pages_for_span(page_spans, start, end)
+            section_title = _section_title_for_offset(heading_paths, start)
             all_chunks.append(
                 Chunk(
-                    text=chunk_text_value,
-                    source_file=page.source_file,
-                    page_number=page.page_number,
+                    text=cleaned_text,
+                    source_file=source_file,
+                    page_number=page_number,
+                    page_end=page_end,
                     chunk_index=chunk_index,
+                    section_title=section_title,
                 )
             )
+            chunk_index += 1
     return all_chunks

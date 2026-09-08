@@ -11,8 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from rag.config import load_config
-from rag.embeddings import EmbeddingGenerator
+from rag.common.config import load_config
+from rag.ingestion.embeddings import EmbeddingGenerator
 
 
 def download_embedding_model() -> None:

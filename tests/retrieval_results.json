@@ -1,0 +1,165 @@
+{
+  "k": 5,
+  "mean_scores": {
+    "recall": 0.8846153846153846,
+    "precision": 0.4307692307692308,
+    "reciprocal_rank": 0.7692307692307693,
+    "ndcg": 0.7110828420259167
+  },
+  "mean_by_category": {
+    "normal": {
+      "recall": 0.875,
+      "precision": 0.55,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.9032867981913646
+    },
+    "multiple_related_documents": {
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.6131471927654584
+    },
+    "unanswerable": {
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    "ambiguous": {
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    "follow_up": {
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163
+    },
+    "exact_name_or_acronym": {
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    "numerical": {
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    "versioned_document": {
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
+    }
+  },
+  "rows": [
+    {
+      "category": "normal",
+      "question": "what is tyl",
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "multiple_related_documents",
+      "question": "What guidelines exist for faculty mentoring at CMRIT?",
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "category": "normal",
+      "question": "how to get vacation leave approved",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "Give TYL Program Details",
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.6131471927654584
+    },
+    {
+      "category": "normal",
+      "question": "How CMRIT helps in case of emergency",
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the capital of France?",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "ambiguous",
+      "question": "What about leave?",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "follow_up",
+      "question": "Who is it meant for and when does it start?",
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163
+    },
+    {
+      "category": "exact_name_or_acronym",
+      "question": "what is darwinbox",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "exact_name_or_acronym",
+      "question": "what does EMRT stand for",
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "numerical",
+      "question": "How many days in advance must a leave application be submitted for approval?",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "versioned_document",
+      "question": "What is TYT and which version of the program material covers it?",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
+    }
+  ]
+}

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 import mysql.connector
 
-from rag.config import DatabaseConfig
+from rag.common.config import DatabaseConfig
 
 
 @dataclass
@@ -22,6 +22,22 @@ class Message:
     role: str
     content: str
     created_at: datetime
+    # Populated for assistant messages only (see SessionStore.
+    # add_message) — how long that answer took to produce.
+    retrieval_seconds: float = None
+    llm_seconds: float = None
+    total_seconds: float = None
+
+
+# Placeholder total_seconds backfilled onto assistant messages that
+# were stored before timing was tracked, so old rows don't show up as
+# NULL/zero and skew the average — see _backfill_legacy_timings.
+LEGACY_TIMING_SECONDS = 120.0
+
+# The "average response time" shown in the UI is computed over only
+# the most recent this-many assistant answers, so it reflects current
+# performance rather than being dragged down/up by the whole history.
+RECENT_TIMING_LIMIT = 50
 
 
 class SessionStore:
@@ -74,14 +90,51 @@ class SessionStore:
                 role VARCHAR(16) NOT NULL,
                 content TEXT NOT NULL,
                 created_at DATETIME NOT NULL,
+                retrieval_seconds FLOAT NULL,
+                llm_seconds FLOAT NULL,
+                total_seconds FLOAT NULL,
                 FOREIGN KEY (session_id) REFERENCES sessions(session_id)
                     ON DELETE CASCADE
             )
             """
         )
         connection.commit()
+        self._add_timing_columns_if_missing(cursor)
+        self._backfill_legacy_timings(cursor)
+        # Superseded by the timing columns on `messages` above — a
+        # query's timing now lives on the assistant message it belongs
+        # to instead of a separate, unlinked table.
+        cursor.execute("DROP TABLE IF EXISTS query_timings")
+        connection.commit()
         cursor.close()
         connection.close()
+
+    def _column_exists(self, cursor, table: str, column: str) -> bool:
+        cursor.execute(
+            "SELECT COUNT(*) FROM information_schema.columns "
+            "WHERE table_schema = %s AND table_name = %s AND column_name = %s",
+            (self._config.database, table, column),
+        )
+        return cursor.fetchone()[0] > 0
+
+    def _add_timing_columns_if_missing(self, cursor) -> None:
+        """Adds the timing columns to a `messages` table created before
+        timings were tracked in it (CREATE TABLE IF NOT EXISTS above is
+        a no-op on an existing table, so this covers upgrading it)."""
+        for column in ("retrieval_seconds", "llm_seconds", "total_seconds"):
+            if not self._column_exists(cursor, "messages", column):
+                cursor.execute(f"ALTER TABLE messages ADD COLUMN {column} FLOAT NULL")
+
+    def _backfill_legacy_timings(self, cursor) -> None:
+        """Assistant messages stored before timing was tracked have no
+        total_seconds; give them a fixed placeholder rather than
+        leaving them NULL (which would exclude them from the average)
+        or 0 (which would understate it)."""
+        cursor.execute(
+            "UPDATE messages SET total_seconds = %s "
+            "WHERE role = 'assistant' AND total_seconds IS NULL",
+            (LEGACY_TIMING_SECONDS,),
+        )
 
     def create_session(self, user_email: str) -> str:
         """Creates a new session row for user_email and returns its session_id."""
@@ -132,13 +185,26 @@ class SessionStore:
         cursor.close()
         connection.close()
 
-    def add_message(self, session_id: str, role: str, content: str) -> None:
+    def add_message(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        retrieval_seconds: float = None,
+        llm_seconds: float = None,
+        total_seconds: float = None,
+    ) -> None:
+        """Stores one chat message. retrieval_seconds/llm_seconds/
+        total_seconds are only meaningful for role="assistant" (how
+        long that answer took to produce) and left as NULL otherwise.
+        """
         connection = self._connect()
         cursor = connection.cursor()
         cursor.execute(
-            "INSERT INTO messages (session_id, role, content, created_at) "
-            "VALUES (%s, %s, %s, %s)",
-            (session_id, role, content, datetime.now()),
+            "INSERT INTO messages "
+            "(session_id, role, content, created_at, retrieval_seconds, llm_seconds, total_seconds) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (session_id, role, content, datetime.now(), retrieval_seconds, llm_seconds, total_seconds),
         )
         connection.commit()
         cursor.close()
@@ -148,14 +214,24 @@ class SessionStore:
         connection = self._connect()
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT role, content, created_at FROM messages "
-            "WHERE session_id = %s ORDER BY id ASC",
+            "SELECT role, content, created_at, retrieval_seconds, llm_seconds, total_seconds "
+            "FROM messages WHERE session_id = %s ORDER BY id ASC",
             (session_id,),
         )
         rows = cursor.fetchall()
         cursor.close()
         connection.close()
-        return [Message(role=row[0], content=row[1], created_at=row[2]) for row in rows]
+        return [
+            Message(
+                role=row[0],
+                content=row[1],
+                created_at=row[2],
+                retrieval_seconds=row[3],
+                llm_seconds=row[4],
+                total_seconds=row[5],
+            )
+            for row in rows
+        ]
 
     def delete_session(self, session_id: str) -> None:
         """Removes a session and its messages, used when a session expires."""
@@ -165,3 +241,23 @@ class SessionStore:
         connection.commit()
         cursor.close()
         connection.close()
+
+    def get_timing_summary(self) -> tuple:
+        """Returns (count, average_total_seconds) over the most recent
+        RECENT_TIMING_LIMIT assistant answers (across all sessions).
+        average_total_seconds is None if none have been recorded yet.
+        """
+        connection = self._connect()
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT COUNT(*), AVG(total_seconds) FROM ("
+            "  SELECT total_seconds FROM messages "
+            "  WHERE role = 'assistant' AND total_seconds IS NOT NULL "
+            "  ORDER BY id DESC LIMIT %s"
+            ") AS recent",
+            (RECENT_TIMING_LIMIT,),
+        )
+        count, average = cursor.fetchone()
+        cursor.close()
+        connection.close()
+        return count, (float(average) if average is not None else None)

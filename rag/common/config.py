@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 
@@ -22,6 +22,7 @@ class OllamaConfig:
     temperature: float
     request_timeout_seconds: int
     num_thread: int
+    num_predict: int
 
 
 @dataclass
@@ -39,6 +40,7 @@ class ChromaConfig:
 @dataclass
 class DocumentsConfig:
     source_directory: str
+    metadata_file: str
 
 
 @dataclass
@@ -49,9 +51,24 @@ class ChunkingConfig:
 
 
 @dataclass
+class RerankConfig:
+    enabled: bool
+    model: str
+    candidates: int
+
+
+@dataclass
+class HybridConfig:
+    enabled: bool
+    candidates: int
+
+
+@dataclass
 class RetrievalConfig:
     top_k: int
     min_relevance_score: float
+    hybrid: HybridConfig
+    rerank: RerankConfig
 
 
 @dataclass
@@ -59,6 +76,30 @@ class SessionConfig:
     timeout_minutes: int
     warning_seconds_before_timeout: int
     max_history_messages: int
+
+
+@dataclass
+class RetrievalEvalConfig:
+    # k is intentionally not duplicated here — retrieval eval scores
+    # Recall/Precision/NDCG @ config.retrieval.top_k, the same k the
+    # app actually uses at answer time.
+    min_recall: float
+    min_mrr: float
+    results_path: str
+
+
+@dataclass
+class EvaluationConfig:
+    judge_provider: str
+    judge_model: str
+    judge_temperature: float
+    judge_timeout_seconds: int
+    judge_max_workers: int
+    test_data_path: str
+    metrics: list
+    min_score: float
+    results_path: str
+    retrieval: RetrievalEvalConfig
 
 
 @dataclass
@@ -79,6 +120,7 @@ class AppConfig:
     chunking: ChunkingConfig
     retrieval: RetrievalConfig
     session: SessionConfig
+    evaluation: EvaluationConfig
     database: DatabaseConfig
 
 
@@ -110,12 +152,26 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
 
     documents_raw = raw["documents"]
     documents_cfg = DocumentsConfig(
-        source_directory=_resolve_path(documents_raw["source_directory"])
+        source_directory=_resolve_path(documents_raw["source_directory"]),
+        metadata_file=_resolve_path(documents_raw["metadata_file"]),
     )
 
     chunking_cfg = ChunkingConfig(**raw["chunking"])
-    retrieval_cfg = RetrievalConfig(**raw["retrieval"])
+
+    retrieval_raw = dict(raw["retrieval"])
+    retrieval_raw["hybrid"] = HybridConfig(**retrieval_raw["hybrid"])
+    retrieval_raw["rerank"] = RerankConfig(**retrieval_raw["rerank"])
+    retrieval_cfg = RetrievalConfig(**retrieval_raw)
+
     session_cfg = SessionConfig(**raw["session"])
+
+    evaluation_raw = dict(raw["evaluation"])
+    evaluation_raw["test_data_path"] = _resolve_path(evaluation_raw["test_data_path"])
+    evaluation_raw["results_path"] = _resolve_path(evaluation_raw["results_path"])
+    retrieval_eval_raw = dict(evaluation_raw["retrieval"])
+    retrieval_eval_raw["results_path"] = _resolve_path(retrieval_eval_raw["results_path"])
+    evaluation_raw["retrieval"] = RetrievalEvalConfig(**retrieval_eval_raw)
+    evaluation_cfg = EvaluationConfig(**evaluation_raw)
 
     database_raw = dict(raw["database"])
     database_raw["password"] = os.environ.get(
@@ -131,5 +187,6 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         chunking=chunking_cfg,
         retrieval=retrieval_cfg,
         session=session_cfg,
+        evaluation=evaluation_cfg,
         database=database_cfg,
     )

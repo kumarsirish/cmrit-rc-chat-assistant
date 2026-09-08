@@ -6,7 +6,29 @@ streamlit
 chromadb==1.5.9
 sentence-transformers
 pypdf
-ollama
 mysql-connector-python
 PyYAML
 pytest
+
+# LangChain: document loading, text splitting, embeddings, vector
+# store, and LLM chat client all go through these instead of talking
+# to chromadb/sentence-transformers/ollama directly.
+langchain-community
+langchain-text-splitters
+langchain-huggingface
+langchain-chroma
+langchain-ollama
+
+# RAGAS: LLM-judged evaluation of the RAG pipeline's answers against
+# the reference Q&A pairs in tests/test-question-qnswers.json (see
+# tests/test_ragas_judge.py, `make test-ragas`).
+ragas
+
+# Gemini judge client for tests/test_ragas_judge.py when
+# evaluation.judge_provider is "gemini" (needs GOOGLE_API_KEY).
+langchain-google-genai
+
+# BM25 lexical index for hybrid retrieval (rag/bm25_index.py) — pure
+# Python, no server/embedding model needed, so it's the standard
+# lightweight choice for combining with dense/embedding search.
+rank_bm25

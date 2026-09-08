@@ -1,11 +1,24 @@
-"""Wrapper around the Ollama chat API.
+"""Wrapper around LangChain's ChatOllama.
 
 Keeps all Ollama-specific code (host, model name, request shape) in
 one place so the model can be swapped later by editing config.yaml
-only.
+only, and so the rest of the app (rag_pipeline.py) only ever calls
+generate_answer() and never touches ChatOllama directly.
 """
 
-import ollama
+import logging
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_ollama import ChatOllama
+
+logger = logging.getLogger(__name__)
+
+_ROLE_TO_MESSAGE_CLASS = {"user": HumanMessage, "assistant": AIMessage}
+
+
+class LlmGenerationError(Exception):
+    """Raised when the Ollama server is unreachable, times out, or
+    otherwise fails to produce a reply."""
 
 
 class LlmClient:
@@ -18,11 +31,16 @@ class LlmClient:
         temperature: float,
         timeout_seconds: int,
         num_thread: int,
+        num_predict: int = None,
     ):
-        self._model = model
-        self._temperature = temperature
-        self._num_thread = num_thread
-        self._client = ollama.Client(host=base_url, timeout=timeout_seconds)
+        self._llm = ChatOllama(
+            base_url=base_url,
+            model=model,
+            temperature=temperature,
+            num_thread=num_thread,
+            num_predict=num_predict,
+            client_kwargs={"timeout": timeout_seconds},
+        )
 
     def generate_answer(
         self, system_prompt: str, user_prompt: str, conversation_history: list = None
@@ -35,17 +53,15 @@ class LlmClient:
         turns in the same session, placed between the system prompt and
         the new question so the model can follow up on prior context.
         """
-        messages = [{"role": "system", "content": system_prompt}]
-        if conversation_history:
-            messages.extend(conversation_history)
-        messages.append({"role": "user", "content": user_prompt})
+        messages = [SystemMessage(content=system_prompt)]
+        for turn in conversation_history or []:
+            message_class = _ROLE_TO_MESSAGE_CLASS[turn["role"]]
+            messages.append(message_class(content=turn["content"]))
+        messages.append(HumanMessage(content=user_prompt))
 
-        response = self._client.chat(
-            model=self._model,
-            messages=messages,
-            options={
-                "temperature": self._temperature,
-                "num_thread": self._num_thread,
-            },
-        )
-        return response["message"]["content"]
+        try:
+            response = self._llm.invoke(messages)
+        except Exception as exc:
+            logger.error("Ollama call failed (model=%s): %s", self._llm.model, exc)
+            raise LlmGenerationError(f"Ollama call failed: {exc}") from exc
+        return response.content

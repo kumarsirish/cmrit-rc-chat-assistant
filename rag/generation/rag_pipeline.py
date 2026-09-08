@@ -8,18 +8,27 @@ Two layers keep the assistant from answering with outside knowledge:
 2. If chunks are found, the LLM is given a strict system prompt that
    restricts it to the supplied context and told to say so when the
    context does not contain the answer.
+
+RagPipeline itself only orchestrates: it delegates context formatting
+to context_builder and citation/response assembly to
+response_processor, so each of those concerns can be read, tested, and
+changed independently of the others. Retrieval always runs on the
+current question alone — conversation history is never used to build
+the retrieval query, only passed to the LLM (see answer() below) so it
+can resolve references like "it" in its reply. This keeps retrieval
+deterministic, fast, and easy to evaluate/debug independent of session
+state.
 """
 
-import re
-from dataclasses import dataclass
+import logging
+import time
 
-from rag.llm_client import LlmClient
-from rag.retriever import Retriever
-
-NO_MATCH_MESSAGE = (
-    "I could not find anything about that in the college policy documents. "
-    "I can only answer questions covered by those documents."
-)
+from rag.generation import context_builder
+from rag.generation.llm_client import LlmClient
+from rag.indexing.docs_metadata import find_matching_topic
+from rag.response import response_processor
+from rag.response.response_processor import NO_MATCH_MESSAGE, RagAnswer, SourceReference  # re-exported
+from rag.retrieval.retriever import Retriever
 
 SYSTEM_PROMPT = (
     "You are an assistant that answers questions about CMRIT college "
@@ -28,12 +37,17 @@ SYSTEM_PROMPT = (
     "Do not use any outside knowledge, even if you believe it to be true. "
     "If the CONTEXT does not contain the answer, reply exactly: "
     f'"{NO_MATCH_MESSAGE}" '
-    "Keep URLs from the context exactly as written if you include them. "
-    "Write only the answer itself — do not mention document names, page "
-    "numbers, or the words 'Source'/'CONTEXT' anywhere in your reply, and "
-    "never add bracketed citations like '[Source 1: ...]'. The application "
-    "displays the source documents separately below your answer, so any "
-    "citation you add would just be duplicated noise. "
+    "Keep URLs from the context exactly as written and include them if they are relevant. "
+    "Cite your source for every factual claim: immediately after the "
+    "sentence, add the bracketed number of the CONTEXT source it came "
+    "from, e.g. 'Employees are eligible for 12 days of casual leave "
+    "[1].' Use ONLY the numbers given in the CONTEXT's 'Source N' "
+    "labels — never invent a number, never cite a source that doesn't "
+    "support that specific sentence, and never write the source's "
+    "name, page number, or the word 'Source' out in the sentence "
+    "itself; the bracketed number is the only citation form. If a "
+    "sentence draws on more than one source, cite all of them, e.g. "
+    "'[1][2]'. "
     "Earlier turns from this conversation may be included before the "
     "current question purely to resolve references like 'it' or 'that "
     "leave type' — they are not an additional source of facts. Every "
@@ -41,121 +55,63 @@ SYSTEM_PROMPT = (
     "current question."
 )
 
-# Belt-and-braces cleanup: even with the instruction above, a model can
-# still slip in a citation — bracketed ("[Source 1: policy.pdf, page 2]")
-# or as plain prose ("...specifically from Source 1: policy.pdf, page
-# 20..."). Strip both shapes so the answer text never duplicates what
-# the UI already renders as separate source links.
-_CONTEXT_LEAD_IN_PATTERN = re.compile(
-    r"According to (the )?(provided )?CONTEXT,?\s*(specifically from\s*)?",
-    re.IGNORECASE,
-)
-_INLINE_CITATION_PATTERN = re.compile(
-    r"\[?\s*Source\s+\d+\s*:\s*[^,\]]+,\s*pages?\s*\d+(?:-\d+)?\s*\]?,?\s*",
-    re.IGNORECASE,
-)
-
-
-def _strip_inline_citations(answer_text: str) -> str:
-    cleaned = _CONTEXT_LEAD_IN_PATTERN.sub("", answer_text)
-    cleaned = _INLINE_CITATION_PATTERN.sub("", cleaned)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    cleaned = cleaned.strip().lstrip(",").strip()
-    if cleaned:
-        cleaned = cleaned[0].upper() + cleaned[1:]
-    return cleaned
-
-
-@dataclass
-class SourceReference:
-    source_file: str
-    page_number: int
-    relevance_score: float
-    text_preview: str
-    match_type: str
-
-
-@dataclass
-class RagAnswer:
-    answer_text: str
-    sources: list
-    grounded: bool
-
-
-def _build_retrieval_query(question: str, conversation_history: list) -> str:
-    """Broadens the retrieval query with the previous user turn.
-
-    A short follow-up like "give details" or "what about that" carries
-    no topic words of its own, so searching for it in isolation finds
-    nothing. Prepending the previous user turn gives retrieval enough
-    signal to find the chunks that turn was about, without dragging in
-    the whole conversation (which would blur the query for a genuinely
-    new, unrelated question).
-    """
-    if not conversation_history:
-        return question
-
-    previous_user_message = None
-    for message in reversed(conversation_history):
-        if message["role"] == "user":
-            previous_user_message = message["content"]
-            break
-
-    if not previous_user_message:
-        return question
-    return f"{previous_user_message} {question}"
-
-
-def _build_context(chunks: list) -> str:
-    context_parts = []
-    for index, chunk in enumerate(chunks, start=1):
-        context_parts.append(
-            f"[Source {index}: {chunk.source_file}, page {chunk.page_number}]\n"
-            f"{chunk.text}"
-        )
-    return "\n\n".join(context_parts)
+logger = logging.getLogger(__name__)
 
 
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
-    def __init__(self, retriever: Retriever, llm_client: LlmClient):
+    def __init__(self, retriever: Retriever, llm_client: LlmClient, doc_topics: list = None):
         self._retriever = retriever
         self._llm_client = llm_client
+        self._doc_topics = doc_topics or []
 
     def answer(self, question: str, conversation_history: list = None) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
 
-        conversation_history (optional) is prior turns from the same
-        session — {"role": "user"/"assistant", "content": str} dicts.
-        It's used two ways: retrieval is broadened with the previous
-        user turn so a topic-less follow-up ("give details") can still
-        find the right chunks (see _build_retrieval_query), and the
-        full history is passed to the LLM so it can resolve references
-        like "it"/"that" in its reply.
+        Retrieval runs on question alone — conversation_history (prior
+        {"role", "content"} turns from the same session, if any) is
+        never used to build the retrieval query. It's only passed to
+        the LLM below, so it can resolve references like "it"/"that"
+        in its reply; the retriever never sees it.
         """
-        retrieval_query = _build_retrieval_query(question, conversation_history)
-        chunks = self._retriever.retrieve(retrieval_query)
+        overall_start = time.perf_counter()
+        chunks = self._retriever.retrieve(question)
+        retrieval_seconds = time.perf_counter() - overall_start
+        matched_topic = find_matching_topic(question, self._doc_topics)
 
         if not chunks:
-            return RagAnswer(answer_text=NO_MATCH_MESSAGE, sources=[], grounded=False)
+            total_seconds = time.perf_counter() - overall_start
+            logger.debug(
+                "Answer timing (seconds): retrieval=%.3f llm=n/a total=%.3f",
+                retrieval_seconds,
+                total_seconds,
+            )
+            return response_processor.build_no_result_response(
+                matched_topic, retrieval_seconds=retrieval_seconds, total_seconds=total_seconds
+            )
 
-        context = _build_context(chunks)
+        context = context_builder.build(chunks)
         user_prompt = f"CONTEXT:\n{context}\n\nQUESTION: {question}"
+
+        llm_start = time.perf_counter()
         raw_answer_text = self._llm_client.generate_answer(
             SYSTEM_PROMPT, user_prompt, conversation_history=conversation_history
         )
-        answer_text = _strip_inline_citations(raw_answer_text)
+        llm_seconds = time.perf_counter() - llm_start
+        total_seconds = time.perf_counter() - overall_start
 
-        sources = [
-            SourceReference(
-                source_file=chunk.source_file,
-                page_number=chunk.page_number,
-                relevance_score=chunk.relevance_score,
-                text_preview=chunk.text[:200],
-                match_type=chunk.match_type,
-            )
-            for chunk in chunks
-        ]
-        grounded = NO_MATCH_MESSAGE not in answer_text
-        return RagAnswer(answer_text=answer_text, sources=sources, grounded=grounded)
+        logger.debug(
+            "Answer timing (seconds): retrieval=%.3f llm=%.3f total=%.3f",
+            retrieval_seconds,
+            llm_seconds,
+            total_seconds,
+        )
+        return response_processor.process(
+            raw_answer_text,
+            chunks,
+            matched_topic,
+            retrieval_seconds=retrieval_seconds,
+            llm_seconds=llm_seconds,
+            total_seconds=total_seconds,
+        )

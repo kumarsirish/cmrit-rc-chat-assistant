@@ -1,12 +1,25 @@
 """Step 3a: Sentence embeddings.
 
-Wraps a local sentence-transformers model so the rest of the
-application never has to know which embedding model is in use. The
-model name is read from configuration, so it can be swapped for a
-different sentence-transformers model without changing any other file.
+Wraps LangChain's HuggingFaceEmbeddings (itself a thin layer over a
+local sentence-transformers model) so the rest of the application
+never has to know which embedding model is in use. The model name is
+read from configuration, so it can be swapped for a different
+sentence-transformers model without changing any other file.
 """
 
-from sentence_transformers import SentenceTransformer
+import warnings
+
+# langchain_core falls back to the pydantic.v1 compat shim for some
+# internal type checks; that shim isn't validated on Python 3.14+ and
+# warns about it on import. It's noise this app can't act on, so quiet
+# it here before langchain_core (imported transitively below) fires it.
+warnings.filterwarnings(
+    "ignore",
+    message="Core Pydantic V1 functionality isn't compatible with Python 3.14",
+    category=UserWarning,
+)
+
+from langchain_huggingface import HuggingFaceEmbeddings
 from transformers.utils import logging as hf_logging
 
 # sentence-transformers pulls in transformers, which logs harmless
@@ -22,8 +35,11 @@ class EmbeddingGenerator:
 
     def __init__(self, model_name: str, batch_size: int = 32):
         self.model_name = model_name
-        self._batch_size = batch_size
-        self._model = SentenceTransformer(model_name)
+        self._model = HuggingFaceEmbeddings(
+            model_name=model_name,
+            encode_kwargs={"batch_size": batch_size},
+            show_progress=False,
+        )
 
     def embed_texts(self, texts: list) -> list:
         """Embeds a list of strings in batches and returns a list of float vectors.
@@ -32,11 +48,8 @@ class EmbeddingGenerator:
         model process several chunks per forward pass, which is
         essentially free CPU throughput to reclaim during ingestion.
         """
-        embeddings = self._model.encode(
-            texts, batch_size=self._batch_size, show_progress_bar=False
-        )
-        return [embedding.tolist() for embedding in embeddings]
+        return self._model.embed_documents(texts)
 
     def embed_query(self, text: str) -> list:
         """Embeds a single query string and returns one float vector."""
-        return self.embed_texts([text])[0]
+        return self._model.embed_query(text)

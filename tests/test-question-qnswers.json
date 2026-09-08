@@ -1,0 +1,31 @@
+[
+    {
+        "category": "normal",
+        "question": "what is tyl",
+        "answer": "TYL stands for Tie Your LACES, a program that focuses on professional competency of students, covering Language, Aptitude, Core domain, Experiential and Soft skills, along with programming skills and industry relevant technologies.",
+        "relevant_sources": [
+            "HoD Handbook - CMRIT.pdf",
+            "TYL - Faculty Orientation for New Joinees -August 2024.pptx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "how to get vacation leave approved",
+        "answer": "To get vacation leave approved, an employee must submit a leave application to the Head of the Department (HoD) at least three days in advance. The leave application should be submitted in the prescribed format and should be approved by the HoD before the leave can be taken.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the capital of France?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the process to get a refund for a cancelled flight booking?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
+    }
+]
