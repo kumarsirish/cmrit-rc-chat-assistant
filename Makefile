@@ -26,7 +26,7 @@ test:
 	pytest tests/
 
 # Live RAGAS judge evaluation: scores real pipeline answers against
-# tests/test-question-qnswers.json using the judge model configured
+# tests/evaluation-question-answers.json using the judge model configured
 # in config.yaml. Needs Ollama running (both ollama.model and
 # evaluation.judge_model pulled) and an ingested Chroma store (`make
 # ingest`), so it's excluded from the default `make test`.

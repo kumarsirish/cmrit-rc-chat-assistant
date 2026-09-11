@@ -92,6 +92,22 @@ retrieval:
   # as "not relevant enough" so the assistant can refuse to answer
   # instead of guessing from unrelated context.
   min_relevance_score: 0.40
+  # Cap on how many of the mapped document's own chunks ("PRIMARY")
+  # are kept, out of top_k, before any remaining slots go to a
+  # SECONDARY, cross-document search — see retriever.py's
+  # MAPPED_DOCUMENT_PRIMARY_TOP_K docstring for the full rationale.
+  # Deliberately small rather than top_k itself: a short,
+  # single-subject policy PDF frequently has several chunks that
+  # individually clear min_relevance_score, which would otherwise let
+  # PRIMARY silently consume the entire top_k budget on its own every
+  # time and leave SECONDARY no room to ever run.
+  mapped_document_primary_top_k: 2
+  # Minimum cosine similarity (embedding-based, see
+  # rag/indexing/topic_matcher.py) between a query and a topic's name
+  # (docs-metadata.json) for that topic to be considered a match.
+  # Below this, the query is treated as unmatched and retrieval falls
+  # back to GLOBAL mode.
+  topic_match_threshold: 0.5
   hybrid:
     # GLOBAL mode (fallback) only — see rag/retriever.py. When a query
     # matches a topic with a locally-indexed document (docs-metadata.json),
@@ -156,7 +172,7 @@ evaluation:
   # concurrent calls (and even 4) reliably hits per-minute rate limits
   # and causes calls to return truncated results or time out.
   judge_max_workers: 1
-  test_data_path: "./tests/test-question-qnswers.json"
+  test_data_path: "./tests/evaluation-question-answers.json"
   metrics:
     - faithfulness
     - answer_relevancy

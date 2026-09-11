@@ -148,9 +148,11 @@ def get_rag_pipeline():
         reranker=get_reranker() if config.retrieval.rerank.enabled else None,
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
+        mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
+        topic_match_threshold=config.retrieval.topic_match_threshold,
     )
     llm_client = LlmClient.from_config(config.llm)
-    return RagPipeline(retriever=retriever, llm_client=llm_client, doc_topics=doc_topics)
+    return RagPipeline(retriever=retriever, llm_client=llm_client)
 
 
 @st.cache_resource
@@ -328,7 +330,7 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
 def render_topic_link(topic_name, topic_link):
     """Shows the canonical URL for the topic docs-metadata.json says the
     question was about, if one was identified (see
-    rag.docs_metadata.find_matching_topic). Shown regardless of whether
+    rag.indexing.topic_matcher.EmbeddingTopicMatcher). Shown regardless of whether
     the answer came from a locally-indexed chunk, since some topics
     (e.g. the college website) have no local PDF to index at all.
     """

@@ -91,6 +91,9 @@ class _CapturingRetriever:
         self.last_chunks = self._retriever.retrieve(query, metadata_filter)
         return self.last_chunks
 
+    def match_topic(self, query):
+        return self._retriever.match_topic(query)
+
 
 @pytest.fixture(scope="module")
 def pipeline_and_retriever(config):
@@ -118,10 +121,12 @@ def pipeline_and_retriever(config):
         else None,
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
+        mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
+        topic_match_threshold=config.retrieval.topic_match_threshold,
     )
     capturing_retriever = _CapturingRetriever(retriever)
     llm_client = LlmClient.from_config(config.llm)
-    pipeline = RagPipeline(retriever=capturing_retriever, llm_client=llm_client, doc_topics=doc_topics)
+    pipeline = RagPipeline(retriever=capturing_retriever, llm_client=llm_client)
     return pipeline, capturing_retriever
 
 

@@ -3,8 +3,8 @@
 Two retrieval modes, chosen per query:
 
 1. MAPPED_DOCUMENT — the query matches a topic in docs-metadata.json
-   that has a locally-indexed document (see docs_metadata.
-   find_matching_topic). That topic -> document mapping is trusted
+   that has a locally-indexed document (see topic_matcher.
+   EmbeddingTopicMatcher). That topic -> document mapping is trusted
    metadata, so the mapped document is searched first and given
    priority: dense (embedding) search and BM25 (lexical) search both
    run with a `source_file` filter for just that document, fused by
@@ -69,7 +69,7 @@ import operator
 import time
 from dataclasses import dataclass
 
-from rag.indexing.docs_metadata import find_matching_topic
+from rag.indexing.topic_matcher import DEFAULT_SIMILARITY_THRESHOLD, EmbeddingTopicMatcher
 from rag.ingestion.embeddings import EmbeddingGenerator
 from rag.indexing.vector_store import VectorStore
 
@@ -100,18 +100,21 @@ RRF_K = 60
 # enough to work with across the whole collection.
 MAPPED_DOCUMENT_CANDIDATES = 6
 
-# Cap on how many of the mapped document's own chunks ("PRIMARY") are
-# kept, out of top_k, before any remaining slots go to a SECONDARY,
-# cross-document search. Deliberately small rather than top_k itself:
-# a short, single-subject policy PDF frequently has several chunks
-# that individually clear min_relevance_score (they're all "about" the
-# same narrow topic), which would otherwise let PRIMARY silently
-# consume the *entire* top_k budget on its own every time and leave
-# SECONDARY no room to ever run — defeating the point of adding it.
-# Observed on the real corpus: "Give TYL Program Details" and "What
-# guidelines exist for faculty mentoring at CMRIT?" (a genuinely
-# multi-document question) both filled all of top_k from PRIMARY alone
-# with no cap, so a second, actually-relevant document never surfaced.
+# Default cap on how many of the mapped document's own chunks
+# ("PRIMARY") are kept, out of top_k, before any remaining slots go to
+# a SECONDARY, cross-document search — overridable per-instance via
+# Retriever's mapped_document_primary_top_k constructor arg, wired
+# from config.yaml's retrieval.mapped_document_primary_top_k.
+# Deliberately small rather than top_k itself: a short, single-subject
+# policy PDF frequently has several chunks that individually clear
+# min_relevance_score (they're all "about" the same narrow topic),
+# which would otherwise let PRIMARY silently consume the *entire*
+# top_k budget on its own every time and leave SECONDARY no room to
+# ever run — defeating the point of adding it. Observed on the real
+# corpus: "Give TYL Program Details" and "What guidelines exist for
+# faculty mentoring at CMRIT?" (a genuinely multi-document question)
+# both filled all of top_k from PRIMARY alone with no cap, so a
+# second, actually-relevant document never surfaced.
 MAPPED_DOCUMENT_PRIMARY_TOP_K = 2
 
 MAPPED_DOCUMENT_MODE = "MAPPED_DOCUMENT"
@@ -241,6 +244,8 @@ class Retriever:
         reranker=None,
         rerank_candidates: int = 0,
         doc_topics: list = None,
+        mapped_document_primary_top_k: int = MAPPED_DOCUMENT_PRIMARY_TOP_K,
+        topic_match_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
     ):
         self._vector_store = vector_store
         self._embedding_generator = embedding_generator
@@ -256,7 +261,19 @@ class Retriever:
         # directly by its existing order instead of being re-scored.
         self._reranker = reranker
         self._rerank_candidates = rerank_candidates
-        self._doc_topics = doc_topics or []
+        self._mapped_document_primary_top_k = mapped_document_primary_top_k
+        self._topic_matcher = EmbeddingTopicMatcher(
+            doc_topics or [], embedding_generator, similarity_threshold=topic_match_threshold
+        )
+
+    def match_topic(self, query: str, query_embedding: list = None):
+        """Returns the DocTopic query is about (see EmbeddingTopicMatcher),
+        or None if none clears the similarity threshold. Exposed
+        publicly so callers that need the topic match but not a
+        retrieval (e.g. RagPipeline, for the "topic exists but has no
+        indexed document" no-answer message) don't have to keep their
+        own separate copy of doc_topics/embedding_generator."""
+        return self._topic_matcher.match(query, query_embedding=query_embedding)
 
     def retrieve(self, query: str, metadata_filter: dict = None) -> list:
         """Returns relevant chunks for query, most relevant first.
@@ -291,7 +308,7 @@ class Retriever:
         overall_start = time.perf_counter()
 
         query_embedding = self._embedding_generator.embed_query(query)
-        matched_topic = find_matching_topic(query, self._doc_topics)
+        matched_topic = self.match_topic(query, query_embedding=query_embedding)
         primary_results = None
         secondary_results = None
 
@@ -299,11 +316,11 @@ class Retriever:
             mode = MAPPED_DOCUMENT_MODE
             mapped_document = matched_topic.docs_filename
             scoped_filter = {"source_file": mapped_document}
-            # Capped at MAPPED_DOCUMENT_PRIMARY_TOP_K (not the full
+            # Capped at mapped_document_primary_top_k (not the full
             # top_k budget) so PRIMARY can't consume every slot on its
-            # own and leave SECONDARY nothing to fill — see that
-            # constant's comment.
-            primary_keep = min(MAPPED_DOCUMENT_PRIMARY_TOP_K, self._top_k)
+            # own and leave SECONDARY nothing to fill — see
+            # MAPPED_DOCUMENT_PRIMARY_TOP_K's comment.
+            primary_keep = min(self._mapped_document_primary_top_k, self._top_k)
             primary_candidates, primary_results = self._search(
                 query, query_embedding, scoped_filter, MAPPED_DOCUMENT_CANDIDATES, keep=primary_keep
             )

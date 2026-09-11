@@ -74,7 +74,7 @@ tested, and swapped independently:
 | 3. Vector storage (Chroma) | `rag/vector_store.py` |
 | 4a. Lexical (BM25) index | `rag/bm25_index.py` |
 | 4b. Cross-encoder reranking | `rag/reranker.py` |
-| 4c. Topic detection (query -> docs-metadata.json entry) | `rag/docs_metadata.py`, `rag/keyword_extraction.py` |
+| 4c. Topic detection (query -> docs-metadata.json entry) | `rag/docs_metadata.py`, `rag/topic_matcher.py` |
 | 4. Retrieval (topic-mapped-document or hybrid dense+BM25 fallback + rerank) | `rag/retriever.py` |
 | 5. Session & chat history (MySQL, 5 min timeout) | `rag/session_store.py` |
 | — Email validation (identifies each user) | `rag/user_identity.py` |
@@ -101,8 +101,9 @@ is worth reading directly. There are two modes, chosen fresh for every
 query — no caller ever picks one explicitly:
 
 - **MAPPED_DOCUMENT mode** — the question matches a topic in
-  `docs-metadata.json` that has a locally-indexed document (keyword-
-  overlap match, see `find_matching_topic`). That topic -> document
+  `docs-metadata.json` that has a locally-indexed document (embedding
+  cosine-similarity match against each topic's name, see
+  `EmbeddingTopicMatcher` in `topic_matcher.py`). That topic -> document
   mapping is trusted metadata, so retrieval is restricted to chunks
   from that one document only — both the dense and BM25 searches run
   with a `source_file` filter for it. Because every candidate that
@@ -173,9 +174,9 @@ entirely rather than trying to out-tune it.
 | One module per RAG step | Each stage (load, chunk, embed, store, retrieve, generate) can be read, tested, and replaced on its own without touching the others. |
 | Hybrid retrieval (dense + BM25 fused by RRF), not dense-only | Dense embeddings miss exact acronyms/policy codes/proper nouns the model has too little signal to place correctly (e.g. "TYL"); BM25 alone misses paraphrases dense search catches naturally. Fusing by rank rather than picking a winner or normalizing scores lets whichever signal is actually strong for a given query carry the result, without the app guessing in advance which one that is. |
 | Cross-encoder reranking as an optional second pass | A cross-encoder scoring `(query, chunk)` jointly is a strictly stronger relevance signal than comparing two independently-computed embeddings, but too slow to run over the whole collection — so it's applied only to the fused pool's best `rerank.candidates`, not the full corpus. |
-| Topic detection from `docs-metadata.json` (`docs_metadata.py`) | The college already maintains a topic -> canonical-URL/filename mapping; reusing it as a lightweight keyword-overlap signal restricts retrieval to the right document for on-topic queries, and lets the app surface a source link even for topics with no locally-ingested PDF. |
+| Topic detection from `docs-metadata.json`, embedding-based (`topic_matcher.py`) | The college already maintains a topic -> canonical-URL/filename mapping; matching a query against each topic's name by embedding cosine similarity (instead of literal keyword overlap) restricts retrieval to the right document even when the query paraphrases the topic name, and lets the app surface a source link even for topics with no locally-ingested PDF. Keyword overlap was tried first and dropped: it misses any topic phrased with different words than the topic's own name (e.g. "who do I email if I'm sick" sharing zero words with "Leave Information, Application and Approval Process"). The similarity threshold is configurable (`retrieval.topic_match_threshold`). |
 | A topic match restricts search to the mapped document (MAPPED_DOCUMENT mode), not an additive score boost | An earlier design boosted a topic-matched chunk's score *after* global search, but reranking then fully rescored the pool and could still bury a correct topic match under an unrelated document — the boost only affected who got a chance in front of the reranker, not who won. Restricting the search itself to the mapped document removes cross-document competition entirely: nothing (fusion, threshold, or reranking) can substitute a different document once one is trusted. |
-| MAPPED_DOCUMENT mode falls back to GLOBAL search if the mapped document has nothing above the relevance threshold | Topic detection is a lightweight keyword-overlap heuristic and can pick the wrong topic (e.g. a generic word like "details" ties across topics). Trusting a wrong mapping with no escape hatch would turn a bad topic match into a hard refusal; falling back to a normal global search only when the trusted document comes up genuinely empty keeps the common case strict without making a heuristic's mistake fatal. |
+| MAPPED_DOCUMENT mode falls back to GLOBAL search if the mapped document has nothing above the relevance threshold | Topic detection is a similarity heuristic and can still pick the wrong topic. Trusting a wrong mapping with no escape hatch would turn a bad topic match into a hard refusal; falling back to a normal global search only when the trusted document comes up genuinely empty keeps the common case strict without making a heuristic's mistake fatal. |
 | Answer LLM is provider-agnostic (`llm.provider: "ollama"` or `"groq"`), built via LangChain's `init_chat_model()` | `llm_client.py` never imports a provider-specific chat class — `init_chat_model(model, model_provider=...)` dispatches to `ChatOllama` or `ChatGroq` based on `config.yaml`, so switching providers (or adding another LangChain-supported one) is a config change, not a code change. Ollama runs fully offline/on-prem (no policy data leaves the machine); Groq is a hosted, much faster option for the same role, authenticated via an API key in the environment (`llm.groq.api_key_env`, default-configured as `GROQ_KEY`). Both providers' models are config values, not hard-coded. |
 | Local `sentence-transformers` (`all-MiniLM-L6-v2`) for embeddings, not an Ollama embedding model | Keeps embedding independent of whatever LLM is configured, runs in-process (no extra network hop), and is small/fast enough to embed every chunk and every query on CPU. |
 | Recursive, separator-cascade chunker (`chunker.py`) instead of a fixed character splitter | Tries paragraph breaks first, then line breaks, then sentence stops, and only hard-cuts by character count as a last resort — so a chunk boundary lands on a natural break in the text instead of mid-sentence whenever possible. |
@@ -334,6 +335,8 @@ typed dataclasses — no code changes needed to retune the system:
 | `chunking` | `separators` | `["\n\n", "\n", ". ", " "]` | Split priority order (paragraph -> line -> sentence -> word) |
 | `retrieval` | `top_k` | `3` | Final chunks returned per question, in both MAPPED_DOCUMENT and GLOBAL mode, after fusion/rerank/filtering |
 | `retrieval` | `min_relevance_score` | `0.40` | Minimum dense cosine similarity to keep a pure-dense chunk; lexical-only hits skip this (different scale). If nothing survives, the pipeline refuses instead of guessing |
+| `retrieval` | `mapped_document_primary_top_k` | `2` | MAPPED_DOCUMENT mode only: cap on how many of the mapped document's own ("PRIMARY") chunks are kept out of `top_k`, before any remaining slots go to a SECONDARY, cross-document search (see `retriever.py`'s `MAPPED_DOCUMENT_PRIMARY_TOP_K`) |
+| `retrieval` | `topic_match_threshold` | `0.5` | Minimum embedding cosine similarity between a query and a topic's name (`docs-metadata.json`) for `EmbeddingTopicMatcher` to count it as a match; below this, retrieval falls back to GLOBAL mode |
 | `retrieval.hybrid` | `enabled` | `true` | GLOBAL mode only: turns on BM25 lexical search fused with dense search via RRF; disabled means dense-only |
 | `retrieval.hybrid` | `candidates` | `10` | GLOBAL mode: chunks fetched from *each* of dense/lexical search before fusion. MAPPED_DOCUMENT mode uses a separate, smaller constant (`MAPPED_DOCUMENT_CANDIDATES = 6` in `retriever.py`, not config — the search space is already one document) |
 | `retrieval.rerank` | `enabled` | `true` | Turns on the cross-encoder reranking pass over the candidate pool (fused GLOBAL pool, or the small MAPPED_DOCUMENT pool) |
@@ -342,7 +345,7 @@ typed dataclasses — no code changes needed to retune the system:
 | `session` | `timeout_minutes` | `5` | Inactivity timeout before a session is treated as expired |
 | `session` | `max_history_messages` | `2` | Most recent chat turns sent to the LLM as conversation context |
 | `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `test-ragas`, kept separate from whichever `llm.provider` answers real questions so it isn't grading its own generations |
-| `evaluation` | `test_data_path` | `./tests/test-question-qnswers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both eval suites |
+| `evaluation` | `test_data_path` | `./tests/evaluation-question-answers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both eval suites |
 | `evaluation` | `min_score` | `0.5` | Minimum mean RAGAS metric score to pass `test-ragas` |
 | `evaluation.retrieval` | `min_recall` / `min_mrr` | `0.6` / `0.5` | Minimum mean Recall@k / MRR to pass `test-retrieval-eval` |
 | `database` | `host` / `port` / `user` / `database` | `127.0.0.1` / `3306` / `sirkumar` / `rag_sessions` | MySQL connection for session/chat history |
@@ -400,7 +403,7 @@ it:
   `TYL - Faculty Orientation...pdf`, the topic's authoritative
   document (previously the reranker was dropping it entirely — see
   git history). Recall is still only 0.5 because the ground truth in
-  `test-question-qnswers.json` lists *two* `relevant_sources`
+  `evaluation-question-answers.json` lists *two* `relevant_sources`
   (`TYL - Faculty Orientation...pdf` **and** `HoD Handbook - CMRIT.pdf`,
   which mentions TYL only in passing). MAPPED_DOCUMENT mode deliberately
   never returns a second document once one is trusted, so this ground
@@ -457,7 +460,7 @@ showing up here as low context_precision.
 
 1. **The ground truth for TYL questions assumes multi-document
    recall, which MAPPED_DOCUMENT mode deliberately doesn't provide** —
-   `test-question-qnswers.json` lists `HoD Handbook - CMRIT.pdf` as a
+   `evaluation-question-answers.json` lists `HoD Handbook - CMRIT.pdf` as a
    "relevant source" for TYL questions because it mentions TYL in
    passing; the authoritative document per `docs-metadata.json` is
    `TYL - Faculty Orientation...pdf` alone. Now that retrieval treats
@@ -469,17 +472,16 @@ showing up here as low context_precision.
    multi-document ones. This is a definitional decision, not a
    retrieval bug — flagging it rather than changing the test data
    unilaterally.
-2. **`find_matching_topic`'s tie-breaking picked the wrong topic for
-   "Give TYL Program Details"** — it ties on keyword-overlap count
-   between the correct TYL topic and an unrelated one sharing only a
-   generic word ("details"), and its tie-break (longer topic string
-   wins) doesn't favor the more specific match. This was always a
-   latent weakness, but restricting retrieval to the resolved topic's
-   document makes a wrong resolution far more consequential than
-   before (it now determines the entire search scope, not just a soft
-   boost). Worth either weighting rarer/more specific keywords more
-   than common ones, or requiring a minimum overlap fraction (not just
-   count) before trusting a topic match enough to restrict search.
+2. ~~**`find_matching_topic`'s tie-breaking picked the wrong topic for
+   "Give TYL Program Details"**~~ — **Resolved.** Topic detection no
+   longer scores by literal keyword overlap at all: `topic_matcher.
+   EmbeddingTopicMatcher` embeds each topic's name once and matches a
+   query by cosine similarity against those vectors, so a generic
+   shared word like "details" no longer ties two unrelated topics —
+   only genuine semantic closeness counts, and paraphrases of a topic
+   name (not just literal keyword matches) are picked up too. The
+   match threshold is `retrieval.topic_match_threshold` in
+   `config.yaml`.
 3. **The GLOBAL fallback (for a bad topic match, or no match at all)
    still has the pre-existing weaknesses hybrid+rerank always had** —
    e.g. no mechanism to diversify across source documents for a

@@ -83,6 +83,8 @@ class HybridConfig:
 class RetrievalConfig:
     top_k: int
     min_relevance_score: float
+    mapped_document_primary_top_k: int
+    topic_match_threshold: float
     hybrid: HybridConfig
     rerank: RerankConfig
 

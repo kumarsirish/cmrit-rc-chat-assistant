@@ -26,7 +26,7 @@ langchain
 langchain-groq
 
 # RAGAS: LLM-judged evaluation of the RAG pipeline's answers against
-# the reference Q&A pairs in tests/test-question-qnswers.json (see
+# the reference Q&A pairs in tests/evaluation-question-answers.json (see
 # tests/test_ragas_judge.py, `make test-ragas`).
 ragas
 

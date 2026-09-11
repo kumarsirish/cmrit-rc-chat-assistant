@@ -25,7 +25,6 @@ import time
 
 from rag.generation import context_builder
 from rag.generation.llm_client import LlmClient
-from rag.indexing.docs_metadata import find_matching_topic
 from rag.response import response_processor
 from rag.response.response_processor import NO_MATCH_MESSAGE, RagAnswer, SourceReference  # re-exported
 from rag.retrieval.retriever import Retriever
@@ -37,6 +36,16 @@ SYSTEM_PROMPT = (
     "Do not use any outside knowledge, even if you believe it to be true. "
     "If the CONTEXT does not contain the answer, reply exactly: "
     f'"{NO_MATCH_MESSAGE}" '
+    "Answer ONLY the specific question asked — nothing more. Do not "
+    "add related rules, exceptions, background, or nearby policies "
+    "from the CONTEXT that the question did not ask about, even if "
+    "they cover the same document or topic. For example, if asked how "
+    "many casual leaves are allowed, state only that number — do not "
+    "also describe vacation leave, compensatory-off, or approval "
+    "steps unless the question asked about those too. When a detail "
+    "in the CONTEXT is a direct precondition for the answer (e.g. an "
+    "eligibility requirement the number depends on), include it; "
+    "otherwise leave it out. "
     "Keep URLs from the context exactly as written and include them if they are relevant. "
     "Cite your source for every factual claim: immediately after the "
     "sentence, add the bracketed number of the CONTEXT source it came "
@@ -52,7 +61,12 @@ SYSTEM_PROMPT = (
     "current question purely to resolve references like 'it' or 'that "
     "leave type' — they are not an additional source of facts. Every "
     "factual claim must still come from the CONTEXT given with the "
-    "current question."
+    "current question. "
+    "Format the answer for readability: never write it as one long "
+    "paragraph. Break it into short paragraphs of no more than 5-6 "
+    "sentences each, and when the answer describes a sequence of "
+    "steps, a process, or a list of items, use numbered steps or "
+    "bullet points instead of prose."
 )
 
 logger = logging.getLogger(__name__)
@@ -61,10 +75,9 @@ logger = logging.getLogger(__name__)
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
-    def __init__(self, retriever: Retriever, llm_client: LlmClient, doc_topics: list = None):
+    def __init__(self, retriever: Retriever, llm_client: LlmClient):
         self._retriever = retriever
         self._llm_client = llm_client
-        self._doc_topics = doc_topics or []
 
     def answer(self, question: str, conversation_history: list = None) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
@@ -78,7 +91,7 @@ class RagPipeline:
         overall_start = time.perf_counter()
         chunks = self._retriever.retrieve(question)
         retrieval_seconds = time.perf_counter() - overall_start
-        matched_topic = find_matching_topic(question, self._doc_topics)
+        matched_topic = self._retriever.match_topic(question)
 
         if not chunks:
             total_seconds = time.perf_counter() - overall_start

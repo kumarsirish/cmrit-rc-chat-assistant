@@ -17,6 +17,9 @@ class FakeRetriever:
         self.last_query = question
         return self._chunks
 
+    def match_topic(self, question):
+        return None
+
 
 class FakeLlmClient:
     def __init__(self, reply):

@@ -1,17 +1,17 @@
 {
   "k": 5,
   "mean_scores": {
-    "recall": 1.0,
-    "precision": 0.25,
-    "reciprocal_rank": 0.5,
-    "ndcg": 0.5
+    "recall": 0.9583333333333334,
+    "precision": 0.2833333333333333,
+    "reciprocal_rank": 0.5881944444444445,
+    "ndcg": 0.629677368931854
   },
   "mean_by_category": {
     "normal": {
-      "recall": 1.0,
-      "precision": 0.5,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "recall": 0.9545454545454546,
+      "precision": 0.3090909090909091,
+      "reciprocal_rank": 0.6416666666666667,
+      "ndcg": 0.6869207661074771
     },
     "unanswerable": {
       "recall": 1.0,
@@ -33,7 +33,7 @@
       "category": "normal",
       "question": "how to get vacation leave approved",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 0.6,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -52,6 +52,166 @@
       "precision": 0.0,
       "reciprocal_rank": 0.0,
       "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "how many casual leaves are permanent staff allowed per year",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
+    },
+    {
+      "category": "normal",
+      "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.5
+    },
+    {
+      "category": "normal",
+      "question": "when do unused casual and vacation leaves expire",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
+    },
+    {
+      "category": "normal",
+      "question": "what counts as half a casual leave for coming late",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.5
+    },
+    {
+      "category": "normal",
+      "question": "how long is the probation period for new employees at CMRIT",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "when does the probation completion process start in Darwinbox",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "does CMRIT provide PF and ESI benefits to staff",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what flexible working hours option do staff get",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what compensatory off is given for working on a holiday",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.43067655807339306
+    },
+    {
+      "category": "normal",
+      "question": "what is CMRIT's quality policy",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what does tyt stand for",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.5
+    },
+    {
+      "category": "normal",
+      "question": "what are the responsibilities of the Director at CMRIT",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "what is the head of department expected to focus on",
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.9197207891481876
+    },
+    {
+      "category": "normal",
+      "question": "what mandatory training must new faculty complete within six months of joining",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "how often is the faculty semester evaluation done",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what weightage do core activities like teaching and research carry in the faculty evaluation",
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what is the official CMRIT website address",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "who do I contact in case of a medical emergency at CMRIT",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "who is the contact for infrastructure related issues on campus",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "is work from home available during a family medical emergency",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     }
   ]
 }

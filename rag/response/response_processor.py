@@ -124,7 +124,7 @@ def build_no_result_response(
 ) -> RagAnswer:
     """Builds the response for "nothing was retrieved".
 
-    matched_topic (see docs_metadata.find_matching_topic), if set,
+    matched_topic (see topic_matcher.EmbeddingTopicMatcher), if set,
     means the question was recognized as being about a known topic
     that simply has no locally-indexed document — the reply points at
     that topic's official link instead of a bare refusal.

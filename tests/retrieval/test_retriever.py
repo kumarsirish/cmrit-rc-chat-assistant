@@ -9,6 +9,9 @@ class FakeEmbeddingGenerator:
     def embed_query(self, text):
         return [1.0, 0.0, 0.0]
 
+    def embed_texts(self, texts):
+        return [self.embed_query(text) for text in texts]
+
 
 @dataclass
 class FakeDocument:

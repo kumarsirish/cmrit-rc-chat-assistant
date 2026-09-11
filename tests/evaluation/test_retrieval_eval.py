@@ -1,7 +1,7 @@
 """Classic IR evaluation of the retriever alone, apart from the
 LLM-judged generation metrics in test_ragas_judge.py.
 
-For every case in tests/test-question-qnswers.json that has a
+For every case in tests/evaluation-question-answers.json that has a
 "relevant_sources" list (the ground-truth source files for that
 question), runs the real hybrid Retriever against the real Chroma
 store and scores Recall@K/Precision@K/MRR/NDCG@K (see
@@ -76,6 +76,8 @@ def retriever(config):
         reranker=Reranker(config.retrieval.rerank.model) if config.retrieval.rerank.enabled else None,
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
+        mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
+        topic_match_threshold=config.retrieval.topic_match_threshold,
     )
 
 
