@@ -27,6 +27,10 @@ env/
 chroma_store/
 logs/
 
+# MLflow's local experiment tracking store (scripts/run_experiment.py)
+mlflow.db
+mlruns/
+
 # Editor / IDE
 .vscode/
 .idea/

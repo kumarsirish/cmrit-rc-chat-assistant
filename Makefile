@@ -1,4 +1,4 @@
-.PHONY: install download-embedding-model ingest run run-debug test test-ragas test-retrieval-eval metrics clean
+.PHONY: install download-embedding-model ingest run run-debug test test-ragas test-retrieval-eval metrics experiment mlflow-ui clean
 
 install:
 	pip install -r requirements.txt
@@ -50,6 +50,20 @@ test-retrieval-eval:
 # judge metrics (faithfulness/answer_relevancy/etc, see test-ragas).
 # Needs an ingested Chroma store and, for test-ragas, Ollama running.
 metrics: test-retrieval-eval test-ragas
+
+# Runs one retrieval evaluation and logs it as an MLflow run (params,
+# metrics, resolved config) to ./mlflow.db, for comparing model/
+# hyperparameter changes over time. Unlike test-retrieval-eval this is
+# not a pass/fail gate — it's the tool for deliberate experiments. For
+# --set overrides or --run-name, call the script directly instead:
+#   python scripts/run_experiment.py --set retrieval.top_k=3 --run-name my-experiment
+experiment:
+	python scripts/run_experiment.py
+
+# Opens the MLflow UI over the local tracking store, to compare
+# experiment runs logged by `make experiment`.
+mlflow-ui:
+	mlflow ui --backend-store-uri sqlite:///mlflow.db
 
 # Removes generated caches/build artifacts (see .gitignore) — bytecode,
 # test/lint caches, coverage reports, packaging output. Does NOT touch

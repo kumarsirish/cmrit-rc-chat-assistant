@@ -314,6 +314,80 @@ make run-debug
 | `make test-retrieval-eval` | Runs the retrieval-only IR metrics (Recall/Precision/MRR/NDCG@k) against the real Chroma store, no LLM call |
 | `make test-ragas` | Runs the RAGAS judge evaluation against the real pipeline (needs Ollama + an ingested Chroma store) |
 | `make metrics` | Runs `test-retrieval-eval` then `test-ragas` back to back |
+| `make experiment` | Runs one retrieval evaluation and logs it as an MLflow run — see "Experiment tracking" below |
+| `make mlflow-ui` | Opens the MLflow UI to compare experiment runs |
+
+## Experiment tracking (MLflow)
+
+`make test-retrieval-eval` is a pass/fail gate (did retrieval stay
+above `min_recall`/`min_mrr`); it doesn't keep history. For comparing
+*different* models/hyperparameters against each other over time —
+"is `top_k=8` better than `top_k=5`?", "does swapping the reranker
+model help?" — `scripts/run_experiment.py` runs the same classic IR
+evaluation (Recall/Precision/MRR/NDCG@k) but logs the result as a
+comparable MLflow run instead of just asserting a threshold.
+
+Tracking is entirely local — no server, no Docker: run metadata
+(params/metrics/tags) goes in `./mlflow.db` (SQLite), artifacts
+(resolved config, full per-question results) go under `./mlruns/`.
+Both are gitignored; nothing here is shared or synced anywhere.
+
+### Running an experiment
+
+```bash
+# Run with config.yaml exactly as it is:
+make experiment
+
+# Override one or more values for this run only, without editing config.yaml:
+python scripts/run_experiment.py --run-name my-change --set retrieval.top_k=3
+
+# Or name a reusable hyperparameter set in experiments.yaml instead of typing --set flags:
+python scripts/run_experiment.py --overrides-file experiments.yaml --experiment low_threshold
+```
+
+`--set` accepts any dotted path under `config.yaml`'s `retrieval`,
+`embedding`, or `chunking` sections (e.g. `retrieval.hybrid.dense_weight`,
+`retrieval.rerank.model`, `embedding.model_name`) — repeat the flag for
+multiple overrides; each value is parsed to match that field's
+existing type (int/float/bool/str) automatically. `experiments.yaml`
+holds the same overrides as named, reusable blocks — see the file for
+the format and a few example presets (`low_threshold`, `wide_top_k`,
+`lexical_heavy`, `alt_reranker`).
+
+One caveat: overriding `embedding.model_name` (or anything under
+`chunking`) only changes what the *query* is embedded/compared with
+at evaluation time — it does not rebuild `chroma_store/`. Comparing
+embedding models or chunk sizes fairly requires re-ingesting with that
+setting first (`make ingest`), since those overrides can't retroactively
+change what's already indexed.
+
+### Comparing runs
+
+```bash
+make mlflow-ui
+```
+
+Opens the MLflow UI (`http://localhost:5000`) over `./mlflow.db`. Each
+run shows:
+
+- **Params** — the full resolved `config.yaml` (after any overrides),
+  flattened to dotted keys, e.g. `retrieval.top_k`, `retrieval.rerank.model`
+- **Metrics** — `recall`, `precision`, `reciprocal_rank` (MRR), `ndcg`,
+  both overall and per-category (e.g. `normal_recall`, `unanswerable_precision`)
+- **Tags** — `git_commit`, `git_branch`, `git_dirty` (uncommitted
+  changes at run time), `dataset_hash`/`dataset_num_cases` (which
+  version of `evaluation-question-answers.json` was scored),
+  `num_indexed_chunks`, `chroma_store_mtime`, and a
+  `reproducibility_warning` noting that chunking params are logged
+  from `config.yaml` but aren't verified against what `chroma_store/`
+  was actually built with
+- **Artifacts** — `resolved_config.json` (the full nested config, not
+  just the flattened params) and `retrieval_results.json` (per-question
+  scores, not just the means)
+
+Sort/filter by any metric or tag in the UI to compare runs — e.g. sort
+by `recall` descending to find the best-performing configuration tried
+so far.
 
 ## Configuration
 

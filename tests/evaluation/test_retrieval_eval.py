@@ -17,12 +17,11 @@ ingested Chroma store, so it's excluded from the default `pytest`/
 """
 
 import json
-import statistics
 
 import pytest
 
 from rag.common.config import load_config
-from rag.evaluation.retrieval_metrics import ndcg_at_k, precision_at_k, reciprocal_rank, recall_at_k
+from rag.evaluation.evaluate_retrieval import evaluate_retrieval
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.embeddings import EmbeddingGenerator
 from rag.retrieval.dense_retriever import DenseRetriever
@@ -93,47 +92,14 @@ def test_retrieval_quality_meets_minimum_thresholds(config, retrieval_service):
     ]
     assert test_cases, "No test cases with 'relevant_sources' to evaluate retrieval against."
 
-    k = config.retrieval.top_k
-    rows = []
-    for case in test_cases:
-        chunks, _ = retrieval_service.retrieve(case["question"])
-        retrieved_sources = [chunk.source_file for chunk in chunks]
-        relevant_sources = set(case["relevant_sources"])
-        rows.append(
-            {
-                "category": case.get("category", "uncategorized"),
-                "question": case["question"],
-                "recall": recall_at_k(retrieved_sources, relevant_sources, k),
-                "precision": precision_at_k(retrieved_sources, relevant_sources, k),
-                "reciprocal_rank": reciprocal_rank(retrieved_sources, relevant_sources),
-                "ndcg": ndcg_at_k(retrieved_sources, relevant_sources, k),
-            }
-        )
+    result = evaluate_retrieval(retrieval_service, test_cases, config.retrieval.top_k)
+    mean_scores = result["mean_scores"]
 
-    mean_scores = {
-        metric: statistics.mean(row[metric] for row in rows)
-        for metric in ("recall", "precision", "reciprocal_rank", "ndcg")
-    }
-    by_category = {}
-    for row in rows:
-        by_category.setdefault(row["category"], []).append(row)
-    mean_by_category = {
-        category: {
-            metric: statistics.mean(row[metric] for row in category_rows)
-            for metric in ("recall", "precision", "reciprocal_rank", "ndcg")
-        }
-        for category, category_rows in by_category.items()
-    }
-
-    print(f"\nRetrieval mean scores (k={k}): {mean_scores}")
-    print(f"Retrieval mean scores by category: {mean_by_category}")
+    print(f"\nRetrieval mean scores (k={result['k']}): {mean_scores}")
+    print(f"Retrieval mean scores by category: {result['mean_by_category']}")
 
     with open(config.evaluation.retrieval.results_path, "w", encoding="utf-8") as results_file:
-        json.dump(
-            {"k": k, "mean_scores": mean_scores, "mean_by_category": mean_by_category, "rows": rows},
-            results_file,
-            indent=2,
-        )
+        json.dump(result, results_file, indent=2)
 
     failing = {
         "recall": mean_scores["recall"] < config.evaluation.retrieval.min_recall,
