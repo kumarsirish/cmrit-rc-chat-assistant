@@ -10,7 +10,7 @@ embed, store) rather than one function, so e.g. metadata-building can
 be unit-tested without touching the embedding model or Chroma. The
 BM25 index is deliberately not built/persisted here — it's rebuilt in
 memory from the vector store at application startup (see
-rag/indexing/bm25_index.py), so there's nothing for ingestion to write for it.
+rag/retrieval/bm25_retriever.py), so there's nothing for ingestion to write for it.
 """
 
 import logging
@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rag.common.config import AppConfig, load_config
-from rag.indexing.docs_metadata import DocTopic, build_filename_topic_map, load_doc_topics
+from rag.routing.docs_metadata import DocTopic, build_filename_topic_map, load_doc_topics
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.chunker import Chunk, chunk_documents
 from rag.ingestion.document_loader import load_all_documents

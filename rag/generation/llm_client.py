@@ -80,10 +80,13 @@ class LlmClient:
         self._llm = init_chat_model(model=model, model_provider=provider, **kwargs)
 
     @classmethod
-    def from_config(cls, llm_config) -> "LlmClient":
+    def from_config(cls, llm_config, temperature: float = None) -> "LlmClient":
         """Builds the client for whichever provider llm_config.provider
         selects, reading that provider's settings block (llm_config.ollama
         / llm_config.groq / ...) off the same AppConfig.llm object.
+
+        temperature, if given, overrides that provider's configured
+        temperature (used by the UI's temperature slider).
 
         This is the one place that needs to know the provider-config
         blocks share a (model, temperature, request_timeout_seconds, ...)
@@ -94,7 +97,7 @@ class LlmClient:
         return cls(
             provider=provider,
             model=provider_cfg.model,
-            temperature=provider_cfg.temperature,
+            temperature=provider_cfg.temperature if temperature is None else temperature,
             timeout_seconds=provider_cfg.request_timeout_seconds,
             **{
                 field: value

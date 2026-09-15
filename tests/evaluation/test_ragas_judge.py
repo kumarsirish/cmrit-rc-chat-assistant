@@ -54,12 +54,13 @@ from ragas.run_config import RunConfig
 from rag.common.config import load_config
 from rag.generation.llm_client import LlmClient
 from rag.generation.rag_pipeline import RagPipeline
-from rag.indexing.bm25_index import BM25Index
-from rag.indexing.docs_metadata import load_doc_topics
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.embeddings import EmbeddingGenerator
+from rag.retrieval.bm25_retriever import BM25Index
+from rag.retrieval.dense_retriever import DenseRetriever
 from rag.retrieval.reranker import Reranker
-from rag.retrieval.retriever import Retriever
+from rag.retrieval.retrieval_service import RetrievalService
+from rag.routing.docs_metadata import load_doc_topics
 
 pytestmark = pytest.mark.ragas
 
@@ -77,22 +78,21 @@ def config():
     return load_config()
 
 
-class _CapturingRetriever:
-    """Wraps a real Retriever and remembers the chunks its last call
-    returned, so evaluation_dataset can reuse the exact chunks
+class _CapturingRetrievalService:
+    """Wraps a real RetrievalService and remembers the chunks its last
+    call returned, so evaluation_dataset can reuse the exact chunks
     pipeline.answer() retrieved internally instead of calling
-    retriever.retrieve() a second time for the same question."""
+    retrieve() a second time for the same question."""
 
-    def __init__(self, retriever):
-        self._retriever = retriever
+    def __init__(self, retrieval_service):
+        self._retrieval_service = retrieval_service
         self.last_chunks = []
 
-    def retrieve(self, query, metadata_filter=None):
-        self.last_chunks = self._retriever.retrieve(query, metadata_filter)
-        return self.last_chunks
-
-    def match_topic(self, query):
-        return self._retriever.match_topic(query)
+    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None):
+        self.last_chunks, matched_topic = self._retrieval_service.retrieve(
+            query, metadata_filter, top_k=top_k, min_reranker_score=min_reranker_score
+        )
+        return self.last_chunks, matched_topic
 
 
 @pytest.fixture(scope="module")
@@ -105,17 +105,20 @@ def pipeline_and_retriever(config):
         collection_name=config.chroma.collection_name,
     )
     # doc_topics must be passed here the same way dashboard.py passes it
-    # to the production Retriever — otherwise this evaluation silently
-    # scores GLOBAL-mode-only behavior and never exercises the
+    # to the production RetrievalService — otherwise this evaluation
+    # silently scores GLOBAL-mode-only behavior and never exercises the
     # MAPPED_DOCUMENT path real users' topic-matched queries actually take.
     doc_topics = load_doc_topics(config.documents.metadata_file)
-    retriever = Retriever(
-        vector_store=vector_store,
+    retrieval_service = RetrievalService(
+        dense_retriever=DenseRetriever(vector_store),
         embedding_generator=embedding_generator,
         top_k=config.retrieval.top_k,
+        min_reranker_score=config.retrieval.min_reranker_score,
         min_relevance_score=config.retrieval.min_relevance_score,
         bm25_index=BM25Index.from_vector_store(vector_store) if config.retrieval.hybrid.enabled else None,
         hybrid_candidates=config.retrieval.hybrid.candidates,
+        dense_weight=config.retrieval.hybrid.dense_weight,
+        lexical_weight=config.retrieval.hybrid.lexical_weight,
         reranker=Reranker(config.retrieval.rerank.model)
         if config.retrieval.rerank.enabled
         else None,
@@ -124,10 +127,10 @@ def pipeline_and_retriever(config):
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
     )
-    capturing_retriever = _CapturingRetriever(retriever)
+    capturing_retrieval_service = _CapturingRetrievalService(retrieval_service)
     llm_client = LlmClient.from_config(config.llm)
-    pipeline = RagPipeline(retriever=capturing_retriever, llm_client=llm_client)
-    return pipeline, capturing_retriever
+    pipeline = RagPipeline(retrieval_service=capturing_retrieval_service, llm_client=llm_client)
+    return pipeline, capturing_retrieval_service
 
 
 @pytest.fixture(scope="module")

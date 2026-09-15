@@ -1,4 +1,4 @@
-from rag.indexing.docs_metadata import DocTopic, build_filename_topic_map
+from rag.routing.docs_metadata import DocTopic, build_filename_topic_map
 
 
 def _sample_topics():

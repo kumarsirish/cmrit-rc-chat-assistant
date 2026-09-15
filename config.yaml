@@ -42,7 +42,7 @@ llm:
     # Groq is hosted (no CPU inference budget to protect), so this is
     # just an answer-length cap, not a latency safety valve like
     # ollama.num_predict.
-    max_tokens: 220
+    max_tokens: 800
     # Name of the environment variable holding the Groq API key. Kept
     # configurable (rather than hard-coding GROQ_API_KEY) because this
     # deployment's key is already set as GROQ_KEY.
@@ -88,9 +88,34 @@ retrieval:
   # PRIMARY alone consuming the entire budget and leaving no slots for
   # a second, genuinely relevant document on multi-document questions.
   top_k: 5
-  # Chunks whose similarity score falls below this value are treated
-  # as "not relevant enough" so the assistant can refuse to answer
-  # instead of guessing from unrelated context.
+  # Minimum cross-encoder reranker score to keep a chunk; anything
+  # below this is treated as "not relevant enough" so the assistant
+  # can refuse instead of guessing from unrelated context.
+  #
+  # This used to be min_relevance_score: 0.40, a threshold on dense
+  # cosine similarity ([0, 1] scale). Since the reranker score is now
+  # the authoritative relevance signal (see retrieval_service.py),
+  # that old number has no meaning here — bge-reranker-base scores
+  # aren't cosine similarity. 0.35 was picked by scoring real
+  # (question, chunk) pairs from tests/evaluation-question-answers.json
+  # with the reranker and comparing scores for chunks from a
+  # question's relevant_sources vs. chunks that weren't: 0.35 had the
+  # best precision/recall balance (F1) of the thresholds tried. This
+  # is document-level ground truth (not every chunk in a "relevant"
+  # document actually answers the question), so treat it as a
+  # reasonable starting point, not a precisely tuned number.
+  min_reranker_score: 0.35
+  # Used only for PRIMARY (MAPPED_DOCUMENT) search — the mapped
+  # document is already trusted by the topic match, so its own chunks
+  # are judged by dense cosine similarity, not the reranker score. A
+  # cross-encoder can genuinely score a short/heading-like chunk low
+  # even when it's clearly the right one (observed: "Welfare Measures
+  # for Teaching and Non-Teaching Staff" scored 0.18 by the reranker,
+  # despite being the #1 dense AND lexical hit in its own document) —
+  # letting that evict PRIMARY's own top chunk just forces a worse
+  # GLOBAL fallback. The reranker still reorders PRIMARY's results,
+  # it just can't drop one outright. This is the original 0.40 cosine
+  # threshold from before reranker_score became the gate elsewhere.
   min_relevance_score: 0.40
   # Cap on how many of the mapped document's own chunks ("PRIMARY")
   # are kept, out of top_k, before any remaining slots go to a
@@ -98,7 +123,7 @@ retrieval:
   # MAPPED_DOCUMENT_PRIMARY_TOP_K docstring for the full rationale.
   # Deliberately small rather than top_k itself: a short,
   # single-subject policy PDF frequently has several chunks that
-  # individually clear min_relevance_score, which would otherwise let
+  # individually clear min_reranker_score, which would otherwise let
   # PRIMARY silently consume the entire top_k budget on its own every
   # time and leave SECONDARY no room to ever run.
   mapped_document_primary_top_k: 2
@@ -121,6 +146,11 @@ retrieval:
     # index is not queried).
     enabled: true
     candidates: 10   # chunks fetched from EACH of dense/lexical search before fusion
+    # How much each search method's rank counts toward the fused RRF
+    # score. Equal by default — neither method is trusted more than
+    # the other without evidence one should be.
+    dense_weight: 0.5
+    lexical_weight: 0.5
   rerank:
     # When enabled, the candidate pool (fused dense+lexical for GLOBAL
     # mode, or the small mapped-document dense pool for MAPPED_DOCUMENT

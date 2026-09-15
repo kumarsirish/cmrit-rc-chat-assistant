@@ -5,20 +5,18 @@ file (test_context_builder.py, test_response_processor.py).
 """
 
 from rag.generation.rag_pipeline import NO_MATCH_MESSAGE, RagPipeline
-from rag.retrieval.retriever import RetrievedChunk
+from rag.retrieval.retrieval_service import RetrievedChunk
 
 
-class FakeRetriever:
-    def __init__(self, chunks):
+class FakeRetrievalService:
+    def __init__(self, chunks, matched_topic=None):
         self._chunks = chunks
+        self._matched_topic = matched_topic
         self.last_query = None
 
-    def retrieve(self, question):
+    def retrieve(self, question, top_k=None, min_reranker_score=None):
         self.last_query = question
-        return self._chunks
-
-    def match_topic(self, question):
-        return None
+        return self._chunks, self._matched_topic
 
 
 class FakeLlmClient:
@@ -34,10 +32,10 @@ class FakeLlmClient:
 
 
 def test_answer_refuses_without_calling_llm_when_no_chunks_found():
-    retriever = FakeRetriever(chunks=[])
+    retriever = FakeRetrievalService(chunks=[])
     llm_client = FakeLlmClient(reply="should not be used")
 
-    pipeline = RagPipeline(retriever=retriever, llm_client=llm_client)
+    pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
     result = pipeline.answer("What is the capital of France?")
 
     assert result.answer_text == NO_MATCH_MESSAGE
@@ -55,10 +53,10 @@ def test_answer_is_grounded_and_includes_sources_when_chunks_found():
             relevance_score=0.82,
         )
     ]
-    retriever = FakeRetriever(chunks=chunks)
+    retriever = FakeRetrievalService(chunks=chunks)
     llm_client = FakeLlmClient(reply="Staff must apply for leave 3 days in advance [1].")
 
-    pipeline = RagPipeline(retriever=retriever, llm_client=llm_client)
+    pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
     result = pipeline.answer("How far in advance should I apply for leave?")
 
     assert result.grounded is True
@@ -78,14 +76,14 @@ def test_answer_forwards_conversation_history_to_the_llm_but_not_to_retrieval():
             relevance_score=0.82,
         )
     ]
-    retriever = FakeRetriever(chunks=chunks)
+    retriever = FakeRetrievalService(chunks=chunks)
     llm_client = FakeLlmClient(reply="Yes, the same rule applies.")
     history = [
         {"role": "user", "content": "How far in advance should I apply for leave?"},
         {"role": "assistant", "content": "At least 3 days in advance."},
     ]
 
-    pipeline = RagPipeline(retriever=retriever, llm_client=llm_client)
+    pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
     pipeline.answer("What about sick leave?", conversation_history=history)
 
     # The LLM sees the full conversation history ...
@@ -105,10 +103,10 @@ def test_answer_defaults_to_no_conversation_history():
             relevance_score=0.82,
         )
     ]
-    retriever = FakeRetriever(chunks=chunks)
+    retriever = FakeRetrievalService(chunks=chunks)
     llm_client = FakeLlmClient(reply="Staff must apply for leave 3 days in advance.")
 
-    pipeline = RagPipeline(retriever=retriever, llm_client=llm_client)
+    pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
     pipeline.answer("How far in advance should I apply for leave?")
 
     assert llm_client.last_conversation_history is None

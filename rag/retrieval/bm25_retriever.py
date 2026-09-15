@@ -1,36 +1,46 @@
-"""Step 4a: BM25 lexical retrieval.
+"""BM25 lexical retrieval.
 
-Dense embedding search (see vector_store.py) captures semantic
-similarity but can miss exact keyword matches — acronyms, policy
-codes, proper nouns — that the embedding model has too little signal
-to place correctly. BM25 scores chunks by term frequency against the
-query's literal tokens, which is exactly the signal dense search is
-weak on.
+Dense embedding search can miss exact keyword matches (acronyms,
+policy codes, proper nouns). BM25 scores chunks by term frequency
+against the query's literal tokens, which covers that gap.
+
+This stays custom instead of using langchain_community's BM25Retriever
+for two reasons: BM25Retriever has no way to filter by metadata after
+scoring (needed for PRIMARY/SECONDARY/GLOBAL scoping), and it has no
+token-overlap gate, so it can return a "match" with a near-zero score
+and no real lexical overlap. Building one BM25Retriever per source_file
+instead would also change the IDF/avgdl statistics for every term,
+which is a different retrieval model, not just a filtering change.
 
 The whole corpus is small (a few hundred/thousand chunks), so the
 index is just an in-memory rank_bm25.BM25Okapi built once from every
-chunk in the Chroma collection (see BM25Index.from_vector_store),
-rather than anything persisted separately from the vector store.
+chunk in the Chroma collection, rather than persisted separately.
 """
 
+import operator
 import re
 from dataclasses import dataclass
 
 from rank_bm25 import BM25Okapi
 
-from rag.retrieval.keyword_extraction import _STOPWORDS
-
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+
+_STOPWORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "what", "who", "whom", "which", "how", "why", "when", "where",
+    "do", "does", "did", "doing", "can", "could", "should", "would",
+    "will", "shall", "may", "might", "must",
+    "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
+    "my", "your", "his", "its", "our", "their",
+    "for", "of", "to", "in", "on", "at", "by", "with", "about", "as",
+    "and", "or", "but", "if", "so", "this", "that", "these", "those",
+    "tell", "explain", "please",
+}
 
 
 def _tokenize(text: str) -> list:
-    # Stopwords excluded (same list keyword_extraction.py uses): left
-    # in, a query like "What is the capital of France?" shares "is"/
-    # "the"/"of" with nearly every chunk in the corpus, which BM25
-    # would then score as a genuine lexical match — exactly the false
-    # positive a completely unrelated question must NOT produce, since
-    # a lexical hit bypasses the dense relevance threshold downstream
-    # (see retriever.py).
+    # Stopwords removed so a query like "what is the capital of
+    # France?" doesn't share "is"/"the"/"of" with nearly every chunk.
     return [token for token in _TOKEN_PATTERN.findall(text.lower()) if token not in _STOPWORDS]
 
 
@@ -42,9 +52,7 @@ def _matches_filter(metadata: dict, metadata_filter: dict) -> bool:
 
 @dataclass
 class BM25Document:
-    """One chunk as seen by the BM25 index: just enough to score and
-    identify it, mirroring the shape of a langchain Document (.metadata)
-    without depending on langchain."""
+    """One chunk as seen by the BM25 index."""
 
     text: str
     metadata: dict
@@ -62,8 +70,7 @@ class BM25Index:
     @classmethod
     def from_vector_store(cls, vector_store) -> "BM25Index":
         """Builds the index from every chunk currently stored in
-        vector_store. Called once at startup; the app is read-only
-        against the index between ingestion runs."""
+        vector_store. Called once at startup."""
         documents = [
             BM25Document(text=text, metadata=metadata)
             for text, metadata in vector_store.get_all_documents()
@@ -73,8 +80,7 @@ class BM25Index:
     def search(self, query: str, top_k: int, metadata_filter: dict = None) -> list:
         """Returns up to top_k (BM25Document, score) pairs whose text
         shares at least one token with query, most relevant first,
-        optionally restricted to documents whose metadata matches every
-        key/value in metadata_filter.
+        optionally restricted by metadata_filter.
         """
         if not self._bm25 or not self._documents:
             return []
@@ -83,18 +89,15 @@ class BM25Index:
         if not query_tokens:
             return []
 
-        # BM25's IDF term goes to 0/negative for a token that appears
-        # in every document of a small corpus (trivially true for a
-        # 1-2 document test fixture, and possible in production for a
-        # near-universal word) — a plain score > 0 filter would wrongly
-        # drop a real, literal match in that case. Token overlap
-        # decides *candidacy*; the (possibly negative) BM25 score is
-        # only used to *rank* the candidates that qualify.
+        # A token that appears in every document of a small corpus can
+        # give BM25 a score near/below zero even for a real match, so
+        # token overlap (not the raw score) decides candidacy; the
+        # score is only used to rank the candidates that qualify.
         scores = self._bm25.get_scores(list(query_tokens))
         candidates = [
             (document, score)
             for document, score, token_set in zip(self._documents, scores, self._token_sets)
             if token_set & query_tokens and _matches_filter(document.metadata, metadata_filter)
         ]
-        candidates.sort(key=lambda pair: pair[1], reverse=True)
+        candidates.sort(key=operator.itemgetter(1), reverse=True)
         return candidates[:top_k]

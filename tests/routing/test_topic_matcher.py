@@ -1,5 +1,5 @@
-from rag.indexing.docs_metadata import DocTopic
-from rag.indexing.topic_matcher import EmbeddingTopicMatcher
+from rag.routing.docs_metadata import DocTopic
+from rag.routing.topic_matcher import EmbeddingTopicMatcher
 
 
 class FakeEmbeddingGenerator:

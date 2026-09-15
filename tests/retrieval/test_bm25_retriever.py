@@ -1,4 +1,4 @@
-from rag.indexing.bm25_index import BM25Document, BM25Index
+from rag.retrieval.bm25_retriever import BM25Document, BM25Index
 
 
 def _index(entries):

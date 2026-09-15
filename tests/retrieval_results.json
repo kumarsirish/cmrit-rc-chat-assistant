@@ -1,23 +1,23 @@
 {
   "k": 5,
   "mean_scores": {
-    "recall": 0.9583333333333334,
-    "precision": 0.2833333333333333,
-    "reciprocal_rank": 0.5881944444444445,
-    "ndcg": 0.629677368931854
+    "recall": 0.9791666666666666,
+    "precision": 0.4909722222222222,
+    "reciprocal_rank": 0.7256944444444444,
+    "ndcg": 0.7502473522283263
   },
   "mean_by_category": {
     "normal": {
-      "recall": 0.9545454545454546,
-      "precision": 0.3090909090909091,
-      "reciprocal_rank": 0.6416666666666667,
-      "ndcg": 0.6869207661074771
+      "recall": 0.9772727272727273,
+      "precision": 0.4446969696969697,
+      "reciprocal_rank": 0.7007575757575758,
+      "ndcg": 0.7275425660672651
     },
     "unanswerable": {
       "recall": 1.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     }
   },
   "rows": [
@@ -33,7 +33,7 @@
       "category": "normal",
       "question": "how to get vacation leave approved",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.6666666666666666,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -41,17 +41,17 @@
       "category": "unanswerable",
       "question": "What is the capital of France?",
       "recall": 1.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     },
     {
       "category": "unanswerable",
       "question": "What is the process to get a refund for a cancelled flight booking?",
       "recall": 1.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     },
     {
       "category": "normal",
@@ -81,7 +81,7 @@
       "category": "normal",
       "question": "what counts as half a casual leave for coming late",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.25,
       "reciprocal_rank": 0.25,
       "ndcg": 0.5
     },
@@ -89,7 +89,7 @@
       "category": "normal",
       "question": "how long is the probation period for new employees at CMRIT",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 0.3333333333333333,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -97,7 +97,7 @@
       "category": "normal",
       "question": "when does the probation completion process start in Darwinbox",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -113,7 +113,7 @@
       "category": "normal",
       "question": "what flexible working hours option do staff get",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -122,14 +122,14 @@
       "question": "what compensatory off is given for working on a holiday",
       "recall": 1.0,
       "precision": 0.2,
-      "reciprocal_rank": 0.2,
-      "ndcg": 0.43067655807339306
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
     },
     {
       "category": "normal",
       "question": "what is CMRIT's quality policy",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 0.2,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -137,31 +137,31 @@
       "category": "normal",
       "question": "what does tyt stand for",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 0.6,
       "reciprocal_rank": 0.3333333333333333,
       "ndcg": 0.5
     },
     {
       "category": "normal",
       "question": "what are the responsibilities of the Director at CMRIT",
-      "recall": 0.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     },
     {
       "category": "normal",
       "question": "what is the head of department expected to focus on",
-      "recall": 1.0,
-      "precision": 0.8,
+      "recall": 0.5,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
-      "ndcg": 0.9197207891481876
+      "ndcg": 0.6131471927654584
     },
     {
       "category": "normal",
       "question": "what mandatory training must new faculty complete within six months of joining",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.3333333333333333,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -169,7 +169,7 @@
       "category": "normal",
       "question": "how often is the faculty semester evaluation done",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -177,7 +177,7 @@
       "category": "normal",
       "question": "what weightage do core activities like teaching and research carry in the faculty evaluation",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -209,7 +209,7 @@
       "category": "normal",
       "question": "is work from home available during a family medical emergency",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     }

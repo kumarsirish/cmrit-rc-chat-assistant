@@ -27,7 +27,7 @@ from rag.generation import context_builder
 from rag.generation.llm_client import LlmClient
 from rag.response import response_processor
 from rag.response.response_processor import NO_MATCH_MESSAGE, RagAnswer, SourceReference  # re-exported
-from rag.retrieval.retriever import Retriever
+from rag.retrieval.retrieval_service import RetrievalService
 
 SYSTEM_PROMPT = (
     "You are an assistant that answers questions about CMRIT college "
@@ -63,7 +63,7 @@ SYSTEM_PROMPT = (
     "factual claim must still come from the CONTEXT given with the "
     "current question. "
     "Format the answer for readability: never write it as one long "
-    "paragraph. Break it into short paragraphs of no more than 5-6 "
+    "paragraph. Break it into short paragraphs of no more than 10 "
     "sentences each, and when the answer describes a sequence of "
     "steps, a process, or a list of items, use numbered steps or "
     "bullet points instead of prose."
@@ -75,23 +75,38 @@ logger = logging.getLogger(__name__)
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
-    def __init__(self, retriever: Retriever, llm_client: LlmClient):
-        self._retriever = retriever
+    def __init__(self, retrieval_service: RetrievalService, llm_client: LlmClient):
+        self._retrieval_service = retrieval_service
         self._llm_client = llm_client
 
-    def answer(self, question: str, conversation_history: list = None) -> RagAnswer:
+    def answer(
+        self,
+        question: str,
+        conversation_history: list = None,
+        top_k: int = None,
+        min_reranker_score: float = None,
+    ) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
 
         Retrieval runs on question alone — conversation_history (prior
         {"role", "content"} turns from the same session, if any) is
         never used to build the retrieval query. It's only passed to
         the LLM below, so it can resolve references like "it"/"that"
-        in its reply; the retriever never sees it.
+        in its reply; retrieval never sees it.
+
+        top_k / min_reranker_score, if given, override the retrieval
+        service's configured defaults for this call only (the UI's
+        retrieval settings sliders use this).
+
+        retrieval_service.retrieve() returns the matched topic along
+        with the chunks, so it only has to detect/embed the topic
+        match once per question instead of a second time here.
         """
         overall_start = time.perf_counter()
-        chunks = self._retriever.retrieve(question)
+        chunks, matched_topic = self._retrieval_service.retrieve(
+            question, top_k=top_k, min_reranker_score=min_reranker_score
+        )
         retrieval_seconds = time.perf_counter() - overall_start
-        matched_topic = self._retriever.match_topic(question)
 
         if not chunks:
             total_seconds = time.perf_counter() - overall_start

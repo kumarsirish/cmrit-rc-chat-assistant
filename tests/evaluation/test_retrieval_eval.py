@@ -23,14 +23,15 @@ import pytest
 
 from rag.common.config import load_config
 from rag.evaluation.retrieval_metrics import ndcg_at_k, precision_at_k, reciprocal_rank, recall_at_k
-from rag.indexing.docs_metadata import load_doc_topics
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.embeddings import EmbeddingGenerator
+from rag.retrieval.dense_retriever import DenseRetriever
 from rag.retrieval.reranker import Reranker
-from rag.retrieval.retriever import Retriever
+from rag.retrieval.retrieval_service import RetrievalService
+from rag.routing.docs_metadata import load_doc_topics
 
 try:
-    from rag.indexing.bm25_index import BM25Index
+    from rag.retrieval.bm25_retriever import BM25Index
 except ImportError:  # pragma: no cover - rank_bm25 is a listed dependency
     BM25Index = None
 
@@ -48,7 +49,7 @@ def config():
 
 
 @pytest.fixture(scope="module")
-def retriever(config):
+def retrieval_service(config):
     vector_store = VectorStore(
         persist_directory=config.chroma.persist_directory,
         collection_name=config.chroma.collection_name,
@@ -62,17 +63,20 @@ def retriever(config):
         else None
     )
     # doc_topics must be passed here the same way dashboard.py passes it
-    # to the production Retriever — otherwise this evaluation silently
-    # scores GLOBAL-mode-only behavior and never exercises the
+    # to the production RetrievalService — otherwise this evaluation
+    # silently scores GLOBAL-mode-only behavior and never exercises the
     # MAPPED_DOCUMENT path real users' topic-matched queries actually take.
     doc_topics = load_doc_topics(config.documents.metadata_file)
-    return Retriever(
-        vector_store=vector_store,
+    return RetrievalService(
+        dense_retriever=DenseRetriever(vector_store),
         embedding_generator=embedding_generator,
         top_k=config.retrieval.top_k,
+        min_reranker_score=config.retrieval.min_reranker_score,
         min_relevance_score=config.retrieval.min_relevance_score,
         bm25_index=bm25_index,
         hybrid_candidates=config.retrieval.hybrid.candidates,
+        dense_weight=config.retrieval.hybrid.dense_weight,
+        lexical_weight=config.retrieval.hybrid.lexical_weight,
         reranker=Reranker(config.retrieval.rerank.model) if config.retrieval.rerank.enabled else None,
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
@@ -81,7 +85,7 @@ def retriever(config):
     )
 
 
-def test_retrieval_quality_meets_minimum_thresholds(config, retriever):
+def test_retrieval_quality_meets_minimum_thresholds(config, retrieval_service):
     test_cases = [
         case
         for case in _load_test_cases(config.evaluation.test_data_path)
@@ -92,9 +96,8 @@ def test_retrieval_quality_meets_minimum_thresholds(config, retriever):
     k = config.retrieval.top_k
     rows = []
     for case in test_cases:
-        retrieved_sources = [
-            chunk.source_file for chunk in retriever.retrieve(case["question"])
-        ]
+        chunks, _ = retrieval_service.retrieve(case["question"])
+        retrieved_sources = [chunk.source_file for chunk in chunks]
         relevant_sources = set(case["relevant_sources"])
         rows.append(
             {

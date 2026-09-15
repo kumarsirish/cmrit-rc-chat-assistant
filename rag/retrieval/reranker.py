@@ -1,33 +1,35 @@
-"""Step 4b: cross-encoder reranking of the retriever's ANN candidates.
+"""Cross-encoder reranking of the hybrid retriever's candidates.
 
-Embedding similarity (used by Retriever's initial semantic search)
-scores the query and each chunk independently, then compares the two
-vectors — fast enough to run over the whole collection, but a weaker
-relevance signal. A cross-encoder instead scores the (query, chunk)
-pair jointly, which is much more accurate but too slow to run over
-more than a handful of candidates. So Retriever over-fetches
-(config.retrieval.rerank.candidates) and this module picks the best
-top_k of those.
+A cross-encoder scores the (query, chunk) pair jointly, which is more
+accurate than comparing two independent embeddings, but too slow to
+run over the whole collection — so retrieval_service.py only sends it
+a small candidate pool.
+
+Uses LangChain's HuggingFaceCrossEncoder to load and run the model.
+Scoring stays a separate step from picking the final chunks: LangChain's
+CrossEncoderReranker sorts, truncates, and drops the scores in one
+step, but retrieval_service.py needs the scores first, to filter by
+min_reranker_score before truncating to a top_k count.
 """
 
-from sentence_transformers import CrossEncoder
+import operator
+
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 
 class Reranker:
     """Scores (query, chunk) pairs with a cross-encoder model."""
 
     def __init__(self, model_name: str):
-        self._model = CrossEncoder(model_name)
+        self._model = HuggingFaceCrossEncoder(model_name=model_name)
 
     def score(self, query: str, chunks: list) -> list:
-        """Returns the raw cross-encoder score for each chunk, in the
-        same order as chunks (not sorted, not truncated) — used by
-        rerank() below, and by Retriever's debug trace logging to show
-        the scores before truncation/reordering."""
+        """Returns one cross-encoder score per chunk, in the same
+        order as chunks (not sorted, not truncated)."""
         if not chunks:
             return []
         pairs = [(query, chunk.text) for chunk in chunks]
-        return list(self._model.predict(pairs))
+        return list(self._model.score(pairs))
 
     def rerank(self, query: str, chunks: list, top_k: int) -> list:
         """Returns the top_k chunks, reordered by cross-encoder score
@@ -37,5 +39,6 @@ class Reranker:
             return chunks
 
         scores = self.score(query, chunks)
-        ranked = sorted(zip(scores, chunks), key=lambda pair: pair[0], reverse=True)
-        return [chunk for _, chunk in ranked[:top_k]]
+        scored_chunks = list(zip(scores, chunks))
+        scored_chunks.sort(key=operator.itemgetter(0), reverse=True)
+        return [chunk for _, chunk in scored_chunks[:top_k]]

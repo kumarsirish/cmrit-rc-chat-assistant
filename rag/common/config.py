@@ -77,11 +77,14 @@ class RerankConfig:
 class HybridConfig:
     enabled: bool
     candidates: int
+    dense_weight: float
+    lexical_weight: float
 
 
 @dataclass
 class RetrievalConfig:
     top_k: int
+    min_reranker_score: float
     min_relevance_score: float
     mapped_document_primary_top_k: int
     topic_match_threshold: float

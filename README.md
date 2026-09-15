@@ -19,7 +19,7 @@ policies_docs/*.pdf
 
 `scripts/ingest.py` also tags every chunk with the topic/URL it maps
 to in `docs-metadata.json` (see "Topic matching" below), and a
-`rag/bm25_index.py` lexical index is rebuilt in-memory from the same
+`rag/retrieval/bm25_retriever.py` lexical index is rebuilt in-memory from the same
 Chroma collection at query-server startup (nothing extra is persisted
 for it).
 
@@ -68,22 +68,32 @@ tested, and swapped independently:
 
 | Step | Module |
 |---|---|
-| 1. Document loading (load PDFs) | `rag/document_loader.py` |
-| 2. Chunking (recursive, URL-safe) | `rag/chunker.py` |
-| 3. Sentence embeddings | `rag/embeddings.py` |
-| 3. Vector storage (Chroma) | `rag/vector_store.py` |
-| 4a. Lexical (BM25) index | `rag/bm25_index.py` |
-| 4b. Cross-encoder reranking | `rag/reranker.py` |
-| 4c. Topic detection (query -> docs-metadata.json entry) | `rag/docs_metadata.py`, `rag/topic_matcher.py` |
-| 4. Retrieval (topic-mapped-document or hybrid dense+BM25 fallback + rerank) | `rag/retriever.py` |
-| 5. Session & chat history (MySQL, 5 min timeout) | `rag/session_store.py` |
-| — Email validation (identifies each user) | `rag/user_identity.py` |
-| 6. LLM chat client (provider-agnostic: Ollama or Groq, via LangChain `init_chat_model`) | `rag/llm_client.py` |
-| 6. Context block formatting | `rag/context_builder.py` |
-| 6. Citation validation / answer assembly | `rag/response_processor.py` |
-| 7. Grounded answer orchestration | `rag/rag_pipeline.py` |
-| Frontend dashboard (all Streamlit UI code) | `rag/dashboard.py` |
-| Configuration | `config.yaml`, loaded by `rag/config.py` |
+| 1. Document loading (load PDFs) | `rag/ingestion/document_loader.py` |
+| 2. Chunking (recursive, URL-safe) | `rag/ingestion/chunker.py` |
+| 3. Sentence embeddings | `rag/ingestion/embeddings.py` |
+| 3. Vector storage (Chroma) | `rag/indexing/vector_store.py` |
+| 4a. Dense (embedding) retrieval | `rag/retrieval/dense_retriever.py` |
+| 4a. Lexical (BM25) retrieval | `rag/retrieval/bm25_retriever.py` |
+| 4a. Dense+BM25 fusion (RRF) | `rag/retrieval/hybrid_retriever.py` |
+| 4b. Cross-encoder reranking | `rag/retrieval/reranker.py` |
+| 4c. Topic detection (query -> docs-metadata.json entry) | `rag/routing/docs_metadata.py`, `rag/routing/topic_matcher.py` |
+| 4. Retrieval orchestration (topic-mapped-document / GLOBAL policy, PRIMARY+SECONDARY allocation) | `rag/retrieval/retrieval_service.py` |
+| 5. Session & chat history (MySQL, 5 min timeout) | `rag/auth/session_store.py` |
+| — Email validation (identifies each user) | `rag/auth/user_identity.py` |
+| 6. LLM chat client (provider-agnostic: Ollama or Groq, via LangChain `init_chat_model`) | `rag/generation/llm_client.py` |
+| 6. Context block formatting | `rag/generation/context_builder.py` |
+| 6. Citation validation / answer assembly | `rag/response/response_processor.py` |
+| 7. Grounded answer orchestration | `rag/generation/rag_pipeline.py` |
+| Frontend dashboard (all Streamlit UI code) | `rag/ui/dashboard.py` |
+| Configuration | `config.yaml`, loaded by `rag/common/config.py` |
+
+`rag/indexing/` builds/stores the index (the vector store); `rag/retrieval/`
+queries it at question time. `rag/retrieval/dense_retriever.py`,
+`bm25_retriever.py`, `hybrid_retriever.py`, and `reranker.py` are
+generic retrieval mechanisms with no CMRIT-specific knowledge;
+`retrieval_service.py` is the only module that knows about topics,
+mapped documents, or the MAPPED_DOCUMENT/PRIMARY/SECONDARY/GLOBAL
+policy — see its module docstring for the full flow.
 
 `scripts/ingest.py` runs steps 1-3 (plus topic tagging) to (re)build
 the vector index. `scripts/download_embedding_model.py` pre-fetches
@@ -125,7 +135,7 @@ differ:
    chunk vectors in Chroma (cosine similarity). Good at
    paraphrase/synonym matches, weak on exact acronyms/proper nouns/codes.
 2. **BM25 (lexical) search** — the question's significant keywords
-   (`keyword_extraction.py`, stopwords stripped) are matched against
+   (`bm25_retriever.py`, stopwords stripped) are matched against
    chunk term frequency. Good at exact keyword/acronym matches, blind
    to paraphrase. Kept even in MAPPED_DOCUMENT mode: the same
    acronym/proper-noun gap dense search has across the whole
@@ -146,14 +156,14 @@ differ:
    In MAPPED_DOCUMENT mode the pool it rescores only ever contains
    chunks from the mapped document, so it can reorder within it but
    never pull in, or be replaced by, a different document.
-5. **Relevance threshold** — anything below `min_relevance_score`
-   (dense score, or lexical-only hits, which skip the threshold since
-   BM25 isn't on the same 0-1 scale) is dropped before the LLM ever
-   sees it. If nothing survives (and, for MAPPED_DOCUMENT mode, the
-   GLOBAL fallback also finds nothing), `rag_pipeline.py` refuses
-   without calling the LLM at all.
+5. **Relevance threshold** — anything scoring below `min_reranker_score`
+   (the cross-encoder's reranker_score, the authoritative relevance
+   signal once reranking is on — see "Relevance filtering" below) is
+   dropped before the LLM ever sees it. If nothing survives (and, for
+   MAPPED_DOCUMENT mode, the GLOBAL fallback also finds nothing),
+   `rag_pipeline.py` refuses without calling the LLM at all.
 
-Every query logs one summary line (`rag.retriever` logger, INFO level)
+Every query logs one summary line (`rag.retrieval.retrieval_service` logger, INFO level)
 with the detected topic, mapped document (if any), which mode ran,
 candidate/result counts, and the final source documents — enough to
 diagnose a retrieval failure without needing `RAG_DEBUG`'s fuller
@@ -307,8 +317,13 @@ make run-debug
 
 ## Configuration
 
-All tunables live in `config.yaml`, loaded by `rag/config.py` into
-typed dataclasses — no code changes needed to retune the system:
+All tunables live in `config.yaml`, loaded by `rag/common/config.py`
+into typed dataclasses — no code changes needed to retune the system.
+`top_k`, the reranker relevance threshold, and the LLM temperature can
+also be adjusted per-session from sliders in the app's sidebar, for
+trying out different values without editing `config.yaml`; the sliders
+start at whatever `config.yaml` sets and only affect that browser
+session.
 
 | Section | Key | Current value | Meaning |
 |---|---|---|---|
@@ -334,11 +349,12 @@ typed dataclasses — no code changes needed to retune the system:
 | `chunking` | `chunk_overlap` | `120` (characters, ~15%) | Overlap carried between consecutive chunks, so a sentence split across a boundary isn't lost to either side |
 | `chunking` | `separators` | `["\n\n", "\n", ". ", " "]` | Split priority order (paragraph -> line -> sentence -> word) |
 | `retrieval` | `top_k` | `3` | Final chunks returned per question, in both MAPPED_DOCUMENT and GLOBAL mode, after fusion/rerank/filtering |
-| `retrieval` | `min_relevance_score` | `0.40` | Minimum dense cosine similarity to keep a pure-dense chunk; lexical-only hits skip this (different scale). If nothing survives, the pipeline refuses instead of guessing |
-| `retrieval` | `mapped_document_primary_top_k` | `2` | MAPPED_DOCUMENT mode only: cap on how many of the mapped document's own ("PRIMARY") chunks are kept out of `top_k`, before any remaining slots go to a SECONDARY, cross-document search (see `retriever.py`'s `MAPPED_DOCUMENT_PRIMARY_TOP_K`) |
+| `retrieval` | `min_reranker_score` | `0.35` | Minimum cross-encoder reranker score to keep a chunk (see "Relevance filtering" below for why this replaced the old dense-cosine `min_relevance_score`). If nothing survives, the pipeline refuses instead of guessing |
+| `retrieval` | `mapped_document_primary_top_k` | `2` | MAPPED_DOCUMENT mode only: cap on how many of the mapped document's own ("PRIMARY") chunks are kept out of `top_k`, before any remaining slots go to a SECONDARY, cross-document search (see `retrieval_service.py`'s `MAPPED_DOCUMENT_PRIMARY_TOP_K`) |
 | `retrieval` | `topic_match_threshold` | `0.5` | Minimum embedding cosine similarity between a query and a topic's name (`docs-metadata.json`) for `EmbeddingTopicMatcher` to count it as a match; below this, retrieval falls back to GLOBAL mode |
 | `retrieval.hybrid` | `enabled` | `true` | GLOBAL mode only: turns on BM25 lexical search fused with dense search via RRF; disabled means dense-only |
-| `retrieval.hybrid` | `candidates` | `10` | GLOBAL mode: chunks fetched from *each* of dense/lexical search before fusion. MAPPED_DOCUMENT mode uses a separate, smaller constant (`MAPPED_DOCUMENT_CANDIDATES = 6` in `retriever.py`, not config — the search space is already one document) |
+| `retrieval.hybrid` | `candidates` | `10` | GLOBAL mode: chunks fetched from *each* of dense/lexical search before fusion. MAPPED_DOCUMENT mode uses a separate, smaller constant (`MAPPED_DOCUMENT_CANDIDATES = 6` in `retrieval_service.py`, not config — the search space is already one document) |
+| `retrieval.hybrid` | `dense_weight` / `lexical_weight` | `0.5` / `0.5` | How much each search method's rank counts toward the fused RRF score. Equal by default |
 | `retrieval.rerank` | `enabled` | `true` | Turns on the cross-encoder reranking pass over the candidate pool (fused GLOBAL pool, or the small MAPPED_DOCUMENT pool) |
 | `retrieval.rerank` | `model` | `BAAI/bge-reranker-base` | Cross-encoder model (alt: `ms-marco-MiniLM-L-6-v2`) |
 | `retrieval.rerank` | `candidates` | `8` | Top N of the candidate pool handed to the reranker; the final `top_k` is chosen from these |
@@ -377,55 +393,27 @@ the judge model scores them.
 (classic IR) and `tests/ragas_results.json` (LLM-judged), both also
 readable from the app's System Info page.
 
-### Retrieval-only (`test-retrieval-eval`, k=3, 4 labeled questions)
+### Retrieval-only (`test-retrieval-eval`, k=5, 24 labeled questions)
 
-Retrieval was reworked since the numbers above were first recorded:
-a query that matches a topic in `docs-metadata.json` with a
-locally-indexed document (MAPPED_DOCUMENT mode) now searches *only*
-that document, instead of searching everything and hoping an additive
-score boost plus reranking would surface it — see "Retrieval, in
-detail" above. Current numbers on the same 4-question set:
+Retrieval was reworked to use a LangChain-backed dense retriever, a
+cross-encoder reranker (`HuggingFaceCrossEncoder`) as the sole
+relevance judge, and a recalibrated `min_reranker_score` (see
+"Retrieval, in detail" above and `retrieval_service.py`). Current
+numbers, run against the real Chroma store and the current 24-question
+`evaluation-question-answers.json`:
 
-| Category | Recall@3 | Precision@3 | MRR | NDCG@3 |
+| Category | Recall@5 | Precision@5 | MRR | NDCG@5 |
 |---|---|---|---|---|
-| `normal` (3 questions) | 0.50 | 0.44 | 0.67 | 0.91 |
-| `multiple_related_documents` (1 question) | 0.00 | 0.00 | 0.00 | 0.00 |
-| **Overall mean** | **0.375** | **0.33** | **0.50** | 0.69 |
+| `normal` (22 questions) | 0.977 | 0.445 | 0.701 | 0.728 |
+| `unanswerable` (2 questions) | 1.000 | 1.000 | 1.000 | 1.000 |
+| **Overall mean** | **0.979** | **0.491** | **0.726** | 0.750 |
 
-**This now fails the configured minimums** (`min_recall: 0.6`,
-`min_mrr: 0.5`) — recall got worse, not better, on this ground truth.
-That's an expected, direct consequence of the redesign, not a bug, and
-it's worth understanding exactly why before deciding what to do about
-it:
-
-- **"what is tyl" (recall 0.5, was 0.5)** — now correctly resolves to
-  MAPPED_DOCUMENT mode and returns 3/3 chunks from
-  `TYL - Faculty Orientation...pdf`, the topic's authoritative
-  document (previously the reranker was dropping it entirely — see
-  git history). Recall is still only 0.5 because the ground truth in
-  `evaluation-question-answers.json` lists *two* `relevant_sources`
-  (`TYL - Faculty Orientation...pdf` **and** `HoD Handbook - CMRIT.pdf`,
-  which mentions TYL only in passing). MAPPED_DOCUMENT mode deliberately
-  never returns a second document once one is trusted, so this ground
-  truth and the new design are structurally in tension — see item 1
-  below.
-- **"Give TYL Program Details" (recall 0.0, was 0.5)** — a real
-  regression. `find_matching_topic`'s keyword-overlap scoring ties
-  between the correct "TYL Process - Training and Placement" topic and
-  "Faculty Handbook (...Contact Details etc.)" (both share exactly one
-  keyword with the query — "tyl" vs. "details"), and its tie-break
-  ("prefer the longer topic string") picks Faculty Handbook. That
-  document has nothing relevant, so MAPPED_DOCUMENT mode correctly
-  falls back to GLOBAL — but the global fallback then landed on
-  `Student Handbook-CMRIT.docx.pdf`, not either expected document. This
-  is a pre-existing weakness in `find_matching_topic`'s tie-breaking
-  (generic words like "details" count as much as "tyl"), just newly
-  consequential now that a topic match determines the entire search
-  scope. See item 2 below.
-- **"how to get vacation leave approved" (recall 1.0, was 1.0)** and
-  the rest of `normal` are unaffected or improved — single-document,
-  unambiguous topic matches are exactly the case MAPPED_DOCUMENT mode
-  is built for.
+**This passes the configured minimums** (`min_recall: 0.6`,
+`min_mrr: 0.5`) comfortably. Precision is the weakest number: `top_k`
+is 5, but most questions have only one or two truly relevant chunks,
+so several correctly-ranked-but-lower-relevance chunks fill out the
+remaining slots — this is a `top_k` sizing effect, not a sign
+retrieval is picking wrong documents (recall/MRR are high).
 
 ### RAGAS judge (`test-ragas`, gemini-2.5-flash judge, current 4-question set)
 
@@ -489,11 +477,12 @@ showing up here as low context_precision.
    `multiple_related_documents` category). MAPPED_DOCUMENT mode doesn't
    touch this; it only helps when a topic resolves correctly to one
    document.
-4. **Test set size** — 4 labeled retrieval cases (1 per category
-   except `normal`) means every metric is dominated by one or two
-   questions; before trusting any further tuning change, the test set
-   needs more labeled cases per category so the mean isn't noise, and
-   ideally more single-topic MAPPED_DOCUMENT-shaped questions to
-   validate the new path specifically.
+4. **Test set now has 24 labeled cases** (`normal` and `unanswerable`),
+   up from the original 4 — the `multiple_related_documents` category
+   from earlier runs is no longer present in the current file, so
+   item 3 above (GLOBAL fallback diversification) is currently
+   unvalidated by `test-retrieval-eval`; re-adding cases for it would
+   close that gap.
 5. **Re-run `make test-ragas`** on the current retrieval code — the
-   committed `ragas_results.json` predates this refactor.
+   committed `ragas_results.json` predates the cross-encoder/threshold
+   refactor described above.
