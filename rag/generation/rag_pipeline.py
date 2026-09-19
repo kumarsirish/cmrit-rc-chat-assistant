@@ -34,6 +34,14 @@ SYSTEM_PROMPT = (
     "policies. You must answer using ONLY the CONTEXT provided below, "
     "which is extracted from official policy documents. "
     "Do not use any outside knowledge, even if you believe it to be true. "
+    "The CONTEXT sources vary in quality — some are extracted from "
+    "slide decks or other messy layouts and may contain stray "
+    "fragments, page numbers, or irrelevant text alongside the useful "
+    "part. Judge each source independently: if even one source clearly "
+    "supports an answer, use it and cite it, even if other sources in "
+    "the CONTEXT are noisy, poorly formatted, or unrelated to the "
+    "question. Never let noise or irrelevance in one source stop you "
+    "from using a clear answer found in another. "
     "If the CONTEXT does not contain the answer, reply exactly: "
     f'"{NO_MATCH_MESSAGE}" '
     "Answer ONLY the specific question asked — nothing more. Do not "
@@ -95,8 +103,8 @@ class RagPipeline:
         in its reply; retrieval never sees it.
 
         top_k / min_reranker_score, if given, override the retrieval
-        service's configured defaults for this call only (the UI's
-        retrieval settings sliders use this).
+        service's configured defaults for this call only (used by
+        evaluation scripts to try settings without editing config.yaml).
 
         retrieval_service.retrieve() returns the matched topic along
         with the chunks, so it only has to detect/embed the topic

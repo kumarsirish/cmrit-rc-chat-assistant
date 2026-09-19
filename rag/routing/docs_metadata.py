@@ -20,14 +20,36 @@ from dataclasses import dataclass
 class DocTopic:
     """One topic -> URL mapping from docs-metadata.json.
 
-    docs_filename is None for entries that only point at an external
-    resource (e.g. the college website, a shared Drive folder) with no
-    corresponding PDF ingested into policies_docs.
+    docs_filename is always a list — empty for entries that only point
+    at an external resource (e.g. the college website, a shared Drive
+    folder) with no corresponding PDF ingested into policies_docs, and
+    can hold more than one filename for a topic backed by several
+    local PDFs. Accepts a single filename string, a list, or None at
+    construction time (matching what "docs" in docs-metadata.json can
+    be) and normalizes to a list here so every caller — whether built
+    via load_doc_topics or constructed directly, e.g. in tests — sees
+    the same shape.
+
+    keywords holds extra terms (job titles, synonyms, etc.) that a
+    query might use but the topic name itself doesn't contain — e.g.
+    "Roles and Responsibilities" says nothing about "Director" or
+    "duties". topic_matcher folds these into the text it embeds for
+    this topic, so short/generic topic names still match the queries
+    they should.
     """
 
     topic: str
     link: str
-    docs_filename: str = None
+    docs_filename: object = None
+    keywords: str = None
+
+    def __post_init__(self):
+        if self.docs_filename is None:
+            self.docs_filename = []
+        elif isinstance(self.docs_filename, str):
+            self.docs_filename = [self.docs_filename]
+        else:
+            self.docs_filename = list(self.docs_filename)
 
 
 def load_doc_topics(path: str) -> list:
@@ -46,7 +68,14 @@ def load_doc_topics(path: str) -> list:
         link = resource.get("link")
         if not topic or not link:
             continue
-        topics.append(DocTopic(topic=topic, link=link, docs_filename=resource.get("docs")))
+        topics.append(
+            DocTopic(
+                topic=topic,
+                link=link,
+                docs_filename=resource.get("docs"),
+                keywords=resource.get("keywords"),
+            )
+        )
     return topics
 
 
@@ -55,10 +84,13 @@ def _normalize_filename(filename: str) -> str:
 
 
 def build_filename_topic_map(topics: list) -> dict:
-    """Maps normalized local PDF filename -> DocTopic, for entries that
-    have one (skips link-only entries)."""
+    """Maps normalized local PDF filename -> DocTopic, for every
+    filename an entry has (skips link-only entries). A topic backed by
+    several PDFs (docs_filename with more than one entry) gets a
+    filename_map entry for each of them, all pointing at the same
+    DocTopic."""
     filename_map = {}
     for doc_topic in topics:
-        if doc_topic.docs_filename:
-            filename_map[_normalize_filename(doc_topic.docs_filename)] = doc_topic
+        for filename in doc_topic.docs_filename:
+            filename_map[_normalize_filename(filename)] = doc_topic
     return filename_map

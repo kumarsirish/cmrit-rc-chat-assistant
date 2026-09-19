@@ -29,21 +29,44 @@ from rag.routing.docs_metadata import load_doc_topics
 
 APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icon.png"
 
-st.set_page_config(page_title="chatbot-policies", page_icon=str(APP_ICON_PATH), layout="wide")
+st.set_page_config(page_title="CMRIT-RAG", page_icon=str(APP_ICON_PATH), layout="wide")
 
 # Streamlit's default centered layout leaves large blank margins on
-# either side of the chat. Constrain the content to a comfortable
-# reading width instead of the full window, and trim the default top
-# padding above the title.
+# either side of the chat, plus a tall gap above the title. Constrain
+# the content to a comfortable reading width and pull it up/left
+# closer to the edge of the viewport instead.
+#
+# Streamlit's own header toolbar (hamburger menu / "Deploy" button) is
+# position:fixed at the top of the viewport, normally cleared by
+# block-container's large default padding-top. Shrinking that padding
+# without also shrinking the header leaves the header's fixed height
+# taller than the new clearance, so content (the page-title icon in
+# particular, being an <img> rather than text) renders partly behind
+# it and looks clipped at the top. Shrinking the header to match keeps
+# the compact layout without that overlap.
 st.markdown(
     """
     <style>
+    header[data-testid="stHeader"] {
+        height: 2.5rem;
+        min-height: 2.5rem;
+    }
     .block-container {
-        max-width: 1100px;
-        padding-top: 2rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        margin: 0 auto;
+        max-width: 1200px;
+        padding-top: 2.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        margin: 0;
+    }
+    [data-testid="stSidebar"] .block-container {
+        padding-top: 1.25rem;
+    }
+    div[data-testid="stChatMessage"] {
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.25rem;
+    }
+    hr {
+        margin: 0.75rem 0;
     }
     </style>
     """,
@@ -158,16 +181,13 @@ def get_retrieval_service():
 
 
 @st.cache_resource
-def get_llm_client(temperature: float):
-    # Cached per temperature value, so moving the temperature slider
-    # builds a new LLM client only when the value actually changes,
-    # instead of on every rerun.
+def get_llm_client():
     config = get_config()
-    return LlmClient.from_config(config.llm, temperature=temperature)
+    return LlmClient.from_config(config.llm, temperature=_default_llm_temperature(config))
 
 
-def get_rag_pipeline(temperature: float):
-    return RagPipeline(retrieval_service=get_retrieval_service(), llm_client=get_llm_client(temperature))
+def get_rag_pipeline():
+    return RagPipeline(retrieval_service=get_retrieval_service(), llm_client=get_llm_client())
 
 
 @st.cache_resource
@@ -275,51 +295,8 @@ def render_sidebar(config, session_store):
 def _default_llm_temperature(config):
     provider_config = getattr(config.llm, config.llm.provider)
     # config.yaml can write this as a plain "0", which YAML parses as
-    # an int — st.slider requires value/min_value/max_value to all be
-    # the same type, so this must always be a float.
+    # an int rather than a float.
     return float(provider_config.temperature)
-
-
-def init_retrieval_settings(config):
-    """Sets the retrieval/generation slider values to their config.yaml
-    defaults the first time this session runs, so later reruns keep
-    whatever the user chose instead of resetting every rerun."""
-    if "retrieval_top_k" not in st.session_state:
-        st.session_state.retrieval_top_k = config.retrieval.top_k
-    if "retrieval_min_reranker_score" not in st.session_state:
-        st.session_state.retrieval_min_reranker_score = config.retrieval.min_reranker_score
-    if "llm_temperature" not in st.session_state:
-        st.session_state.llm_temperature = _default_llm_temperature(config)
-
-
-def render_retrieval_settings(config):
-    """Sidebar sliders letting a user try different retrieval/generation
-    settings without editing config.yaml. Values are read at answer
-    time (see render_chat_page) and passed in per question — nothing
-    here rebuilds the retrieval service or the embedding/reranker
-    models."""
-    with st.sidebar:
-        st.caption("Retrieval settings")
-        st.session_state.retrieval_top_k = st.slider(
-            "Chunks returned (top_k)",
-            min_value=1,
-            max_value=10,
-            value=st.session_state.retrieval_top_k,
-        )
-        st.session_state.retrieval_min_reranker_score = st.slider(
-            "Minimum reranker score",
-            min_value=0.0,
-            max_value=1.0,
-            value=st.session_state.retrieval_min_reranker_score,
-            step=0.05,
-        )
-        st.session_state.llm_temperature = st.slider(
-            "LLM temperature",
-            min_value=0.0,
-            max_value=1.0,
-            value=st.session_state.llm_temperature,
-            step=0.1,
-        )
 
 
 TOP_SOURCES_SHOWN = 2
@@ -447,14 +424,16 @@ def render_answer_time(total_seconds):
 
 # A handful of representative, already-indexed policy questions shown
 # as one-click starting points, so a new user isn't stuck guessing
-# what to type.
+# what to type. Limited to questions verified to score RAGAS
+# faithfulness == 1.0 against the live pipeline — "grievance
+# redressal" and "anti-ragging" were dropped because the pipeline
+# currently can't answer them at all (no matching indexed document),
+# so clicking them would only produce a refusal.
 EXAMPLE_QUERIES = [
     "Give details on the leave application and approval process?",
     "Give details on the probation period completion process?",
     "What are the staff welfare measures at CMRIT?",
     "What is the CMRIT quality policy?",
-    "What is the CMRIT grievance redressal policy?",
-    "What is the CMRIT anti-ragging policy?",
 ]
 
 
@@ -518,8 +497,6 @@ def render_chat_page():
     config = get_config()
     session_store = get_session_store()
     ensure_active_session(session_store, config.session.timeout_minutes)
-    init_retrieval_settings(config)
-    render_retrieval_settings(config)
 
     render_page_title("CMRIT College Policy Assistant")
     st.write(
@@ -594,12 +571,10 @@ def render_chat_page():
 
         with st.chat_message("assistant"):
             with st.spinner("Checking the policy documents..."):
-                rag_pipeline = get_rag_pipeline(st.session_state.llm_temperature)
+                rag_pipeline = get_rag_pipeline()
                 result = rag_pipeline.answer(
                     question,
                     conversation_history=conversation_history,
-                    top_k=st.session_state.retrieval_top_k,
-                    min_reranker_score=st.session_state.retrieval_min_reranker_score,
                 )
             # Idle countdown restarts from when the answer is delivered,
             # not from when the question was submitted, so a slow

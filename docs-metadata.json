@@ -17,7 +17,8 @@
       "s_no": 3,
       "topic": "Roles and Responsibilities",
       "link": "https://docs.google.com/document/d/1ChvJcI8z7bOkQ4nwI3K0gV8Gm-Sagu_T/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
-      "docs": "Roles and Responsibilities.docx.pdf"
+      "docs": "Roles and Responsibilities.docx.pdf",
+      "keywords": "Director, Principal, Vice Principal, HOD/Head of Department, Dean, job duties, designation-wise duties, who is responsible for, what does the Director/Principal/HOD do"
     },
     {
       "s_no": 4,
@@ -42,7 +43,8 @@
       "s_no": 7,
       "topic": "Leave Information, Application and Approval Process",
       "link": "https://docs.google.com/document/d/1jyIKLYtMh7-JiclpLO8NuND62MvImxjosfzJZhesryM/edit?usp=sharing",
-      "docs": "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+      "docs": "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf",
+      "keywords": "casual leave, vacation leave, compensatory off, comp off, leave application, leave approval process, leave balance, sick leave, unused leave expiry, OOD, how many leaves am I entitled to, leave credited, CL and VL"
     },
     {
       "s_no": 8,
@@ -57,7 +59,7 @@
     },
     {
       "s_no": 10,
-      "topic": "CO - PO Handbook (Course Outcome & Program Outcome attainment)",
+      "topic": "CO-PO Handbook (Course Outcome & Program Outcome attainment)",
       "link": "https://docs.google.com/document/d/1NCBzy03ZpwcpJ6j8pdPco994FC6S25qh/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
       "additional_link": "https://docs.google.com/document/d/14CaByHCgirgg9OjACCMTKymCQxHxV4UJ/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true"
     },
@@ -82,7 +84,11 @@
     {
       "s_no": 14,
       "topic": "RCPIE Norms, Targets, Templates, Incentives etc.",
-      "link": "https://sites.google.com/cmrit.ac.in/research-committee/downloads?authuser=0"
+      "link": "https://sites.google.com/cmrit.ac.in/research-committee/downloads?authuser=0",
+      "docs": ["RCPIE-FAQ_RC Approval-09.02.2026.docx.pdf",
+        "RCPIE Verification Checklist(17_06_25).docx.pdf",
+        "RC_Protocols___Incentives.docx.pdf"
+      ]
     },
     {
       "s_no": 15,
@@ -90,9 +96,7 @@
       "link": "https://docs.google.com/document/d/16VzhvICDNvrvikxV5kbY-tB8Nyht77ac/edit?usp=sharing&ouid=102183025786143051675&rtpof=true&sd=true",
       "docs" : "TRCPIE, Non-Core, Knowledge upgrade, Mentoring - Guidelines, Allotment and Evaluation Process_ A.Y. 2026-27.docx.pdf"
     },
-    {
-      "section_header": "Staff Orientation Program Documents"
-    },
+   
     {
       "s_no": 16,
       "topic": "IQAC, Outcome Based Education and CO-PO computation",
@@ -177,8 +181,14 @@
       "topic": "ERP User Guidelines (Juno)",
       "link": "https://drive.google.com/drive/folders/1dEdYp1OY3YypESQoeX1zUfr7IYAoZruC?usp=drive_link"
     },
-    {
+     {
       "s_no": 31,
+      "topic": "IIC  Innovation Council, IIC Activities, IIC Awards, IIC Mentoring and Evaluation Process",
+      "link": "file://wsl$/Ubuntu/home/sirkumar/CMRIT-RAG/policies_docs/Staff%20Orientation-IIC%20President%2013-8-2024.pptx.pdf",
+      "docs": "Staff Orientation-IIC President 13-8-2024.pptx.pdf"
+    },
+    {
+      "s_no": 32,
       "topic": "For Emergency related SPOC",
       "contacts": {
         "medical_emergency": {

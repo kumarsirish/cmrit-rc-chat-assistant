@@ -14,6 +14,7 @@ nothing loaded at all.
 """
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,6 +27,22 @@ logger = logging.getLogger(__name__)
 # logged, since it's also the signature of a scanned/image-only page
 # PyPDFLoader could only pull a caption or page number from.
 MIN_EXPECTED_PAGE_CHARS = 20
+
+# PPT-to-PDF extraction (and some PDF exports) leaves bare slide/page
+# number lines interspersed with real content — a line containing
+# nothing but digits (e.g. a lone "1", "20"). These carry no
+# information, but sitting right next to a real definition (e.g.
+# "Touch Your TOES (TYT)\n...\n1\n\n...") they've been observed to make
+# the downstream LLM treat that whole source as too noisy/unclear to
+# answer from and refuse outright, even though the actual answer is
+# right there (see the "what does tyt stand for" investigation).
+# Stripped for every PDF, not just pptx-derived ones, since a bare
+# numeric line is never meaningful prose either way.
+_STANDALONE_NUMBER_LINE_PATTERN = re.compile(r"^[ \t]*\d{1,4}[ \t]*$", re.MULTILINE)
+
+
+def _strip_standalone_number_lines(text: str) -> str:
+    return _STANDALONE_NUMBER_LINE_PATTERN.sub("", text)
 
 
 class DocumentLoadError(Exception):
@@ -72,7 +89,7 @@ def load_pdf(pdf_path: Path) -> list:
 
     pages = []
     for document in documents:
-        page_text = document.page_content.strip()
+        page_text = _strip_standalone_number_lines(document.page_content).strip()
         if not page_text:
             continue
         if len(page_text) < MIN_EXPECTED_PAGE_CHARS:

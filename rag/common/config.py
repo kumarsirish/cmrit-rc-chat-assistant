@@ -107,6 +107,7 @@ class RetrievalEvalConfig:
     min_recall: float
     min_mrr: float
     results_path: str
+    baseline_path: str
 
 
 @dataclass
@@ -120,6 +121,7 @@ class EvaluationConfig:
     metrics: list
     min_score: float
     results_path: str
+    baseline_path: str
     retrieval: RetrievalEvalConfig
 
 
@@ -190,10 +192,20 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     session_cfg = SessionConfig(**raw["session"])
 
     evaluation_raw = dict(raw["evaluation"])
-    evaluation_raw["test_data_path"] = _resolve_path(evaluation_raw["test_data_path"])
-    evaluation_raw["results_path"] = _resolve_path(evaluation_raw["results_path"])
+    # Both overridable so a debugging run (see scripts/filter_low_faithfulness.py
+    # / `make test-ragas-failures`) can point test-ragas at a filtered
+    # question set and a scratch results file, without touching
+    # config.yaml or clobbering the full-suite tests/ragas_results.json.
+    evaluation_raw["test_data_path"] = _resolve_path(
+        os.environ.get("RAG_EVAL_TEST_DATA_PATH", evaluation_raw["test_data_path"])
+    )
+    evaluation_raw["results_path"] = _resolve_path(
+        os.environ.get("RAG_EVAL_RESULTS_PATH", evaluation_raw["results_path"])
+    )
+    evaluation_raw["baseline_path"] = _resolve_path(evaluation_raw["baseline_path"])
     retrieval_eval_raw = dict(evaluation_raw["retrieval"])
     retrieval_eval_raw["results_path"] = _resolve_path(retrieval_eval_raw["results_path"])
+    retrieval_eval_raw["baseline_path"] = _resolve_path(retrieval_eval_raw["baseline_path"])
     evaluation_raw["retrieval"] = RetrievalEvalConfig(**retrieval_eval_raw)
     evaluation_cfg = EvaluationConfig(**evaluation_raw)
 

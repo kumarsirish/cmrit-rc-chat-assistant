@@ -11,6 +11,15 @@
 #
 # Add your own blocks freely; nothing here is read unless you pass
 # --overrides-file/--experiment explicitly.
+#
+# embedding.model_name/chunking.* overrides change what the index
+# itself must contain, not just how it's searched — run_experiment.py
+# detects that automatically and builds/reuses a dedicated,
+# fingerprint-cached index under ./chroma_store_experiments/ instead of
+# touching the shared ./chroma_store the live app reads (see
+# _ensure_matching_index() in scripts/run_experiment.py). The first run
+# of a new embedding model will therefore take longer (it re-ingests
+# once); later runs with the same setting reuse that cached index.
 
 baseline:
   # Empty means "run exactly what config.yaml says" — useful as a
@@ -29,3 +38,10 @@ lexical_heavy:
 
 alt_reranker:
   retrieval.rerank.model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+bge_base_embedding:
+  # Stronger (and slower/bigger) embedding model than config.yaml's
+  # default all-MiniLM-L6-v2 — triggers a one-time dedicated re-ingest
+  # (see note above) so retrieval is actually scored against vectors
+  # this model produced, not the default index.
+  embedding.model_name: "BAAI/bge-base-en-v1.5"

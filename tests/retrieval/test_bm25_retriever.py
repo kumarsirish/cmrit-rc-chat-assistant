@@ -57,6 +57,29 @@ def test_search_ranks_more_frequent_term_matches_higher():
     assert [document.metadata["source_file"] for document, _ in results] == ["high.pdf", "low.pdf"]
 
 
+def test_search_matches_on_metadata_keywords_not_just_text():
+    # A chunk's own prose may never use the word a query does (e.g. a
+    # "Roles and Responsibilities" chunk that never says "Director").
+    # Curated keywords stored on the chunk's metadata (see
+    # scripts/ingest.py's search_text()) let BM25 match on those terms
+    # too, without the words appearing in the indexed document text.
+    index = _index(
+        [
+            (
+                "Leading functions, operations, and strategic initiatives.",
+                {"source_file": "roles.pdf", "keywords": "Director, Principal, HOD"},
+            ),
+            (
+                "Committee contact list with various department emails.",
+                {"source_file": "contacts.pdf", "keywords": ""},
+            ),
+        ]
+    )
+    results = index.search("responsibilities of the director", top_k=5)
+    assert len(results) == 1
+    assert results[0][0].metadata["source_file"] == "roles.pdf"
+
+
 def test_empty_index_returns_no_results():
     index = _index([])
     assert index.search("anything", top_k=5) == []

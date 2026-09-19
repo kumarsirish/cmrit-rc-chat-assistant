@@ -165,14 +165,26 @@ class RetrievalService:
         relevant first.
 
         top_k / min_reranker_score, if given, override this service's
-        configured defaults for this call only (used by the UI's
-        retrieval settings sliders). matched_topic is returned here
+        configured defaults for this call only (used by evaluation
+        scripts). matched_topic is returned here
         (instead of requiring a second match_topic() call) so a caller
         that also needs it, like rag_pipeline.py, doesn't re-embed and
         re-match the same query a second time.
 
         Retrieval always runs on query alone — no conversation history
         is ever considered here.
+
+        Flow:
+        1. Match the query to a topic. If it maps to a document
+           (MAPPED_DOCUMENT mode), search that document alone for up
+           to `primary_keep` PRIMARY chunks.
+        2. If PRIMARY comes back empty, the topic match isn't trusted
+           for this query — fall back to a GLOBAL search over the
+           whole collection instead.
+        3. Otherwise, fill whatever's left of `top_k` with a second,
+           GLOBAL-ish search that excludes the mapped document
+           (SECONDARY), so PRIMARY + SECONDARY together total top_k.
+        4. No topic match at all skips straight to GLOBAL.
         """
         top_k = self._top_k if top_k is None else top_k
         min_reranker_score = self._min_reranker_score if min_reranker_score is None else min_reranker_score
@@ -186,8 +198,8 @@ class RetrievalService:
 
         if metadata_filter is None and matched_topic and matched_topic.docs_filename:
             mode = MAPPED_DOCUMENT_MODE
-            mapped_document = matched_topic.docs_filename
-            scoped_filter = {"source_file": mapped_document}
+            mapped_documents = matched_topic.docs_filename
+            scoped_filter = {"source_file": {"$in": mapped_documents}}
             primary_keep = min(self._mapped_document_primary_top_k, top_k)
             primary_candidates, primary_results = self._search(
                 query, query_embedding, scoped_filter, MAPPED_DOCUMENT_CANDIDATES,
@@ -208,7 +220,7 @@ class RetrievalService:
                     secondary_candidates, secondary_results = self._search(
                         query, query_embedding, metadata_filter, self._hybrid_candidates,
                         keep=secondary_keep, min_reranker_score=min_reranker_score,
-                        exclude_source_file=mapped_document,
+                        exclude_source_files=mapped_documents,
                     )
                 else:
                     secondary_candidates, secondary_results = [], []
@@ -236,7 +248,7 @@ class RetrievalService:
         candidate_count: int,
         keep: int,
         min_reranker_score: float,
-        exclude_source_file: str = None,
+        exclude_source_files: list = None,
         trusted_pool: bool = False,
     ) -> tuple:
         """Dense + BM25 search restricted to metadata_filter, fused,
@@ -266,10 +278,10 @@ class RetrievalService:
         fused_candidates = hybrid_retriever.fuse(
             dense_results, lexical_results, dense_weight=self._dense_weight, lexical_weight=self._lexical_weight
         )
-        if exclude_source_file:
+        if exclude_source_files:
             fused_candidates = [
                 candidate for candidate in fused_candidates
-                if candidate.metadata.get("source_file") != exclude_source_file
+                if candidate.metadata.get("source_file") not in exclude_source_files
             ]
         if not fused_candidates:
             return fused_candidates, []

@@ -1,17 +1,17 @@
 {
   "k": 5,
   "mean_scores": {
-    "recall": 0.9791666666666666,
-    "precision": 0.4909722222222222,
-    "reciprocal_rank": 0.7256944444444444,
-    "ndcg": 0.7502473522283263
+    "recall": 0.9375,
+    "precision": 0.5548611111111111,
+    "reciprocal_rank": 0.71875,
+    "ndcg": 0.7348694252938037
   },
   "mean_by_category": {
     "normal": {
-      "recall": 0.9772727272727273,
-      "precision": 0.4446969696969697,
-      "reciprocal_rank": 0.7007575757575758,
-      "ndcg": 0.7275425660672651
+      "recall": 0.9318181818181818,
+      "precision": 0.5143939393939394,
+      "reciprocal_rank": 0.6931818181818182,
+      "ndcg": 0.7107666457750585
     },
     "unanswerable": {
       "recall": 1.0,
@@ -58,16 +58,16 @@
       "question": "how many casual leaves are permanent staff allowed per year",
       "recall": 1.0,
       "precision": 0.2,
-      "reciprocal_rank": 0.5,
-      "ndcg": 0.6309297535714575
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     },
     {
       "category": "normal",
       "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
       "recall": 1.0,
       "precision": 0.4,
-      "reciprocal_rank": 0.3333333333333333,
-      "ndcg": 0.5
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
     },
     {
       "category": "normal",
@@ -89,7 +89,7 @@
       "category": "normal",
       "question": "how long is the probation period for new employees at CMRIT",
       "recall": 1.0,
-      "precision": 0.3333333333333333,
+      "precision": 0.6666666666666666,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -105,7 +105,7 @@
       "category": "normal",
       "question": "does CMRIT provide PF and ESI benefits to staff",
       "recall": 1.0,
-      "precision": 0.4,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -121,7 +121,7 @@
       "category": "normal",
       "question": "what compensatory off is given for working on a holiday",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.4,
       "reciprocal_rank": 0.5,
       "ndcg": 0.6309297535714575
     },
@@ -129,25 +129,25 @@
       "category": "normal",
       "question": "what is CMRIT's quality policy",
       "recall": 1.0,
-      "precision": 0.2,
+      "precision": 0.4,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
     {
       "category": "normal",
       "question": "what does tyt stand for",
-      "recall": 1.0,
-      "precision": 0.6,
-      "reciprocal_rank": 0.3333333333333333,
-      "ndcg": 0.5
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
     },
     {
       "category": "normal",
       "question": "what are the responsibilities of the Director at CMRIT",
       "recall": 1.0,
-      "precision": 0.2,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
     },
     {
       "category": "normal",
@@ -169,7 +169,7 @@
       "category": "normal",
       "question": "how often is the faculty semester evaluation done",
       "recall": 1.0,
-      "precision": 0.5,
+      "precision": 0.6666666666666666,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -177,7 +177,7 @@
       "category": "normal",
       "question": "what weightage do core activities like teaching and research carry in the faculty evaluation",
       "recall": 1.0,
-      "precision": 0.5,
+      "precision": 0.6666666666666666,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -213,5 +213,27 @@
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     }
-  ]
+  ],
+  "baseline_comparison": {
+    "recall": {
+      "current": 0.9375,
+      "baseline": 0.9791666666666666,
+      "delta": -0.04166666666666663
+    },
+    "precision": {
+      "current": 0.5548611111111111,
+      "baseline": 0.4909722222222222,
+      "delta": 0.06388888888888894
+    },
+    "reciprocal_rank": {
+      "current": 0.71875,
+      "baseline": 0.7256944444444444,
+      "delta": -0.00694444444444442
+    },
+    "ndcg": {
+      "current": 0.7348694252938037,
+      "baseline": 0.7502473522283263,
+      "delta": -0.015377926934522557
+    }
+  }
 }

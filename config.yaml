@@ -83,11 +83,11 @@ retrieval:
   # queries split between the mapped document's own chunks (PRIMARY,
   # up to MAPPED_DOCUMENT_PRIMARY_TOP_K in retriever.py) and a
   # secondary cross-document search that fills whatever's left
-  # (SECONDARY) — see retriever.py's module docstring. Bumped from 3
-  # to 5 so a mapped-document query has room for both, instead of
-  # PRIMARY alone consuming the entire budget and leaving no slots for
-  # a second, genuinely relevant document on multi-document questions.
-  top_k: 5
+  # (SECONDARY) — see retriever.py's module docstring. Raised from 5 to
+  # 8: the wide_top_k MLflow experiment (see experiments.yaml) scored
+  # best across recall/precision/MRR/NDCG of all runs compared, with no
+  # regression on the unanswerable-question category.
+  top_k: 8 #Changed to 8 from 5 after MLFLOW wide_top_k experiment
   # Minimum cross-encoder reranker score to keep a chunk; anything
   # below this is treated as "not relevant enough" so the assistant
   # can refuse instead of guessing from unrelated context.
@@ -126,7 +126,7 @@ retrieval:
   # individually clear min_reranker_score, which would otherwise let
   # PRIMARY silently consume the entire top_k budget on its own every
   # time and leave SECONDARY no room to ever run.
-  mapped_document_primary_top_k: 2
+  mapped_document_primary_top_k: 3 #Changed to 3 from 2 after MLFLOW wide_top_k experiment
   # Minimum cosine similarity (embedding-based, see
   # rag/indexing/topic_matcher.py) between a query and a topic's name
   # (docs-metadata.json) for that topic to be considered a match.
@@ -216,6 +216,11 @@ evaluation:
   # after each `make test-ragas` run, so the System Info page can show
   # the latest scores without re-running the (slow) evaluation.
   results_path: "./tests/ragas_results.json"
+  # Snapshot of results_path saved via `make save-ragas-baseline`. Every
+  # later `make test-ragas` run compares its mean_scores against this
+  # file (if present) and reports the delta per metric, so regressions
+  # are visible without manually diffing two results files.
+  baseline_path: "./tests/ragas_baseline.json"
 
   retrieval:
     # tests/evaluation/test_retrieval_eval.py: classic IR metrics (Recall/
@@ -227,6 +232,11 @@ evaluation:
     min_recall: 0.6
     min_mrr: 0.5
     results_path: "./tests/retrieval_results.json"
+    # Snapshot of results_path saved via `make save-retrieval-baseline`.
+    # Every later `make test-retrieval-eval` run compares its
+    # mean_scores against this file (if present) and reports the delta
+    # per metric.
+    baseline_path: "./tests/retrieval_baseline.json"
 
 database:
   # Session/history storage in MySQL. The password can be overridden

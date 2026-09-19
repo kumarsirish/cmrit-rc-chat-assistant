@@ -86,19 +86,42 @@ def _chunk_metadata(chunk: Chunk, filename_topic_map: dict) -> dict:
         "chunk_index": chunk.chunk_index,
         "topic": matched_topic.topic if matched_topic else "",
         "source_link": matched_topic.link if matched_topic else "",
+        # Curated terms (job titles, synonyms, ...) a chunk's own prose
+        # doesn't contain but queries about it might use — e.g. "Roles
+        # and Responsibilities.docx.pdf" never says "Director". Stored
+        # on every chunk from this topic's document so search_text()
+        # can fold them into what gets embedded/BM25-indexed, without
+        # ever touching the chunk text shown to the LLM or in
+        # citations. Chroma metadata values can't be None.
+        "keywords": (matched_topic.keywords or "") if matched_topic else "",
     }
 
 
-def embed_chunks(config: AppConfig, chunks: list) -> list:
-    """Stage 5 (embed): one vector per chunk's text."""
+def search_text(chunk_text: str, keywords: str) -> str:
+    """Text actually embedded/BM25-indexed for a chunk: its own text
+    plus any curated keywords for its document's topic (see
+    _chunk_metadata). Retrieval matches on this; everything shown to
+    the LLM or cited to the user still uses the chunk's plain text."""
+    if not keywords:
+        return chunk_text
+    return f"{chunk_text}\n\nKeywords: {keywords}"
+
+
+def embed_chunks(config: AppConfig, chunks: list, metadatas: list) -> list:
+    """Stage 5 (embed): one vector per chunk, embedded from search_text
+    (chunk text + any curated keywords for its topic), not the chunk's
+    raw text alone — see search_text()."""
     logger.info("Loading embedding model %s ...", config.embedding.model_name)
     embedding_generator = EmbeddingGenerator(
         config.embedding.model_name, batch_size=config.embedding.batch_size
     )
 
+    texts = [
+        search_text(chunk.text, metadata["keywords"]) for chunk, metadata in zip(chunks, metadatas)
+    ]
     logger.info("Embedding %d chunks with batch size %d ...", len(chunks), config.embedding.batch_size)
     try:
-        return embedding_generator.embed_texts([chunk.text for chunk in chunks])
+        return embedding_generator.embed_texts(texts)
     except Exception as exc:
         raise RuntimeError(f"Embedding failed for {len(chunks)} chunks: {exc}") from exc
 
@@ -120,13 +143,19 @@ def store_chunks(config: AppConfig, ids: list, chunks: list, embeddings: list, m
     return vector_store
 
 
-def run_ingestion() -> None:
-    config = load_config()
+def run_ingestion(config: AppConfig = None) -> None:
+    """config, if given, is used as-is instead of a fresh load_config()
+    call — lets a caller that already has a (possibly overridden)
+    config, e.g. scripts/run_experiment.py building a dedicated index
+    for a non-default embedding model, reuse this exact pipeline
+    instead of duplicating it."""
+    if config is None:
+        config = load_config()
 
     pages: list = load_pages(config)
     chunks: list = chunk_pages(config, pages)
     ids, metadatas = build_chunk_metadata(config, chunks)
-    embeddings = embed_chunks(config, chunks)
+    embeddings = embed_chunks(config, chunks, metadatas)
     vector_store = store_chunks(config, ids, chunks, embeddings, metadatas)
 
     logger.info("Done. Collection now has %d chunks.", vector_store.count())

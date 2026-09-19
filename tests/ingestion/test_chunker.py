@@ -169,3 +169,63 @@ def test_table_like_block_is_not_split_mid_row():
     assert len(chunks) == 1
     assert "CO-PO Computation" in chunks[0].text
     assert "Paper Writing" in chunks[0].text
+
+
+def test_double_spaced_prose_is_not_mistaken_for_a_table():
+    # Word/Google Docs -> PDF export commonly doubles every single
+    # space between words as a justification artifact. A table-line
+    # heuristic that fires on any 2+-space gap would treat this
+    # ordinary paragraph as one giant table row and mask the whole
+    # thing into a single opaque block the splitter can never break
+    # apart, no matter how large chunk_size is exceeded — burying
+    # whatever real content follows inside one oversized chunk instead
+    # of splitting normally.
+    paragraph = (
+        "Every  employee  must  complete  the  mandatory  orientation  "
+        "training  within  the  first  thirty  days  of  joining  CMRIT. "
+    ) * 5
+    pages = [PageDocument(text=paragraph, source_file="doc.pdf", page_number=1)]
+    chunks = chunk_documents(pages, chunk_size=200, chunk_overlap=20, separators=SEPARATORS)
+    assert len(chunks) > 1
+    for chunk in chunks:
+        assert len(chunk.text) <= 200 + 20
+
+
+def test_chunk_documents_drops_link_index_chunks():
+    # Google Docs/Word exports of a hyperlinked table-of-contents row
+    # repeat the row's title text in the plain-text extraction (once
+    # as cell text, once as anchor text, or once on the title's own
+    # line and again on a short line right after a URL). A chunk
+    # dominated by such rows is pure navigation to other documents,
+    # not answerable content, but it repeats query words densely
+    # enough to outrank the real answer in BM25/reranking (this
+    # reproduces the "what are the responsibilities of the Director"
+    # regression: this exact index chunk outscored the chunk with the
+    # real answer), so it must not be indexed at all.
+    index_text = (
+        "Link  \n"
+        "1  CMRIT  Website  www.cmrit.ac.in \n"
+        "2  CMRIT  Quality  Policy  CMRIT  Quality  Policy \n"
+        "3  Roles  and  Responsibilities  Roles  and  Responsibilities \n"
+        "4  CMRIT  Staff  -Welfare  Measures  CMRIT  Staff  -Welfare  Measures \n"
+        "5  Faculty  Handbook  (Initiatives,  Teaching  &  Learning)  \n"
+        "https://sites.google.com/cmrit.ac.in/handbook \n"
+        "Faculty  Handbook \n"
+    )
+    pages = [PageDocument(text=index_text, source_file="onboarding.pdf", page_number=1)]
+    chunks = chunk_documents(pages, chunk_size=1000, chunk_overlap=0, separators=SEPARATORS)
+    assert chunks == []
+
+
+def test_chunk_documents_keeps_real_prose_with_incidental_repetition():
+    # The link-index heuristic must not sweep up genuine policy prose
+    # that happens to repeat a short phrase once or twice.
+    text = (
+        "Medical Emergency: Ms. Shilpa Mariam Sooraj, Nurse, CMRIT, "
+        "Bangalore. Emergency Response Team: Dr. Prabhat Gautam. "
+        "Infrastructure Related: Mr. Manjunath S, Campus Manager CMRIT."
+    )
+    pages = [PageDocument(text=text, source_file="onboarding.pdf", page_number=3)]
+    chunks = chunk_documents(pages, chunk_size=1000, chunk_overlap=0, separators=SEPARATORS)
+    assert len(chunks) == 1
+    assert "Medical Emergency" in chunks[0].text

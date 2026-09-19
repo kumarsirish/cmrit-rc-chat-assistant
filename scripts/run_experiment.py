@@ -16,6 +16,22 @@ typing --set flags:
 
     python scripts/run_experiment.py --overrides-file experiments.yaml --experiment low_threshold
 
+Only classic IR metrics (Recall/Precision/MRR/NDCG@k, via
+rag/evaluation/evaluate_retrieval.py) are logged here -- RAGAS is never
+invoked by this script, so a run never costs a judge-model call and
+never touches tests/ragas_results.json.
+
+An override that changes embedding.model_name or any chunking.* value
+changes what the index itself must contain, not just how it's
+searched -- config.chroma.persist_directory (the shared store the live
+app reads) is never rebuilt or overwritten for this. Instead,
+_ensure_matching_index() detects the mismatch and transparently builds
+(once) or reuses (on later runs with the same settings) a dedicated,
+fingerprint-cached index under ./chroma_store_experiments/, running
+`scripts/ingest.py`'s pipeline automatically first if that exact
+embedding/chunking combination hasn't been indexed yet. Each run's
+"index_source" tag in MLflow records which store it actually used.
+
 View results with:
 
     mlflow ui --backend-store-uri sqlite:///mlflow.db
@@ -23,6 +39,7 @@ View results with:
 """
 
 import argparse
+import copy
 import hashlib
 import json
 import subprocess
@@ -45,6 +62,7 @@ from rag.retrieval.dense_retriever import DenseRetriever
 from rag.retrieval.reranker import Reranker
 from rag.retrieval.retrieval_service import RetrievalService
 from rag.routing.docs_metadata import load_doc_topics
+from scripts.ingest import run_ingestion
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # A single local SQLite file, not a directory tree — still fully
@@ -55,12 +73,12 @@ MLFLOW_TRACKING_URI = f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}"
 MLFLOW_ARTIFACT_ROOT = PROJECT_ROOT / "mlruns"
 MLFLOW_EXPERIMENT_NAME = "cmrit-rag-retrieval"
 
-REPRODUCIBILITY_WARNING = (
-    "chunking.chunk_size/chunk_overlap are logged from config.yaml but "
-    "are not verified against what chroma_store/ was actually built "
-    "with -- re-run `make ingest` after any chunking change, otherwise "
-    "these params may not describe the index this run actually queried."
-)
+# Dedicated, fingerprint-cached Chroma indexes for experiment runs
+# whose embedding/chunking overrides don't match config.yaml's own
+# settings — see _ensure_matching_index(). Kept entirely separate from
+# config.chroma.persist_directory (the shared store the live app
+# reads) so an experiment run never mutates production data.
+EXPERIMENT_INDEX_CACHE_ROOT = PROJECT_ROOT / "chroma_store_experiments"
 
 
 def _parse_args():
@@ -113,6 +131,72 @@ def _git(*args: str) -> str:
 
 def _dataset_fingerprint(path: str) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:12]
+
+
+def _index_signature(config) -> dict:
+    """The subset of config that determines what a Chroma index
+    actually contains (as opposed to retrieval.* hyperparameters,
+    which only change how an already-built index is searched). Two
+    configs with the same signature can safely share one index."""
+    return {
+        "embedding_model": config.embedding.model_name,
+        "chunk_size": config.chunking.chunk_size,
+        "chunk_overlap": config.chunking.chunk_overlap,
+        "separators": list(config.chunking.separators),
+        "source_directory": config.documents.source_directory,
+    }
+
+
+def _fingerprint_signature(signature: dict) -> str:
+    payload = json.dumps(signature, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()[:12]
+
+
+def _ensure_matching_index(config, base_signature: dict) -> tuple:
+    """Makes sure config.chroma.persist_directory actually points at an
+    index built with config's own embedding/chunking settings before
+    retrieval runs against it.
+
+    If config's signature matches base_signature (config.yaml's own,
+    unoverridden settings — what config.chroma.persist_directory is
+    assumed to already hold via the last `make ingest`), this is a
+    no-op: the run reuses the shared production store as-is.
+
+    Otherwise (an --set/--overrides-file override touched
+    embedding.model_name or chunking.*), the shared store would silently
+    misrepresent this run -- retrieval would run against vectors built
+    by a *different* embedding model than the one just configured. To
+    avoid that, this redirects config.chroma.persist_directory to a
+    dedicated store under EXPERIMENT_INDEX_CACHE_ROOT, keyed by a
+    fingerprint of the signature, and runs ingestion into it via
+    scripts/ingest.py's run_ingestion() -- but only the first time that
+    exact signature is requested; a later run with the same
+    embedding/chunking settings reuses the cached index instead of
+    re-ingesting from scratch.
+
+    Returns (index_source, rebuilt) for logging: index_source is
+    "shared" or "dedicated:<fingerprint>", rebuilt is whether ingestion
+    actually ran this call.
+    """
+    signature = _index_signature(config)
+    if signature == base_signature:
+        return "shared", False
+
+    fingerprint = _fingerprint_signature(signature)
+    persist_directory = str(EXPERIMENT_INDEX_CACHE_ROOT / fingerprint)
+    config.chroma.persist_directory = persist_directory
+
+    already_built = (Path(persist_directory) / "chroma.sqlite3").exists()
+    if already_built:
+        print(f"Reusing cached index for this run's embedding/chunking settings: {persist_directory}")
+        return f"dedicated:{fingerprint}", False
+
+    print(
+        f"This run's embedding/chunking settings differ from config.yaml's -- "
+        f"building a dedicated index at {persist_directory} (fingerprint {fingerprint}) ..."
+    )
+    run_ingestion(config)
+    return f"dedicated:{fingerprint}", True
 
 
 def build_retrieval_service(config):
@@ -174,6 +258,12 @@ def _ensure_experiment() -> None:
 def main():
     args = _parse_args()
     config = load_config()
+    # Untouched snapshot of config.yaml's own settings, taken before any
+    # override is applied -- _ensure_matching_index compares against
+    # this to decide whether config.chroma.persist_directory (the
+    # shared production store) still matches what this run needs, or
+    # whether a dedicated index has to be built/reused instead.
+    base_signature = _index_signature(copy.deepcopy(config))
 
     file_overrides = []
     if args.overrides_file:
@@ -186,6 +276,8 @@ def main():
     # editing the file.
     apply_overrides(config, file_overrides + args.overrides)
     run_name = args.run_name or args.experiment
+
+    index_source, index_rebuilt = _ensure_matching_index(config, base_signature)
 
     with open(config.evaluation.test_data_path, "r", encoding="utf-8") as test_file:
         all_cases = json.load(test_file, strict=False)
@@ -228,7 +320,8 @@ def main():
                 "dataset_num_cases": len(test_cases),
                 "num_indexed_chunks": vector_store.count(),
                 "chroma_store_mtime": chroma_store_mtime,
-                "reproducibility_warning": REPRODUCIBILITY_WARNING,
+                "index_source": index_source,
+                "index_rebuilt_this_run": index_rebuilt,
             }
         )
 

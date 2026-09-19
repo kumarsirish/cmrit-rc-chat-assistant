@@ -181,6 +181,8 @@ entirely rather than trying to out-tune it.
 
 | Decision | Why |
 |---|---|
+| A `docs-metadata.json` topic can map to more than one local PDF | `DocTopic.docs_filename` (`rag/routing/docs_metadata.py`) is always a list — `"docs"` in the JSON accepts a single filename string (kept as-is for every existing entry) or an array. MAPPED_DOCUMENT mode's scoped search then filters on `{"source_file": {"$in": [...]}}` across both the dense (Chroma) and BM25 backends, so a topic legitimately spread across a few PDFs (e.g. several RCPIE documents) can be searched as one trusted unit instead of forcing an artificial single-file split. |
+| Curated `keywords` per topic (`docs-metadata.json`), used two ways | (1) `topic_matcher.py` embeds each keyword phrase alongside the topic name and takes the best match, so a query phrased nothing like the topic's formal title (e.g. "when do unused casual leaves expire" vs. "Leave Information, Application and Approval Process") can still clear `topic_match_threshold`. (2) `scripts/ingest.py`'s `search_text()` appends the same keywords onto a chunk's own text before embedding/BM25-indexing it (never onto the text shown to the LLM or cited), so even a GLOBAL-mode fallback search benefits from terms the document's own prose never uses. |
 | One module per RAG step | Each stage (load, chunk, embed, store, retrieve, generate) can be read, tested, and replaced on its own without touching the others. |
 | Hybrid retrieval (dense + BM25 fused by RRF), not dense-only | Dense embeddings miss exact acronyms/policy codes/proper nouns the model has too little signal to place correctly (e.g. "TYL"); BM25 alone misses paraphrases dense search catches naturally. Fusing by rank rather than picking a winner or normalizing scores lets whichever signal is actually strong for a given query carry the result, without the app guessing in advance which one that is. |
 | Cross-encoder reranking as an optional second pass | A cross-encoder scoring `(query, chunk)` jointly is a strictly stronger relevance signal than comparing two independently-computed embeddings, but too slow to run over the whole collection — so it's applied only to the fused pool's best `rerank.candidates`, not the full corpus. |
@@ -314,7 +316,8 @@ make run-debug
 | `make test-retrieval-eval` | Runs the retrieval-only IR metrics (Recall/Precision/MRR/NDCG@k) against the real Chroma store, no LLM call |
 | `make test-ragas` | Runs the RAGAS judge evaluation against the real pipeline (needs Ollama + an ingested Chroma store) |
 | `make metrics` | Runs `test-retrieval-eval` then `test-ragas` back to back |
-| `make experiment` | Runs one retrieval evaluation and logs it as an MLflow run — see "Experiment tracking" below |
+| `make experiment` | Runs one retrieval evaluation (config.yaml as-is, no overrides) and logs it as an MLflow run — see "Experiment tracking" below |
+| `make experiments-all` | Runs every named block in `experiments.yaml` back to back, then opens the MLflow UI automatically |
 | `make mlflow-ui` | Opens the MLflow UI to compare experiment runs |
 
 ## Experiment tracking (MLflow)
@@ -326,17 +329,25 @@ above `min_recall`/`min_mrr`); it doesn't keep history. For comparing
 model help?" — `scripts/run_experiment.py` runs the same classic IR
 evaluation (Recall/Precision/MRR/NDCG@k) but logs the result as a
 comparable MLflow run instead of just asserting a threshold.
+**RAGAS is never involved here** — no judge-model call, no live
+generation pipeline call, no `tests/ragas_results.json` write; only
+retrieval is scored, which is what keeps each run fast.
 
 Tracking is entirely local — no server, no Docker: run metadata
 (params/metrics/tags) goes in `./mlflow.db` (SQLite), artifacts
-(resolved config, full per-question results) go under `./mlruns/`.
-Both are gitignored; nothing here is shared or synced anywhere.
+(resolved config, full per-question results) go under `./mlruns/`, and
+any dedicated indexes built for non-default embedding/chunking
+settings (see below) live under `./chroma_store_experiments/`. All
+three are gitignored; nothing here is shared or synced anywhere.
 
 ### Running an experiment
 
 ```bash
 # Run with config.yaml exactly as it is:
 make experiment
+
+# Run every named block in experiments.yaml back to back, then open the MLflow UI automatically:
+make experiments-all
 
 # Override one or more values for this run only, without editing config.yaml:
 python scripts/run_experiment.py --run-name my-change --set retrieval.top_k=3
@@ -351,15 +362,28 @@ python scripts/run_experiment.py --overrides-file experiments.yaml --experiment 
 multiple overrides; each value is parsed to match that field's
 existing type (int/float/bool/str) automatically. `experiments.yaml`
 holds the same overrides as named, reusable blocks — see the file for
-the format and a few example presets (`low_threshold`, `wide_top_k`,
-`lexical_heavy`, `alt_reranker`).
+the format and the current presets (`baseline`, `low_threshold`,
+`wide_top_k`, `lexical_heavy`, `alt_reranker`, `bge_base_embedding`).
+`make experiments-all` reads the block names straight from that file
+(nothing hardcoded in the `Makefile`), so a new block is picked up
+automatically.
 
-One caveat: overriding `embedding.model_name` (or anything under
-`chunking`) only changes what the *query* is embedded/compared with
-at evaluation time — it does not rebuild `chroma_store/`. Comparing
-embedding models or chunk sizes fairly requires re-ingesting with that
-setting first (`make ingest`), since those overrides can't retroactively
-change what's already indexed.
+**Overriding `embedding.model_name` or any `chunking.*` value no
+longer silently scores against the wrong index.** Those settings
+change what a Chroma index actually contains, not just how it's
+searched, so `scripts/run_experiment.py`'s `_ensure_matching_index()`
+compares the run's settings against `config.yaml`'s own (what
+`./chroma_store` — the shared store the live app reads — is assumed to
+already hold via the last `make ingest`). If they match, the run
+reuses that shared store untouched. If they differ (e.g.
+`bge_base_embedding`'s `BAAI/bge-base-en-v1.5`), it transparently
+builds — the *first* time that exact combination is requested only —
+a dedicated index under `./chroma_store_experiments/<fingerprint>/`
+via `scripts/ingest.py`'s own pipeline, and reuses that cached index on
+every later run with the same settings. The production
+`./chroma_store` is never rebuilt or overwritten by an experiment run.
+Each run's `index_source` tag (see below) records which store it
+actually used.
 
 ### Comparing runs
 
@@ -367,8 +391,9 @@ change what's already indexed.
 make mlflow-ui
 ```
 
-Opens the MLflow UI (`http://localhost:5000`) over `./mlflow.db`. Each
-run shows:
+Opens the MLflow UI (`http://localhost:5000`) over `./mlflow.db`
+(`make experiments-all` also opens this automatically once every run
+finishes). Each run shows:
 
 - **Params** — the full resolved `config.yaml` (after any overrides),
   flattened to dotted keys, e.g. `retrieval.top_k`, `retrieval.rerank.model`
@@ -377,17 +402,21 @@ run shows:
 - **Tags** — `git_commit`, `git_branch`, `git_dirty` (uncommitted
   changes at run time), `dataset_hash`/`dataset_num_cases` (which
   version of `evaluation-question-answers.json` was scored),
-  `num_indexed_chunks`, `chroma_store_mtime`, and a
-  `reproducibility_warning` noting that chunking params are logged
-  from `config.yaml` but aren't verified against what `chroma_store/`
-  was actually built with
+  `num_indexed_chunks`, `chroma_store_mtime`, `index_source`
+  (`"shared"` or `"dedicated:<fingerprint>"` — which store this run
+  actually queried), and `index_rebuilt_this_run` (whether ingestion
+  ran as part of this call)
 - **Artifacts** — `resolved_config.json` (the full nested config, not
   just the flattened params) and `retrieval_results.json` (per-question
   scores, not just the means)
 
 Sort/filter by any metric or tag in the UI to compare runs — e.g. sort
 by `recall` descending to find the best-performing configuration tried
-so far.
+so far. Better IR metrics don't automatically mean better final
+answers (more/different chunks retrieved is still only an input to
+generation) — `make test-ragas` is the only place generation quality
+(faithfulness/answer correctness) actually gets checked, so confirm
+there before promoting an experiment's settings into `config.yaml`.
 
 ## Configuration
 
@@ -411,7 +440,7 @@ session.
 | `llm.groq` | `model` | `qwen/qwen3.8-27b` | Generation model on Groq's hosted API |
 | `llm.groq` | `temperature` | `0` | Sampling temperature — `0` for deterministic answers |
 | `llm.groq` | `request_timeout_seconds` | `300` | HTTP timeout for a generation call |
-| `llm.groq` | `max_tokens` | `220` | Answer-length cap (Groq is hosted, so this isn't a latency safety valve like `ollama.num_predict`, just a length cap) |
+| `llm.groq` | `max_tokens` | `800` | Answer-length cap (Groq is hosted, so this isn't a latency safety valve like `ollama.num_predict`, just a length cap) |
 | `llm.groq` | `api_key_env` | `GROQ_KEY` | Name of the environment variable holding the Groq API key |
 | `embedding` | `model_name` | `all-MiniLM-L6-v2` | Local sentence-transformers model for chunk/query embeddings |
 | `embedding` | `batch_size` | `64` | Chunks embedded per batch during ingestion |
@@ -422,9 +451,9 @@ session.
 | `chunking` | `chunk_size` | `800` (characters) | Target chunk size — roughly one dense policy paragraph: big enough to keep a rule and its conditions together, small enough that several retrieved chunks still fit comfortably in the LLM's context window |
 | `chunking` | `chunk_overlap` | `120` (characters, ~15%) | Overlap carried between consecutive chunks, so a sentence split across a boundary isn't lost to either side |
 | `chunking` | `separators` | `["\n\n", "\n", ". ", " "]` | Split priority order (paragraph -> line -> sentence -> word) |
-| `retrieval` | `top_k` | `3` | Final chunks returned per question, in both MAPPED_DOCUMENT and GLOBAL mode, after fusion/rerank/filtering |
+| `retrieval` | `top_k` | `8` | Final chunks returned per question, in both MAPPED_DOCUMENT and GLOBAL mode, after fusion/rerank/filtering. Raised from 5: the `wide_top_k` MLflow experiment (see "Experiment tracking" below) scored best across recall/precision/MRR/NDCG of everything compared, with no regression on the unanswerable-question category |
 | `retrieval` | `min_reranker_score` | `0.35` | Minimum cross-encoder reranker score to keep a chunk (see "Relevance filtering" below for why this replaced the old dense-cosine `min_relevance_score`). If nothing survives, the pipeline refuses instead of guessing |
-| `retrieval` | `mapped_document_primary_top_k` | `2` | MAPPED_DOCUMENT mode only: cap on how many of the mapped document's own ("PRIMARY") chunks are kept out of `top_k`, before any remaining slots go to a SECONDARY, cross-document search (see `retrieval_service.py`'s `MAPPED_DOCUMENT_PRIMARY_TOP_K`) |
+| `retrieval` | `mapped_document_primary_top_k` | `3` | MAPPED_DOCUMENT mode only: cap on how many of the mapped document's own ("PRIMARY") chunks are kept out of `top_k`, before any remaining slots go to a SECONDARY, cross-document search (see `retrieval_service.py`'s `MAPPED_DOCUMENT_PRIMARY_TOP_K`) |
 | `retrieval` | `topic_match_threshold` | `0.5` | Minimum embedding cosine similarity between a query and a topic's name (`docs-metadata.json`) for `EmbeddingTopicMatcher` to count it as a match; below this, retrieval falls back to GLOBAL mode |
 | `retrieval.hybrid` | `enabled` | `true` | GLOBAL mode only: turns on BM25 lexical search fused with dense search via RRF; disabled means dense-only |
 | `retrieval.hybrid` | `candidates` | `10` | GLOBAL mode: chunks fetched from *each* of dense/lexical search before fusion. MAPPED_DOCUMENT mode uses a separate, smaller constant (`MAPPED_DOCUMENT_CANDIDATES = 6` in `retrieval_service.py`, not config — the search space is already one document) |
@@ -433,7 +462,7 @@ session.
 | `retrieval.rerank` | `model` | `BAAI/bge-reranker-base` | Cross-encoder model (alt: `ms-marco-MiniLM-L-6-v2`) |
 | `retrieval.rerank` | `candidates` | `8` | Top N of the candidate pool handed to the reranker; the final `top_k` is chosen from these |
 | `session` | `timeout_minutes` | `5` | Inactivity timeout before a session is treated as expired |
-| `session` | `max_history_messages` | `2` | Most recent chat turns sent to the LLM as conversation context |
+| `session` | `max_history_messages` | `1` | Most recent chat turns sent to the LLM as conversation context |
 | `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `test-ragas`, kept separate from whichever `llm.provider` answers real questions so it isn't grading its own generations |
 | `evaluation` | `test_data_path` | `./tests/evaluation-question-answers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both eval suites |
 | `evaluation` | `min_score` | `0.5` | Minimum mean RAGAS metric score to pass `test-ragas` |
@@ -466,6 +495,11 @@ the judge model scores them.
 `make metrics` writes fresh numbers to `tests/retrieval_results.json`
 (classic IR) and `tests/ragas_results.json` (LLM-judged), both also
 readable from the app's System Info page.
+
+**The numbers in this section predate `retrieval.top_k` moving from 5
+to 8** (see "Configuration" above and the `wide_top_k` MLflow
+experiment) — re-run `make metrics` to refresh them against the
+current config.
 
 ### Retrieval-only (`test-retrieval-eval`, k=5, 24 labeled questions)
 
@@ -534,29 +568,52 @@ showing up here as low context_precision.
    multi-document ones. This is a definitional decision, not a
    retrieval bug — flagging it rather than changing the test data
    unilaterally.
-2. ~~**`find_matching_topic`'s tie-breaking picked the wrong topic for
-   "Give TYL Program Details"**~~ — **Resolved.** Topic detection no
-   longer scores by literal keyword overlap at all: `topic_matcher.
-   EmbeddingTopicMatcher` embeds each topic's name once and matches a
-   query by cosine similarity against those vectors, so a generic
-   shared word like "details" no longer ties two unrelated topics —
-   only genuine semantic closeness counts, and paraphrases of a topic
-   name (not just literal keyword matches) are picked up too. The
-   match threshold is `retrieval.topic_match_threshold` in
-   `config.yaml`.
-3. **The GLOBAL fallback (for a bad topic match, or no match at all)
+2. **The GLOBAL fallback (for a bad topic match, or no match at all)
    still has the pre-existing weaknesses hybrid+rerank always had** —
-   e.g. no mechanism to diversify across source documents for a
-   question that genuinely spans more than one policy doc (the
-   `multiple_related_documents` category). MAPPED_DOCUMENT mode doesn't
-   touch this; it only helps when a topic resolves correctly to one
-   document.
-4. **Test set now has 24 labeled cases** (`normal` and `unanswerable`),
+   no mechanism to diversify across source documents for a question
+   that genuinely spans more than one *unrelated* policy doc (the
+   `multiple_related_documents` category). This is now partially
+   addressed for the case where several PDFs are really one topic
+   (`DocTopic.docs_filename` accepts a list, and MAPPED_DOCUMENT mode's
+   scoped search filters on all of them via `{"source_file": {"$in":
+   [...]}}` — see "Design decisions" above), but that only helps when
+   the topic mapping in `docs-metadata.json` is set up that way ahead
+   of time. An ad-hoc question spanning two independently-topic-mapped
+   documents still falls through to plain GLOBAL search with no
+   diversification.
+3. **Test set now has 24 labeled cases** (`normal` and `unanswerable`),
    up from the original 4 — the `multiple_related_documents` category
    from earlier runs is no longer present in the current file, so
-   item 3 above (GLOBAL fallback diversification) is currently
+   item 2 above (GLOBAL fallback diversification) is currently
    unvalidated by `test-retrieval-eval`; re-adding cases for it would
    close that gap.
-5. **Re-run `make test-ragas`** on the current retrieval code — the
-   committed `ragas_results.json` predates the cross-encoder/threshold
-   refactor described above.
+4. **RAGAS's Faithfulness metric can't verify a claim that names its
+   source document, even when the claim is correct** — reproduced
+   directly against the live judge (Gemini 2.5 Flash) while debugging a
+   low-scoring leave-policy question: `retrieved_contexts` handed to
+   RAGAS is plain chunk text with no source metadata attached, so a
+   sentence like "According to the Faculty Handbook, unutilized
+   vacation leaves lapse at the end of the vacation period" gets marked
+   unfaithful — not because the fact is wrong, but because the judge's
+   NLI check can't find "Faculty Handbook" anywhere in the unlabeled
+   context it's checking against. This is a harness limitation, not a
+   pipeline defect; fixing it would mean prefixing each context string
+   passed to RAGAS with its source document name (e.g. `[Source:
+   Faculty Handbook-CMRIT.docx.pdf]`) so attribution claims become
+   verifiable.
+5. **Some of the underlying policy documents genuinely disagree with
+   each other**, independent of any retrieval/metric issue — the
+   Faculty Handbook and HoD Handbook both say unutilized vacation leave
+   "lapses at the end of the corresponding vacation period," while the
+   dedicated Leave Information document says vacation leave lapses "31st
+   December," for the same policy. No amount of retrieval tuning fixes
+   a question whose true answer depends on which of two contradicting
+   source PDFs is authoritative — this is a data-quality issue to flag
+   to whoever owns those documents, not a code fix.
+6. **Re-run `make test-ragas` and `make test-retrieval-eval`** on the
+   current config — the committed `ragas_results.json` and
+   `retrieval_results.json` predate `retrieval.top_k` moving from 5 to
+   8, `mapped_document_primary_top_k` moving from 2 to 3, and the Leave
+   topic `keywords` fix (added after the Leave topic's name alone
+   scored only 0.103 similarity against real leave questions, well
+   under `topic_match_threshold: 0.5`).

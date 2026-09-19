@@ -44,10 +44,26 @@ def _tokenize(text: str) -> list:
     return [token for token in _TOKEN_PATTERN.findall(text.lower()) if token not in _STOPWORDS]
 
 
+def _search_text(document: "BM25Document") -> str:
+    keywords = (document.metadata or {}).get("keywords", "")
+    return f"{document.text} {keywords}" if keywords else document.text
+
+
 def _matches_filter(metadata: dict, metadata_filter: dict) -> bool:
+    """Mirrors the subset of Chroma's `where` operators retrieval_service.py
+    actually builds: a plain value means exact match, {"$in": [...]}
+    means membership (used for MAPPED_DOCUMENT mode's now-possibly-
+    multi-file scoped_filter)."""
     if not metadata_filter:
         return True
-    return all(metadata.get(key) == value for key, value in metadata_filter.items())
+    for key, value in metadata_filter.items():
+        actual = metadata.get(key)
+        if isinstance(value, dict) and "$in" in value:
+            if actual not in value["$in"]:
+                return False
+        elif actual != value:
+            return False
+    return True
 
 
 @dataclass
@@ -63,7 +79,13 @@ class BM25Index:
 
     def __init__(self, documents: list):
         self._documents = documents
-        corpus = [_tokenize(document.text) for document in documents]
+        # Tokenize text + any curated keywords for the chunk's topic
+        # (see scripts/ingest.py's search_text()), not text alone, so
+        # BM25 can match a query term (e.g. "Director") a chunk's own
+        # prose never uses. Only the tokens fed to BM25 are affected —
+        # document.text itself (what gets shown to the LLM/cited)
+        # never changes.
+        corpus = [_tokenize(_search_text(document)) for document in documents]
         self._token_sets = [set(tokens) for tokens in corpus]
         self._bm25 = BM25Okapi(corpus) if corpus else None
 

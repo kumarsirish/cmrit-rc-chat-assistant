@@ -6,6 +6,14 @@ from rag.retrieval.retrieval_service import GLOBAL_MODE, MAPPED_DOCUMENT_MODE, R
 from rag.routing.docs_metadata import DocTopic
 
 
+def _matches(actual, expected):
+    """Same {"$in": [...]} membership support as the real Chroma/BM25
+    filters, for FakeDenseRetriever's exact-match filtering below."""
+    if isinstance(expected, dict) and "$in" in expected:
+        return actual in expected["$in"]
+    return actual == expected
+
+
 class FakeEmbeddingGenerator:
     def embed_query(self, text):
         return [1.0, 0.0, 0.0]
@@ -46,7 +54,7 @@ class FakeDenseRetriever:
             results = [
                 (document, score)
                 for document, score in results
-                if all(document.metadata.get(key) == value for key, value in filter.items())
+                if all(_matches(document.metadata.get(key), value) for key, value in filter.items())
             ]
         return results[:top_k]
 
@@ -360,7 +368,39 @@ def test_primary_full_skips_secondary_search_entirely():
     results, _ = service.retrieve("what is the leave policy")
     assert [chunk.source_file for chunk in results] == ["leave.pdf"]
     assert dense_retriever.search_call_count == 1
-    assert dense_retriever.last_filter == {"source_file": "leave.pdf"}
+    assert dense_retriever.last_filter == {"source_file": {"$in": ["leave.pdf"]}}
+
+
+def test_topic_mapped_to_multiple_documents_searches_all_of_them_as_primary():
+    # A topic can be backed by more than one PDF (docs_filename with
+    # several entries); PRIMARY must pull matching chunks from any of
+    # them, and SECONDARY must exclude all of them, not just the first.
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.02, 0.05, 0.6],
+        metadatas=[
+            {"source_file": "leave.pdf", "page_number": 1, "chunk_index": 0},
+            {"source_file": "leave-addendum.pdf", "page_number": 1, "chunk_index": 0},
+            {"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0},
+        ],
+    )
+    doc_topics = [
+        DocTopic(
+            topic="Leave Policy",
+            link="https://example.com/leave",
+            docs_filename=["leave.pdf", "leave-addendum.pdf"],
+        )
+    ]
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=3,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+        mapped_document_primary_top_k=2,
+    )
+    results, _ = service.retrieve("what is the leave policy")
+    assert [chunk.source_file for chunk in results] == ["leave.pdf", "leave-addendum.pdf", "doc0.pdf"]
+    assert dense_retriever.last_filter is None  # last call is the SECONDARY (unfiltered) search
 
 
 def test_primary_full_with_overridden_config_still_skips_secondary():

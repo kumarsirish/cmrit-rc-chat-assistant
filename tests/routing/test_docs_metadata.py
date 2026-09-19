@@ -29,3 +29,14 @@ def test_build_filename_topic_map_normalizes_and_skips_link_only():
         "Leave Information, Application and Approval Process"
     )
     assert "cmrit website" not in filename_map
+
+
+def test_build_filename_topic_map_maps_every_file_of_a_multi_doc_topic():
+    topic = DocTopic(
+        topic="Leave Policy",
+        link="https://example.com/leave",
+        docs_filename=["leave.pdf", "leave-addendum.pdf"],
+    )
+    filename_map = build_filename_topic_map([topic])
+    assert filename_map["leave.pdf"] is topic
+    assert filename_map["leave-addendum.pdf"] is topic

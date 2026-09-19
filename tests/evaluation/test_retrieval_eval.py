@@ -21,6 +21,7 @@ import json
 import pytest
 
 from rag.common.config import load_config
+from rag.evaluation.baseline import compare_to_baseline, format_comparison, load_baseline_mean_scores
 from rag.evaluation.evaluate_retrieval import evaluate_retrieval
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.embeddings import EmbeddingGenerator
@@ -97,6 +98,20 @@ def test_retrieval_quality_meets_minimum_thresholds(config, retrieval_service):
 
     print(f"\nRetrieval mean scores (k={result['k']}): {mean_scores}")
     print(f"Retrieval mean scores by category: {result['mean_by_category']}")
+
+    baseline_mean_scores = load_baseline_mean_scores(config.evaluation.retrieval.baseline_path)
+    comparison = compare_to_baseline(mean_scores, baseline_mean_scores)
+    if comparison is None:
+        print(
+            f"\nNo baseline at {config.evaluation.retrieval.baseline_path} — run "
+            "`make save-retrieval-baseline` to compare future runs against this one."
+        )
+    else:
+        print(
+            f"\nVs baseline ({config.evaluation.retrieval.baseline_path}):\n"
+            f"{format_comparison(comparison)}"
+        )
+    result["baseline_comparison"] = comparison
 
     with open(config.evaluation.retrieval.results_path, "w", encoding="utf-8") as results_file:
         json.dump(result, results_file, indent=2)

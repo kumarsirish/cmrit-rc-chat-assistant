@@ -68,7 +68,7 @@ def test_match_finds_link_only_entry():
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.3)
     matched = matcher.match("website access")
     assert matched.topic == "website access portal"
-    assert matched.docs_filename is None
+    assert matched.docs_filename == []
 
 
 def test_match_returns_none_with_no_topics():
