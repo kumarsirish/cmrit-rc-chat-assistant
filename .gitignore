@@ -27,6 +27,17 @@ env/
 chroma_store/
 logs/
 
+# MLflow's local experiment tracking store (scripts/run_experiment.py)
+mlflow.db
+mlruns/
+# Dedicated indexes run_experiment.py builds for embedding/chunking
+# overrides that don't match config.yaml's own settings
+chroma_store_experiments/
+
+# Scratch files from `make test-ragas-failures` (scripts/filter_low_faithfulness.py)
+tests/evaluation-question-answers.low-faithfulness.json
+tests/ragas_results.low-faithfulness.json
+
 # Editor / IDE
 .vscode/
 .idea/
@@ -36,3 +47,8 @@ logs/
 .DS_Store
 Thumbs.db
 *:Zone.Identifier
+
+# nohup output from backgrounded long-running commands (make test-ragas,
+# make experiments-all, etc.)
+nohup.out
+nohup.out.*

@@ -68,13 +68,67 @@ _NUMERIC_HEADING_LEVEL_PATTERN = re.compile(r"^(\d+(?:\.\d+)*)\.?\s")
 HEADING_MARKER = "\x00HEADING_BREAK\x00"
 PAGE_JOIN_SEPARATOR = "\n\n"
 
-# A line with two or more runs of 2+ spaces between non-space text
-# looks like a table row (column-aligned plain-text extraction of a
-# table). Two or more such lines in a row are masked as a single
-# opaque block before splitting, so the splitter can't carve a table
-# apart unless the whole table alone exceeds chunk_size.
-_TABLE_LINE_PATTERN = re.compile(r"\S {2,}\S")
+# A line with a run of 3+ spaces between non-space text looks like a
+# table row (column-aligned plain-text extraction of a table). Two or
+# more such lines in a row are masked as a single opaque block before
+# splitting, so the splitter can't carve a table apart unless the
+# whole table alone exceeds chunk_size.
+#
+# Deliberately 3+, not 2+: PDF extraction from Word/Google Docs
+# exports (the *.docx.pdf files in this corpus) commonly doubles every
+# single space between words as a justification artifact, so a 2+
+# threshold makes ordinary prose paragraphs match on nearly every
+# line. That falsely classified whole multi-page documents as "one
+# giant table," bypassing chunk_size entirely and producing 4000-9000
+# character chunks the splitter could never break apart — burying real
+# answers (e.g. a contact-list entry) inside a chunk so dominated by
+# unrelated content that retrieval couldn't find it. Genuine table
+# columns are visually spaced wider (3+ spaces) to stay readable, so
+# this still catches real tables (see test_table_like_block_is_not_split_mid_row)
+# without swallowing doubled-space prose.
+_TABLE_LINE_PATTERN = re.compile(r"\S {3,}\S")
 _MIN_TABLE_BLOCK_LINES = 2
+
+# Google Docs/Word exports of a hyperlinked table-of-contents row
+# repeat the link's display text in the plain-text extraction: either
+# twice back-to-back on the same line (cell text immediately followed
+# by anchor text, e.g. "3  Roles  and  Responsibilities  Roles  and
+# Responsibilities"), or on its own short line shortly after the row's
+# title was already stated (title line, then a URL line, then the
+# link's anchor text repeated alone, e.g. "5  Faculty  Handbook
+# (...)" / "https://..." / "Faculty  Handbook"). No genuine policy
+# sentence repeats a multi-word phrase like this, so it reliably flags
+# a link-index row rather than prose.
+_DUPLICATED_LINK_ROW_PATTERN = re.compile(r"^\d*\s*(.{3,80}?)\s+\1\s*$")
+_MAX_REPEATED_TITLE_WORDS = 6
+_REPEATED_TITLE_LOOKBACK = 2
+# A chunk this dominated by such rows is a table of contents pointing
+# at other documents, not answerable content — but it repeats topic
+# words densely enough to outscore the real answer in BM25/reranking
+# (see test_chunk_documents_drops_link_index_chunks for the regression
+# this guards against), so it's dropped rather than indexed.
+_MIN_LINK_INDEX_ROWS = 2
+_MIN_LINK_INDEX_ROW_RATIO = 0.3
+
+
+def _looks_like_link_index(text: str) -> bool:
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    if not lines:
+        return False
+    normalized = [re.sub(r"\s+", " ", line) for line in lines]
+
+    matches = 0
+    for index, line in enumerate(normalized):
+        if _DUPLICATED_LINK_ROW_PATTERN.match(line):
+            matches += 1
+            continue
+        if len(line.split()) <= _MAX_REPEATED_TITLE_WORDS and any(
+            line.lower() in earlier.lower()
+            for earlier in normalized[max(0, index - _REPEATED_TITLE_LOOKBACK) : index]
+        ):
+            matches += 1
+
+    return matches >= _MIN_LINK_INDEX_ROWS and matches / len(lines) >= _MIN_LINK_INDEX_ROW_RATIO
 
 
 def _normalize_blank_lines(text: str) -> str:
@@ -360,6 +414,9 @@ def chunk_documents(
                 start = search_from
             end = start + len(cleaned_text)
             search_from = start
+
+            if _looks_like_link_index(cleaned_text):
+                continue
 
             page_number, page_end = _pages_for_span(page_spans, start, end)
             section_title = _section_title_for_offset(heading_paths, start)

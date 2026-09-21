@@ -26,7 +26,7 @@ langchain
 langchain-groq
 
 # RAGAS: LLM-judged evaluation of the RAG pipeline's answers against
-# the reference Q&A pairs in tests/test-question-qnswers.json (see
+# the reference Q&A pairs in tests/evaluation-question-answers.json (see
 # tests/test_ragas_judge.py, `make test-ragas`).
 ragas
 
@@ -34,7 +34,12 @@ ragas
 # evaluation.judge_provider is "gemini" (needs GOOGLE_API_KEY).
 langchain-google-genai
 
-# BM25 lexical index for hybrid retrieval (rag/bm25_index.py) — pure
-# Python, no server/embedding model needed, so it's the standard
-# lightweight choice for combining with dense/embedding search.
+# BM25 lexical index for hybrid retrieval (rag/retrieval/bm25_retriever.py)
+# — pure Python, no server/embedding model needed, so it's the
+# standard lightweight choice for combining with dense/embedding search.
 rank_bm25
+
+# Local experiment tracking for scripts/run_experiment.py — file-based
+# (./mlruns), no server/Docker needed. Lets retrieval evaluation runs
+# (different models/hyperparameters) be logged and compared over time.
+mlflow

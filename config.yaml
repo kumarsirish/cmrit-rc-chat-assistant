@@ -42,7 +42,7 @@ llm:
     # Groq is hosted (no CPU inference budget to protect), so this is
     # just an answer-length cap, not a latency safety valve like
     # ollama.num_predict.
-    max_tokens: 220
+    max_tokens: 800
     # Name of the environment variable holding the Groq API key. Kept
     # configurable (rather than hard-coding GROQ_API_KEY) because this
     # deployment's key is already set as GROQ_KEY.
@@ -50,7 +50,24 @@ llm:
 
 embedding:
   # Local sentence-transformers model used to embed chunks and queries.
-  model_name: "all-MiniLM-L6-v2"
+  # Switched from all-MiniLM-L6-v2 to bge-base-en-v1.5 after finding
+  # dense retrieval missing chunks whose embedding didn't strongly
+  # match a conversational/paraphrased question even though the chunk
+  # was clearly the right answer (e.g. "How often am I expected to
+  # present something beyond the syllabus to my department?" vs. the
+  # Faculty Handbook's "Every faculty must present a technical topic
+  # beyond the curriculum..." — a near-paraphrase that still scored
+  # only 0.34 cosine with all-MiniLM-L6-v2, below several wrong
+  # candidates). bge-base-en-v1.5 is a stronger, larger embedding
+  # model expected to separate paraphrases better.
+  #
+  # IMPORTANT: changing this requires re-running `make ingest` — the
+  # existing chroma_store was built with all-MiniLM-L6-v2 embeddings
+  # (384-dim); bge-base-en-v1.5 (768-dim) embeddings are not
+  # comparable to them, so the store must be rebuilt from scratch
+  # before this change has any effect on real queries.
+  model_name: "BAAI/bge-base-en-v1.5"
+  #model_name: "all-MiniLM-L6-v2"  # previous model; kept as fallback reference
   # Chunks are embedded in batches of this size during ingestion,
   # instead of one at a time, to reclaim CPU throughput.
   batch_size: 64
@@ -83,15 +100,87 @@ retrieval:
   # queries split between the mapped document's own chunks (PRIMARY,
   # up to MAPPED_DOCUMENT_PRIMARY_TOP_K in retriever.py) and a
   # secondary cross-document search that fills whatever's left
-  # (SECONDARY) — see retriever.py's module docstring. Bumped from 3
-  # to 5 so a mapped-document query has room for both, instead of
-  # PRIMARY alone consuming the entire budget and leaving no slots for
-  # a second, genuinely relevant document on multi-document questions.
-  top_k: 5
-  # Chunks whose similarity score falls below this value are treated
-  # as "not relevant enough" so the assistant can refuse to answer
-  # instead of guessing from unrelated context.
+  # (SECONDARY) — see retriever.py's module docstring. Raised from 5 to
+  # 8: the wide_top_k MLflow experiment (see experiments.yaml) scored
+  # best across recall/precision/MRR/NDCG of all runs compared, with no
+  # regression on the unanswerable-question category.
+  top_k: 8 #Changed to 8 from 5 after MLFLOW wide_top_k experiment
+  # Minimum cross-encoder reranker score to keep a chunk; anything
+  # below this is treated as "not relevant enough" so the assistant
+  # can refuse instead of guessing from unrelated context.
+  #
+  # This used to be min_relevance_score: 0.40, a threshold on dense
+  # cosine similarity ([0, 1] scale). Since the reranker score is now
+  # the authoritative relevance signal (see retrieval_service.py),
+  # that old number has no meaning here — reranker scores aren't
+  # cosine similarity. 0.35 was picked by scoring real (question,
+  # chunk) pairs from tests/evaluation-question-answers.json with
+  # bge-reranker-base and comparing scores for chunks from a
+  # question's relevant_sources vs. chunks that weren't: 0.35 had the
+  # best precision/recall balance (F1) of the thresholds tried. This
+  # is document-level ground truth (not every chunk in a "relevant"
+  # document actually answers the question), so treat it as a
+  # reasonable starting point, not a precisely tuned number.
+  #
+  # Switched the model to bge-reranker-v2-m3 (see rerank.model below)
+  # after bge-reranker-base was found to score conversational/indirect
+  # phrasings of a question far lower than direct phrasings of the
+  # same question against the identical correct chunk (e.g. 0.35 vs
+  # 0.996 on one observed pair) — enough to silently drop the right
+  # chunk on real-world-style questions. Spot-checking v2-m3 on the
+  # same conversational questions showed clean separation at this same
+  # 0.35 cutoff (true hits ~0.5-0.99, true misses <0.31), so the value
+  # carried over as-is; it hasn't been independently re-tuned for
+  # v2-m3 with the full F1-sweep method used for base.
+  #
+  # Below this cutoff, GLOBAL/SECONDARY search no longer refuses
+  # outright — see low_confidence_min_score below for the fallback.
+  min_reranker_score: 0.35
+  # When nothing clears min_reranker_score, the single best-scoring
+  # candidate is still returned (flagged low_confidence=True) instead
+  # of refusing, as long as its score is at least this — below it, the
+  # query is treated as genuinely unanswerable and no chunk is
+  # returned. Added after finding several correct-but-terse/bulleted
+  # chunks (e.g. "Failure in 1 subject < 5%" for a slow-learners
+  # question) scored 0.06-0.31 against a real question that chunk
+  # directly answers — under min_reranker_score, but a real answer,
+  # not noise. 0.05 was picked by checking genuinely unrelated
+  # questions ("What is the capital of France?") against this corpus,
+  # which scored ~0.0000-0.002 — comfortably below every observed real
+  # miss, so the two cases don't overlap in this sample. rag_pipeline /
+  # the UI must show a clear warning whenever low_confidence=True; this
+  # value trades a wrong-but-confident refusal for a
+  # right-but-uncertain answer, which is only safe if the caller
+  # actually surfaces the uncertainty.
+  low_confidence_min_score: 0.05
+  # Used only for PRIMARY (MAPPED_DOCUMENT) search — the mapped
+  # document is already trusted by the topic match, so its own chunks
+  # are judged by dense cosine similarity, not the reranker score. A
+  # cross-encoder can genuinely score a short/heading-like chunk low
+  # even when it's clearly the right one (observed: "Welfare Measures
+  # for Teaching and Non-Teaching Staff" scored 0.18 by the reranker,
+  # despite being the #1 dense AND lexical hit in its own document) —
+  # letting that evict PRIMARY's own top chunk just forces a worse
+  # GLOBAL fallback. The reranker still reorders PRIMARY's results,
+  # it just can't drop one outright. This is the original 0.40 cosine
+  # threshold from before reranker_score became the gate elsewhere.
   min_relevance_score: 0.40
+  # Cap on how many of the mapped document's own chunks ("PRIMARY")
+  # are kept, out of top_k, before any remaining slots go to a
+  # SECONDARY, cross-document search — see retriever.py's
+  # MAPPED_DOCUMENT_PRIMARY_TOP_K docstring for the full rationale.
+  # Deliberately small rather than top_k itself: a short,
+  # single-subject policy PDF frequently has several chunks that
+  # individually clear min_reranker_score, which would otherwise let
+  # PRIMARY silently consume the entire top_k budget on its own every
+  # time and leave SECONDARY no room to ever run.
+  mapped_document_primary_top_k: 3 #Changed to 3 from 2 after MLFLOW wide_top_k experiment
+  # Minimum cosine similarity (embedding-based, see
+  # rag/indexing/topic_matcher.py) between a query and a topic's name
+  # (docs-metadata.json) for that topic to be considered a match.
+  # Below this, the query is treated as unmatched and retrieval falls
+  # back to GLOBAL mode.
+  topic_match_threshold: 0.5
   hybrid:
     # GLOBAL mode (fallback) only — see rag/retriever.py. When a query
     # matches a topic with a locally-indexed document (docs-metadata.json),
@@ -105,6 +194,11 @@ retrieval:
     # index is not queried).
     enabled: true
     candidates: 10   # chunks fetched from EACH of dense/lexical search before fusion
+    # How much each search method's rank counts toward the fused RRF
+    # score. Equal by default — neither method is trusted more than
+    # the other without evidence one should be.
+    dense_weight: 0.5
+    lexical_weight: 0.5
   rerank:
     # When enabled, the candidate pool (fused dense+lexical for GLOBAL
     # mode, or the small mapped-document dense pool for MAPPED_DOCUMENT
@@ -118,7 +212,13 @@ retrieval:
     # chunks from the mapped document, so reranking can reorder within
     # it but can never replace it with a different document.
     enabled: true
-    model: "BAAI/bge-reranker-base"   # or ms-marco-MiniLM-L-6-v2
+    # bge-reranker-v2-m3: stronger than bge-reranker-base at matching
+    # conversational/indirect question phrasings to literal policy
+    # text (see min_reranker_score comment above for the evidence).
+    # Larger model than base, so it's slower to load and to score each
+    # candidate — worth watching query latency in production.
+    model: "BAAI/bge-reranker-v2-m3"
+    #model: "BAAI/bge-reranker-base"   # previous model; kept as fallback reference
     #model: "cross-encoder/ms-marco-MiniLM-L-6-v2" # pre-trained for small queries
     candidates: 10                      # rerank top 10 of the fused pool, keep top_k
 
@@ -156,7 +256,7 @@ evaluation:
   # concurrent calls (and even 4) reliably hits per-minute rate limits
   # and causes calls to return truncated results or time out.
   judge_max_workers: 1
-  test_data_path: "./tests/test-question-qnswers.json"
+  test_data_path: "./tests/evaluation-question-answers.json"
   metrics:
     - faithfulness
     - answer_relevancy
@@ -170,6 +270,11 @@ evaluation:
   # after each `make test-ragas` run, so the System Info page can show
   # the latest scores without re-running the (slow) evaluation.
   results_path: "./tests/ragas_results.json"
+  # Snapshot of results_path saved via `make save-ragas-baseline`. Every
+  # later `make test-ragas` run compares its mean_scores against this
+  # file (if present) and reports the delta per metric, so regressions
+  # are visible without manually diffing two results files.
+  baseline_path: "./tests/ragas_baseline.json"
 
   retrieval:
     # tests/evaluation/test_retrieval_eval.py: classic IR metrics (Recall/
@@ -181,6 +286,11 @@ evaluation:
     min_recall: 0.6
     min_mrr: 0.5
     results_path: "./tests/retrieval_results.json"
+    # Snapshot of results_path saved via `make save-retrieval-baseline`.
+    # Every later `make test-retrieval-eval` run compares its
+    # mean_scores against this file (if present) and reports the delta
+    # per metric.
+    baseline_path: "./tests/retrieval_baseline.json"
 
 database:
   # Session/history storage in MySQL. The password can be overridden

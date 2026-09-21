@@ -9,7 +9,6 @@ to an already-embedded user question.
 """
 
 import logging
-import re
 
 from langchain_chroma import Chroma
 
@@ -51,12 +50,16 @@ class VectorStore:
 
     def reset(self) -> None:
         """Deletes all existing entries, used before a fresh ingestion run."""
-        existing_ids = self._store._collection.get()["ids"]
-        if existing_ids:
-            self._store._collection.delete(ids=existing_ids)
+        self._store.reset_collection()
 
     def add_chunks(self, ids: list, texts: list, embeddings: list, metadatas: list) -> None:
-        """Stores chunk text, embeddings, and metadata in the collection."""
+        """Stores chunk text, embeddings, and metadata in the collection.
+
+        Uses the raw collection because LangChain's add_texts()/
+        add_documents() always re-embed via the store's embedding
+        function and have no parameter for embeddings computed
+        upfront, which is what ingestion does.
+        """
         self._store._collection.add(
             ids=ids,
             documents=texts,
@@ -65,12 +68,14 @@ class VectorStore:
         )
 
     def count(self) -> int:
+        """Uses the raw collection because LangChain's Chroma has no
+        count() method."""
         return self._store._collection.count()
 
     def count_with_filter(self, filter: dict) -> int:
         """Returns how many stored chunks match filter (same exact-match
         shape as similarity_search_with_relevance_scores's filter)."""
-        result = self._store._collection.get(where=_to_chroma_where(filter), include=[])
+        result = self._store.get(where=_to_chroma_where(filter), include=[])
         return len(result["ids"])
 
     def similarity_search_with_relevance_scores(
@@ -108,37 +113,8 @@ class VectorStore:
     def get_all_documents(self) -> list:
         """Returns every chunk currently stored as (text, metadata)
         pairs. Used to build the in-memory BM25 lexical index (see
-        bm25_index.py) once at startup from whatever ingestion last
-        wrote to this collection.
+        rag/retrieval/bm25_retriever.py) once at startup from whatever
+        ingestion last wrote to this collection.
         """
-        result = self._store._collection.get(include=["documents", "metadatas"])
+        result = self._store.get(include=["documents", "metadatas"])
         return list(zip(result["documents"], result["metadatas"]))
-
-    def find_chunks_containing_any(self, keywords: list, limit: int) -> dict:
-        """Returns chunks whose text literally contains any of the given
-        keywords (case-insensitive substring match), with their
-        embeddings so callers can still rank/score the matches.
-
-        Used as a fallback when semantic search alone comes up empty
-        (e.g. a short query built around a proper noun/brand name the
-        embedding model has little signal for) but the term is still
-        genuinely present in the documents.
-        """
-        if not keywords:
-            return {"documents": [], "metadatas": [], "embeddings": []}
-
-        # Chroma's $contains is case-sensitive (it sets
-        # `PRAGMA case_sensitive_like = ON` in its SQLite backend), so
-        # a lowercased keyword would never match a capitalized word
-        # like "President" in the source text. $regex is honored by
-        # Python's re module underneath, so "(?i)" gives a real
-        # case-insensitive match instead.
-        regex_clauses = [{"$regex": f"(?i){re.escape(keyword)}"} for keyword in keywords]
-        where_document = (
-            regex_clauses[0] if len(regex_clauses) == 1 else {"$or": regex_clauses}
-        )
-        return self._store._collection.get(
-            where_document=where_document,
-            limit=limit,
-            include=["documents", "metadatas", "embeddings"],
-        )

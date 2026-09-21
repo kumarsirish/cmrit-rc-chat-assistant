@@ -25,18 +25,35 @@ import time
 
 from rag.generation import context_builder
 from rag.generation.llm_client import LlmClient
-from rag.indexing.docs_metadata import find_matching_topic
 from rag.response import response_processor
 from rag.response.response_processor import NO_MATCH_MESSAGE, RagAnswer, SourceReference  # re-exported
-from rag.retrieval.retriever import Retriever
+from rag.retrieval.retrieval_service import RetrievalService
 
 SYSTEM_PROMPT = (
     "You are an assistant that answers questions about CMRIT college "
     "policies. You must answer using ONLY the CONTEXT provided below, "
     "which is extracted from official policy documents. "
     "Do not use any outside knowledge, even if you believe it to be true. "
+    "The CONTEXT sources vary in quality — some are extracted from "
+    "slide decks or other messy layouts and may contain stray "
+    "fragments, page numbers, or irrelevant text alongside the useful "
+    "part. Judge each source independently: if even one source clearly "
+    "supports an answer, use it and cite it, even if other sources in "
+    "the CONTEXT are noisy, poorly formatted, or unrelated to the "
+    "question. Never let noise or irrelevance in one source stop you "
+    "from using a clear answer found in another. "
     "If the CONTEXT does not contain the answer, reply exactly: "
     f'"{NO_MATCH_MESSAGE}" '
+    "Answer ONLY the specific question asked — nothing more. Do not "
+    "add related rules, exceptions, background, or nearby policies "
+    "from the CONTEXT that the question did not ask about, even if "
+    "they cover the same document or topic. For example, if asked how "
+    "many casual leaves are allowed, state only that number — do not "
+    "also describe vacation leave, compensatory-off, or approval "
+    "steps unless the question asked about those too. When a detail "
+    "in the CONTEXT is a direct precondition for the answer (e.g. an "
+    "eligibility requirement the number depends on), include it; "
+    "otherwise leave it out. "
     "Keep URLs from the context exactly as written and include them if they are relevant. "
     "Cite your source for every factual claim: immediately after the "
     "sentence, add the bracketed number of the CONTEXT source it came "
@@ -52,7 +69,20 @@ SYSTEM_PROMPT = (
     "current question purely to resolve references like 'it' or 'that "
     "leave type' — they are not an additional source of facts. Every "
     "factual claim must still come from the CONTEXT given with the "
-    "current question."
+    "current question. "
+    "Format the answer for readability: never write it as one long "
+    "paragraph. Break it into short paragraphs of no more than 10 "
+    "sentences each, and when the answer describes a sequence of "
+    "steps, a process, or a list of items, use numbered steps or "
+    "bullet points instead of prose. "
+    "A source tagged '— LOW-CONFIDENCE MATCH' did not clearly match "
+    "the question during retrieval, but is the closest thing found. "
+    "If it genuinely answers the question, use it and cite it as "
+    "normal — the UI already warns the user this match is "
+    "low-confidence, so do not add your own caveat sentence about it. "
+    "If it does not answer the question, refuse normally with the "
+    "exact refusal sentence above; do not stretch a low-confidence "
+    "source to seem more relevant than it is."
 )
 
 logger = logging.getLogger(__name__)
@@ -61,24 +91,38 @@ logger = logging.getLogger(__name__)
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
-    def __init__(self, retriever: Retriever, llm_client: LlmClient, doc_topics: list = None):
-        self._retriever = retriever
+    def __init__(self, retrieval_service: RetrievalService, llm_client: LlmClient):
+        self._retrieval_service = retrieval_service
         self._llm_client = llm_client
-        self._doc_topics = doc_topics or []
 
-    def answer(self, question: str, conversation_history: list = None) -> RagAnswer:
+    def answer(
+        self,
+        question: str,
+        conversation_history: list = None,
+        top_k: int = None,
+        min_reranker_score: float = None,
+    ) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
 
         Retrieval runs on question alone — conversation_history (prior
         {"role", "content"} turns from the same session, if any) is
         never used to build the retrieval query. It's only passed to
         the LLM below, so it can resolve references like "it"/"that"
-        in its reply; the retriever never sees it.
+        in its reply; retrieval never sees it.
+
+        top_k / min_reranker_score, if given, override the retrieval
+        service's configured defaults for this call only (used by
+        evaluation scripts to try settings without editing config.yaml).
+
+        retrieval_service.retrieve() returns the matched topic along
+        with the chunks, so it only has to detect/embed the topic
+        match once per question instead of a second time here.
         """
         overall_start = time.perf_counter()
-        chunks = self._retriever.retrieve(question)
+        chunks, matched_topic = self._retrieval_service.retrieve(
+            question, top_k=top_k, min_reranker_score=min_reranker_score
+        )
         retrieval_seconds = time.perf_counter() - overall_start
-        matched_topic = find_matching_topic(question, self._doc_topics)
 
         if not chunks:
             total_seconds = time.perf_counter() - overall_start

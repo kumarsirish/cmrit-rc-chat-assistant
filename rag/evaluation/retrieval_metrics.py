@@ -5,7 +5,7 @@ Every function takes retrieved_sources — a ranked list of source_file
 strings, most relevant first, exactly as Retriever.retrieve() returns
 them via chunk.source_file — and relevant_sources, the ground-truth
 set of source files that should have been retrieved for that question
-(see the "relevant_sources" field in test-question-qnswers.json).
+(see the "relevant_sources" field in evaluation-question-answers.json).
 
 Relevance here is binary and document-level (a source file either is
 or isn't one of the right documents for the question), which matches

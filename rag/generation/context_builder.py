@@ -22,8 +22,9 @@ def build(chunks: list) -> str:
     context_parts = []
     for index, chunk in enumerate(chunks, start=1):
         section_note = f", section: \"{chunk.section_title}\"" if chunk.section_title else ""
+        confidence_note = " — LOW-CONFIDENCE MATCH" if chunk.low_confidence else ""
         context_parts.append(
-            f"[Source {index}: {chunk.source_file}, {_page_label(chunk)}{section_note}]\n"
+            f"[Source {index}: {chunk.source_file}, {_page_label(chunk)}{section_note}{confidence_note}]\n"
             f"{chunk.text}"
         )
     return "\n\n".join(context_parts)

@@ -1,0 +1,156 @@
+[
+    {
+        "category": "normal",
+        "question": "how many casual leaves are permanent staff allowed per year",
+        "answer": "A maximum of twelve casual leaves (CL) are permitted in a calendar year for permanent staff. Staff on probation instead have one casual leave created at the end of each month.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
+        "answer": "Staff who have completed one year of service (till the last working day of the semester) are permitted a maximum of seven working days of vacation leave per semester. Those who have completed six months of service are permitted a maximum of three working days, and no vacation leave is permitted for those with less than six months of service.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "how long is the probation period for new employees at CMRIT",
+        "answer": "The probation period at CMRIT is one year from the date of joining.",
+        "relevant_sources": [
+            "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "when does the probation completion process start in Darwinbox",
+        "answer": "The probation completion process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date, sending workflow notifications to the Reporting Manager and Deans (Academic Department) or the Reporting Manager and Vice Principal (Non-Academic Department).",
+        "relevant_sources": [
+            "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "does CMRIT provide PF and ESI benefits to staff",
+        "answer": "Yes, all eligible employees, as per the statute, are entitled to PF and ESI facility.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what compensatory off is given for working on a holiday",
+        "answer": "Staff called for work on a holiday by the head of department/Vice Principal are provided compensatory-off of half a day for working four hours, and compensatory-off of one day for working eight hours.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what is CMRIT's quality policy",
+        "answer": "CMRIT's Quality Policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress.",
+        "relevant_sources": [
+            "CMRIT Quality Policy.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what mandatory training must new faculty complete within six months of joining",
+        "answer": "Within six months, new faculty must complete CO-PO Computation Training, Paper & Proposal Writing Training, and Mentoring Process Guidelines during Orientation.",
+        "relevant_sources": [
+            "Mandatory Training for New Faculty - Sheet1.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "how often is the faculty semester evaluation done",
+        "answer": "The Faculty Semester Evaluation is done two times a year: in January for the July-December period, and in July for the January-June period.",
+        "relevant_sources": [
+            "CMRIT_Faculty_Evaluation_Form_AY_2024-25.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what is the official CMRIT website address",
+        "answer": "The official CMRIT website is http://www.cmrit.ac.in.",
+        "relevant_sources": []
+    },
+    {
+        "category": "normal",
+        "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+        "answer": "Every faculty member is required to complete at least one 8-week MOOC per year, unless exempted by the Principal, CMRIT. Only MOOCs offered by NPTEL are considered, and from academic year 2021-22 onward each faculty must score a minimum of 75% (a Silver Certificate) in a course that closely matches the subject they teach. Exemptions apply to faculty undertaking 3 or more Ph.D. coursework subjects in one attempt, engineering faculty who cleared GATE with a 90 percentile or better, and Basic Sciences faculty who cleared NET (CSIR-UGC) or SET before 1st June 2002.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "How often am I expected to present something beyond the syllabus to my department?",
+        "answer": "Every faculty member must present a technical topic beyond the curriculum during the departmental half-day, with the topic reviewed by the DRC beforehand. This is called a Tech Talk, given for one hour per week by faculty members in rotation, and the Tech Talk material must be uploaded to the library portal.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+        "answer": "Teaching staff, including teaching assistants, must submit a resignation with three months' notice period. Technical and non-teaching staff must give two months' notice. Otherwise, staff should follow the institution's norms.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+        "answer": "The institution restricts failure rates as follows: failure in 1 subject should be under 5%, failure in 2 subjects under 3%, failure in 3 subjects under 2%, and failure in 4 or more subjects under 1%. A list of probable ineligible students is created at the beginning of the semester, and Intensive Coaching Program (ICP) sessions are held after the 2nd internal test for such students.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
+        "answer": "Complaints can be submitted through a link on the CMRIT website, which are addressed by the Grievance Redressal Committee. The committee decides the nature of the grievance and submits a report to the Principal/Vice Principal, who takes action accordingly; if required, the Principal sets up an inquiry committee to study and resolve the matter. Suggestion/complaint boxes are also placed at prominent locations on campus and opened regularly.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If the fire alarm goes off, where am I supposed to take the students?",
+        "answer": "The CMRIT playground is identified as the emergency assembly area. The evacuation plan is triggered by an alarm of 4 consecutive sirens of 5 seconds each with a 5 second pause; upon hearing it, faculty and staff must escort students to assemble at the playground, and wardens and the EMRT ensure full evacuation of the hostel building.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
+        "answer": "These are available at the Makerspace, located in the Workshop and Lab area in the basement of the First Year Block. It is equipped with hand tools, power tools, a laser cutter, a CNC router, 3D printers, the Maker Store, a workshop/ideation zone, and a junk store.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want help filing a patent, who at CMRIT can assist me?",
+        "answer": "CMRIT has an IPR Cell established in collaboration with KSCST (Karnataka State Council for Science and Technology), which creates awareness about IPRs through workshops and training, enables patent searches, guides inventors on patenting with an authorized patent attorney, and arranges periodic meetings with officers of the Patent Information Centre to identify patentable inventions.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the capital of France?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the process to get a refund for a cancelled flight booking?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
+    }
+]

@@ -77,14 +77,26 @@ class RerankConfig:
 class HybridConfig:
     enabled: bool
     candidates: int
+    dense_weight: float
+    lexical_weight: float
 
 
 @dataclass
 class RetrievalConfig:
     top_k: int
+    min_reranker_score: float
     min_relevance_score: float
+    mapped_document_primary_top_k: int
+    topic_match_threshold: float
     hybrid: HybridConfig
     rerank: RerankConfig
+    # Floor for the low-confidence fallback in
+    # retrieval_service._filter_relevant_by_reranker: when nothing
+    # clears min_reranker_score, the single best-scoring candidate is
+    # still returned (flagged low_confidence=True) as long as its
+    # score is at least this — below it, the query is treated as
+    # genuinely unanswerable and no chunk is returned at all.
+    low_confidence_min_score: float = 0.05
 
 
 @dataclass
@@ -102,6 +114,7 @@ class RetrievalEvalConfig:
     min_recall: float
     min_mrr: float
     results_path: str
+    baseline_path: str
 
 
 @dataclass
@@ -115,6 +128,7 @@ class EvaluationConfig:
     metrics: list
     min_score: float
     results_path: str
+    baseline_path: str
     retrieval: RetrievalEvalConfig
 
 
@@ -185,10 +199,20 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     session_cfg = SessionConfig(**raw["session"])
 
     evaluation_raw = dict(raw["evaluation"])
-    evaluation_raw["test_data_path"] = _resolve_path(evaluation_raw["test_data_path"])
-    evaluation_raw["results_path"] = _resolve_path(evaluation_raw["results_path"])
+    # Both overridable so a debugging run (see scripts/filter_low_faithfulness.py
+    # / `make test-ragas-failures`) can point test-ragas at a filtered
+    # question set and a scratch results file, without touching
+    # config.yaml or clobbering the full-suite tests/ragas_results.json.
+    evaluation_raw["test_data_path"] = _resolve_path(
+        os.environ.get("RAG_EVAL_TEST_DATA_PATH", evaluation_raw["test_data_path"])
+    )
+    evaluation_raw["results_path"] = _resolve_path(
+        os.environ.get("RAG_EVAL_RESULTS_PATH", evaluation_raw["results_path"])
+    )
+    evaluation_raw["baseline_path"] = _resolve_path(evaluation_raw["baseline_path"])
     retrieval_eval_raw = dict(evaluation_raw["retrieval"])
     retrieval_eval_raw["results_path"] = _resolve_path(retrieval_eval_raw["results_path"])
+    retrieval_eval_raw["baseline_path"] = _resolve_path(retrieval_eval_raw["baseline_path"])
     evaluation_raw["retrieval"] = RetrievalEvalConfig(**retrieval_eval_raw)
     evaluation_cfg = EvaluationConfig(**evaluation_raw)
 

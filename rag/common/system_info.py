@@ -7,12 +7,14 @@ what's expected without reading config.yaml directly.
 """
 
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import streamlit as st
 
+from rag.evaluation.baseline import load_baseline_mean_scores
 from rag.ingestion.document_loader import find_pdf_files
 
 CHROMA_SQLITE_FILENAME = "chroma.sqlite3"
@@ -37,13 +39,27 @@ def _format_timestamp_ist(unix_timestamp: float) -> str:
 
 # One-line, plain-English explanation of each RAGAS metric, shown next
 # to its score so the number means something without reading the
-# RAGAS docs.
+# RAGAS docs. Kept short — the formula (METRIC_FORMULAS) carries the
+# precise definition on its own line underneath.
 METRIC_DESCRIPTIONS = {
-    "faithfulness": "How much of the answer's claims are actually backed by the retrieved context (higher = less hallucination).",
+    "faithfulness": "Fraction of the answer's claims actually backed by the retrieved context (higher = less hallucination).",
     "answer_relevancy": "How directly the answer addresses the question that was actually asked.",
     "answer_correctness": "How closely the answer matches the reference (ground-truth) answer.",
-    "context_precision": "How much of the retrieved context was actually relevant, i.e. how little irrelevant noise was retrieved.",
-    "context_recall": "How much of the information needed to answer the question was present in the retrieved context at all.",
+    "context_precision": "How much of the retrieved context was actually relevant (little irrelevant noise retrieved).",
+    "context_recall": "How much of the information needed to answer was present in the retrieved context at all.",
+}
+
+# LaTeX (rendered via KaTeX in st.markdown's `$...$`), one formula per
+# metric — the precise textbook definition, shown on its own line
+# under each one-liner above. `\lvert x \rvert` instead of literal
+# `|x|`: a bare `|` inside a markdown table cell is parsed as a column
+# delimiter and breaks the table.
+METRIC_FORMULAS = {
+    "faithfulness": r"$\text{Faithfulness} = \dfrac{\lvert\text{supported claims}\rvert}{\lvert\text{claims in answer}\rvert}$",
+    "answer_relevancy": r"$\text{Answer Relevancy} = \dfrac{1}{n}\sum_{i=1}^{n}\cos(E_{g_i}, E_o)$",
+    "answer_correctness": r"$\text{Answer Correctness} = w_1 F_1 + w_2\cos(a, r),\ F_1=\dfrac{TP}{TP+0.5(FP+FN)}$",
+    "context_precision": r"$\text{Context Precision@K} = \dfrac{\sum_{k=1}^{K}\text{Precision@k}\times rel_k}{\lvert\text{relevant in top }K\rvert}$",
+    "context_recall": r"$\text{Context Recall} = \dfrac{\lvert\text{GT statements attributable to context}\rvert}{\lvert\text{GT statements}\rvert}$",
 }
 
 # Same idea, for the classic IR metrics in tests/evaluation/
@@ -58,9 +74,88 @@ RETRIEVAL_METRIC_LABELS = {
 RETRIEVAL_METRIC_DESCRIPTIONS = {
     "recall": "Fraction of the question's known-relevant documents that were actually retrieved.",
     "precision": "Fraction of the retrieved documents that were actually relevant.",
-    "reciprocal_rank": "Mean Reciprocal Rank — how close to the top the first relevant document was ranked.",
-    "ndcg": "Normalized Discounted Cumulative Gain — rewards relevant documents ranked higher, not just present.",
+    "reciprocal_rank": "How close to the top the first relevant document was ranked, averaged over questions.",
+    "ndcg": "Rewards relevant documents ranked higher, not just present.",
 }
+RETRIEVAL_METRIC_FORMULAS = {
+    "recall": r"$\text{Recall@k} = \dfrac{\lvert Rel \cap Ret_k\rvert}{\lvert Rel\rvert}$",
+    "precision": r"$\text{Precision@k} = \dfrac{\lvert Rel \cap Ret_k\rvert}{k}$",
+    "reciprocal_rank": r"$RR=\dfrac{1}{\text{rank}_{\text{first relevant}}},\ MRR=\dfrac{1}{\lvert Q\rvert}\sum_{q\in Q}RR_q$",
+    "ndcg": r"$NDCG@k=\dfrac{DCG@k}{IDCG@k},\ DCG@k=\sum_{i=1}^{k}\dfrac{rel_i}{\log_2(i+1)}$",
+}
+
+
+def _format_score(score) -> str:
+    """"—" for missing/NaN (a NaN mean score means a judge call timed
+    out/errored on the last run — see test_ragas_judge.py), otherwise
+    3 decimal places."""
+    if score is None or (isinstance(score, float) and math.isnan(score)):
+        return "—"
+    return f"{score:.3f}"
+
+
+def _metric_table_rows(
+    metric_names: list,
+    descriptions: dict,
+    formulas: dict,
+    labels: dict,
+    mean_scores: dict,
+    baseline_scores: dict,
+    min_score: float = None,
+) -> list:
+    """Builds the {Metric, What it means, Baseline, Last run} rows
+    shared by the RAGAS and retrieval-eval sections. "What it means"
+    is the one-liner plus its formula on a following line (`<br>` —
+    plain "\\n" doesn't break within a markdown table cell). labels
+    maps a raw metric key to its display name (e.g. "reciprocal_rank"
+    -> "MRR"); pass {} to use the raw key as-is. min_score, if given,
+    prefixes "Last run" with a pass/fail mark instead of just the
+    number.
+    """
+    rows = []
+    for name in metric_names:
+        score = mean_scores.get(name) if mean_scores else None
+        baseline = baseline_scores.get(name) if baseline_scores else None
+        last_run_text = _format_score(score)
+        if score is not None and not (isinstance(score, float) and math.isnan(score)) and min_score is not None:
+            last_run_text = f"{'✅' if score >= min_score else '❌'} {last_run_text}"
+        what_it_means = descriptions.get(name, "")
+        formula = formulas.get(name, "")
+        if formula:
+            what_it_means = f"{what_it_means}<br>{formula}"
+        rows.append(
+            {
+                "Metric": labels.get(name, name),
+                "What it means": what_it_means,
+                "Baseline": _format_score(baseline),
+                "Last run": last_run_text,
+            }
+        )
+    return rows
+
+
+def _render_metric_table(rows: list) -> None:
+    """Renders rows (from _metric_table_rows) as a markdown table
+    instead of st.table: st.table can't render LaTeX or a `<br>` line
+    break inside a cell, while st.markdown's table support does (both
+    go through the same markdown+KaTeX pipeline). The "What it means"
+    column is capped narrower than the others via inline width/wrap
+    styling on its cell content, since a plain markdown table has no
+    per-column width syntax of its own.
+    """
+    if not rows:
+        return
+    headers = list(rows[0].keys())
+    lines = [f"| {' | '.join(headers)} |", f"| {' | '.join('---' for _ in headers)} |"]
+    for row in rows:
+        cells = []
+        for header in headers:
+            value = str(row[header])
+            if header == "What it means":
+                value = f'<span style="display:inline-block;max-width:260px;white-space:normal;">{value}</span>'
+            cells.append(value)
+        lines.append(f"| {' | '.join(cells)} |")
+    st.markdown("\n".join(lines), unsafe_allow_html=True)
 
 
 def _format_bytes(num_bytes: int) -> str:
@@ -125,6 +220,7 @@ def _render_ragas_section(config):
     )
 
     results_path = Path(config.evaluation.results_path)
+    results = None
     if not results_path.exists():
         st.caption(
             f"No results yet — run `make test-ragas` to generate "
@@ -136,14 +232,30 @@ def _render_ragas_section(config):
                 results = json.load(results_file)
             run_at = _format_ist(datetime.fromisoformat(results["run_at"]))
             st.markdown(f"**Last run:** {run_at} (judge: `{results['judge_model']}`)")
-            for name, score in results["mean_scores"].items():
-                passed = score >= results["min_score"]
-                st.markdown(f"- {'✅' if passed else '❌'} **{name}:** {score:.3f}")
-                description = METRIC_DESCRIPTIONS.get(name)
-                if description:
-                    st.caption(description)
         except (json.JSONDecodeError, OSError, KeyError) as error:
             st.caption(f"Could not read {results_path.name}: {error}")
+
+    try:
+        baseline_scores = load_baseline_mean_scores(config.evaluation.baseline_path)
+    except (json.JSONDecodeError, OSError, KeyError):
+        baseline_scores = None
+
+    _render_metric_table(
+        _metric_table_rows(
+            config.evaluation.metrics,
+            METRIC_DESCRIPTIONS,
+            METRIC_FORMULAS,
+            {},
+            results["mean_scores"] if results else None,
+            baseline_scores,
+            min_score=config.evaluation.min_score,
+        )
+    )
+    if baseline_scores is None:
+        st.caption(
+            "No baseline saved yet — run `make save-ragas-baseline` to "
+            "compare future runs against this one."
+        )
 
     test_data_path = Path(config.evaluation.test_data_path)
     if not test_data_path.exists():
@@ -169,23 +281,39 @@ def _render_retrieval_eval_section(config):
     )
 
     results_path = Path(config.evaluation.retrieval.results_path)
+    results = None
     if not results_path.exists():
         st.caption(
             f"No results yet — run `make test-retrieval-eval` to generate "
             f"`{results_path.name}`."
         )
-        return
+    else:
+        try:
+            with open(results_path, "r", encoding="utf-8") as results_file:
+                results = json.load(results_file)
+        except (json.JSONDecodeError, OSError, KeyError) as error:
+            st.caption(f"Could not read {results_path.name}: {error}")
+
     try:
-        with open(results_path, "r", encoding="utf-8") as results_file:
-            results = json.load(results_file)
-        for name, score in results["mean_scores"].items():
-            label = RETRIEVAL_METRIC_LABELS.get(name, name)
-            st.markdown(f"- **{label}:** {score:.3f}")
-            description = RETRIEVAL_METRIC_DESCRIPTIONS.get(name)
-            if description:
-                st.caption(description)
-    except (json.JSONDecodeError, OSError, KeyError) as error:
-        st.caption(f"Could not read {results_path.name}: {error}")
+        baseline_scores = load_baseline_mean_scores(config.evaluation.retrieval.baseline_path)
+    except (json.JSONDecodeError, OSError, KeyError):
+        baseline_scores = None
+
+    _render_metric_table(
+        _metric_table_rows(
+            RETRIEVAL_METRIC_LABELS.keys(),
+            RETRIEVAL_METRIC_DESCRIPTIONS,
+            RETRIEVAL_METRIC_FORMULAS,
+            RETRIEVAL_METRIC_LABELS,
+            results["mean_scores"] if results else None,
+            baseline_scores,
+        )
+    )
+    if baseline_scores is None:
+        st.caption(
+            "No baseline saved yet — run `make save-retrieval-baseline` to "
+            "compare future runs against this one."
+        )
 
 
 def _render_documents_section(config, vector_store):

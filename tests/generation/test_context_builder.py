@@ -1,5 +1,5 @@
 from rag.generation.context_builder import build
-from rag.retrieval.retriever import RetrievedChunk
+from rag.retrieval.retrieval_service import RetrievedChunk
 
 
 def _chunk(**overrides):
