@@ -90,6 +90,13 @@ class RetrievalConfig:
     topic_match_threshold: float
     hybrid: HybridConfig
     rerank: RerankConfig
+    # Floor for the low-confidence fallback in
+    # retrieval_service._filter_relevant_by_reranker: when nothing
+    # clears min_reranker_score, the single best-scoring candidate is
+    # still returned (flagged low_confidence=True) as long as its
+    # score is at least this — below it, the query is treated as
+    # genuinely unanswerable and no chunk is returned at all.
+    low_confidence_min_score: float = 0.05
 
 
 @dataclass

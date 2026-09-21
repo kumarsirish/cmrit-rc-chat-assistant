@@ -74,7 +74,15 @@ SYSTEM_PROMPT = (
     "paragraph. Break it into short paragraphs of no more than 10 "
     "sentences each, and when the answer describes a sequence of "
     "steps, a process, or a list of items, use numbered steps or "
-    "bullet points instead of prose."
+    "bullet points instead of prose. "
+    "A source tagged '— LOW-CONFIDENCE MATCH' did not clearly match "
+    "the question during retrieval, but is the closest thing found. "
+    "If it genuinely answers the question, use it and cite it as "
+    "normal — the UI already warns the user this match is "
+    "low-confidence, so do not add your own caveat sentence about it. "
+    "If it does not answer the question, refuse normally with the "
+    "exact refusal sentence above; do not stretch a low-confidence "
+    "source to seem more relevant than it is."
 )
 
 logger = logging.getLogger(__name__)

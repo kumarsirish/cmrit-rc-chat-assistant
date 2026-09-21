@@ -75,13 +75,24 @@ class RetrievedChunk:
     page_end: int = None
     section_title: str = ""
     chunk_index: int = None
+    # True only for the single best-scoring candidate returned as a
+    # last-resort fallback when nothing cleared min_reranker_score —
+    # see _filter_relevant_by_reranker. Callers (rag_pipeline,
+    # dashboard) use this to warn the user the match is weak instead
+    # of presenting it with the same confidence as a normal result.
+    low_confidence: bool = False
 
     def __post_init__(self):
         if self.page_end is None:
             self.page_end = self.page_number
 
 
-def _make_chunk(candidate: "hybrid_retriever.FusedCandidate", relevance_score: float, match_type: str) -> RetrievedChunk:
+def _make_chunk(
+    candidate: "hybrid_retriever.FusedCandidate",
+    relevance_score: float,
+    match_type: str,
+    low_confidence: bool = False,
+) -> RetrievedChunk:
     metadata = candidate.metadata
     return RetrievedChunk(
         text=candidate.text,
@@ -93,7 +104,19 @@ def _make_chunk(candidate: "hybrid_retriever.FusedCandidate", relevance_score: f
         page_end=metadata.get("page_end"),
         section_title=metadata.get("section_title", ""),
         chunk_index=metadata.get("chunk_index"),
+        low_confidence=low_confidence,
     )
+
+
+def _chunk_from_candidate(
+    candidate: "hybrid_retriever.FusedCandidate", score: float, low_confidence: bool = False
+) -> RetrievedChunk:
+    """_make_chunk, deriving match_type ("hybrid"/"lexical"/"dense")
+    from which of dense_score/lexical_score the candidate carries."""
+    match_type = "hybrid" if candidate.dense_score is not None and candidate.lexical_score is not None else (
+        "lexical" if candidate.dense_score is None else "dense"
+    )
+    return _make_chunk(candidate, score, match_type, low_confidence=low_confidence)
 
 
 class RetrievalService:
@@ -121,6 +144,7 @@ class RetrievalService:
         doc_topics: list = None,
         mapped_document_primary_top_k: int = MAPPED_DOCUMENT_PRIMARY_TOP_K,
         topic_match_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+        low_confidence_min_score: float = 0.05,
     ):
         self._dense_retriever = dense_retriever
         self._embedding_generator = embedding_generator
@@ -144,6 +168,7 @@ class RetrievalService:
         # instead of a reranker_score.
         self._reranker = reranker
         self._rerank_candidates = rerank_candidates
+        self._low_confidence_min_score = low_confidence_min_score
         self._mapped_document_primary_top_k = mapped_document_primary_top_k
         self._topic_matcher = EmbeddingTopicMatcher(
             doc_topics or [], embedding_generator, similarity_threshold=topic_match_threshold
@@ -328,11 +353,26 @@ class RetrievalService:
         for candidate, score in scored_pairs:
             if score < min_reranker_score:
                 continue
-            match_type = "hybrid" if candidate.dense_score is not None and candidate.lexical_score is not None else (
-                "lexical" if candidate.dense_score is None else "dense"
-            )
-            chunks.append(_make_chunk(candidate, float(score), match_type))
-        return chunks
+            chunks.append(_chunk_from_candidate(candidate, float(score)))
+
+        if chunks:
+            return chunks
+
+        # Nothing cleared the threshold. Rather than refuse outright,
+        # fall back to the single best-scoring candidate — but only if
+        # its score is at least low_confidence_min_score, so a truly
+        # unrelated question (e.g. "What is the capital of France?",
+        # which scores ~0.0000-0.002 against this corpus) still gets a
+        # real refusal instead of a low-confidence non-answer. Observed
+        # real misses that this fallback is meant to rescue scored
+        # 0.06-0.31 — well inside that floor. The single chunk is
+        # flagged low_confidence=True so callers (rag_pipeline,
+        # dashboard) can warn the user to verify against the source
+        # instead of presenting it as a normal answer.
+        best_candidate, best_score = scored_pairs[0]
+        if best_score < self._low_confidence_min_score:
+            return []
+        return [_chunk_from_candidate(best_candidate, float(best_score), low_confidence=True)]
 
     def _filter_relevant_by_dense_score(self, fused_candidates: list, min_reranker_score: float) -> list:
         scored_chunks = []  # (sort_key, RetrievedChunk)

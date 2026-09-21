@@ -20,6 +20,7 @@ class FakeChunk:
     source_link: str = ""
     page_end: int = None
     section_title: str = ""
+    low_confidence: bool = False
 
     def __post_init__(self):
         if self.page_end is None:
@@ -133,3 +134,30 @@ def test_process_marks_grounded_false_when_answer_is_the_no_match_message():
     result = process(NO_MATCH_MESSAGE, chunks, matched_topic=None)
 
     assert result.grounded is False
+
+
+def test_process_propagates_low_confidence_from_chunk_to_answer_and_source():
+    chunks = [_chunk(low_confidence=True)]
+    result = process("Casual leave is 12 days [1].", chunks, matched_topic=None)
+
+    assert result.low_confidence is True
+    assert result.sources[0].low_confidence is True
+
+
+def test_process_low_confidence_is_false_when_no_chunk_is_low_confidence():
+    chunks = [_chunk(low_confidence=False)]
+    result = process("Casual leave is 12 days [1].", chunks, matched_topic=None)
+
+    assert result.low_confidence is False
+
+
+def test_process_low_confidence_answer_that_refuses_is_not_flagged():
+    # A low-confidence chunk that the LLM decided didn't actually
+    # answer the question refuses normally (grounded=False, no
+    # sources shown) — low_confidence shouldn't be True for a refusal
+    # with nothing behind it to verify.
+    chunks = [_chunk(low_confidence=True)]
+    result = process(NO_MATCH_MESSAGE, chunks, matched_topic=None)
+
+    assert result.grounded is False
+    assert result.low_confidence is False

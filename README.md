@@ -96,8 +96,8 @@ mapped documents, or the MAPPED_DOCUMENT/PRIMARY/SECONDARY/GLOBAL
 policy — see its module docstring for the full flow.
 
 `scripts/ingest.py` runs steps 1-3 (plus topic tagging) to (re)build
-the vector index. `scripts/download_embedding_model.py` pre-fetches
-the embedding model. `rag/dashboard.py` is the only module with
+the vector index. `scripts/download_models.py` pre-fetches
+the embedding and reranker models. `rag/dashboard.py` is the only module with
 Streamlit UI/dashboard code; it wires the backend modules above
 together and holds nothing that counts as RAG logic itself. `app.py`
 at the project root is just the thin entry point Streamlit runs
@@ -263,10 +263,10 @@ API key under the environment variable named by `llm.groq.api_key_env`
 export GROQ_KEY="gsk_..."
 ```
 
-### 4. Download/verify the local embedding model
+### 4. Download/verify the local embedding and reranker models
 
 ```bash
-make download-embedding-model
+make download-models
 ```
 
 ### 5. MySQL
@@ -308,7 +308,7 @@ make run-debug
 | Target | What it does |
 |---|---|
 | `make install` | Installs Python dependencies |
-| `make download-embedding-model` | Downloads/verifies the local `sentence-transformers` embedding model (safe to re-run) |
+| `make download-models` | Downloads/verifies the local embedding and reranker models (safe to re-run) |
 | `make ingest` | (Re)builds the Chroma vector index from `policies_docs/` |
 | `make run` | Starts the Streamlit app |
 | `make run-debug` | Starts the Streamlit app with `--logger.level=debug` and an in-app debug panel |

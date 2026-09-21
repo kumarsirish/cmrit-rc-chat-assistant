@@ -176,7 +176,10 @@ def test_retrieve_applies_metadata_filter_to_dense_search():
 def test_bm25_only_candidate_is_subject_to_the_reranker_threshold():
     # With a reranker configured, the old "BM25-only skips the
     # threshold" exemption no longer applies: a lexical-only hit is
-    # judged by min_reranker_score just like any other candidate.
+    # judged by min_reranker_score just like any other candidate. It
+    # still comes back as the low-confidence fallback (see
+    # test_low_confidence_fallback_* below) since 0.2 clears the
+    # default low_confidence_min_score of 0.05.
     dense_retriever = FakeDenseRetriever(distances=[0.9])  # dense finds nothing relevant
     bm25_index = _make_bm25_index([("Leave application through Darwinbox portal", "leave.pdf", 2)])
     reranker = FakeReranker({"chunk text 0": 0.1, "Leave application through Darwinbox portal": 0.2})
@@ -191,7 +194,51 @@ def test_bm25_only_candidate_is_subject_to_the_reranker_threshold():
     )
     results, _ = service.retrieve("what is darwinbox")
     # The lexical hit scored 0.2, below min_reranker_score=0.35, so it
-    # is dropped instead of being auto-kept.
+    # doesn't count as a normal match — but it's still the best
+    # candidate available and clears low_confidence_min_score, so it
+    # comes back flagged instead of being dropped outright.
+    assert len(results) == 1
+    assert results[0].low_confidence is True
+    assert results[0].relevance_score == 0.2
+
+
+def test_low_confidence_fallback_returns_best_candidate_below_threshold():
+    dense_retriever = FakeDenseRetriever(distances=[0.9, 0.9])  # dense finds nothing relevant
+    reranker = FakeReranker({"chunk text 0": 0.10, "chunk text 1": 0.20})
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        reranker=reranker,
+        rerank_candidates=8,
+        low_confidence_min_score=0.05,
+    )
+    results, _ = service.retrieve("some question")
+    # Neither candidate clears 0.35, so normally this would refuse.
+    # Instead, the single best-scoring one (0.20) is returned, flagged
+    # low_confidence, since it clears low_confidence_min_score.
+    assert len(results) == 1
+    assert results[0].source_file == "doc1.pdf"
+    assert results[0].relevance_score == 0.20
+    assert results[0].low_confidence is True
+
+
+def test_low_confidence_fallback_still_refuses_below_its_own_floor():
+    dense_retriever = FakeDenseRetriever(distances=[0.9])  # dense finds nothing relevant
+    reranker = FakeReranker({"chunk text 0": 0.02})
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        reranker=reranker,
+        rerank_candidates=8,
+        low_confidence_min_score=0.05,
+    )
+    results, _ = service.retrieve("totally unrelated question")
+    # 0.02 is below even low_confidence_min_score, so this is treated
+    # as genuinely unanswerable — no fallback chunk is returned.
     assert results == []
 
 

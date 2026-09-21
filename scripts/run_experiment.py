@@ -223,6 +223,7 @@ def build_retrieval_service(config):
         doc_topics=doc_topics,
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
+        low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
     return retrieval_service, vector_store
 

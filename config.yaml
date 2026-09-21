@@ -50,7 +50,24 @@ llm:
 
 embedding:
   # Local sentence-transformers model used to embed chunks and queries.
-  model_name: "all-MiniLM-L6-v2"
+  # Switched from all-MiniLM-L6-v2 to bge-base-en-v1.5 after finding
+  # dense retrieval missing chunks whose embedding didn't strongly
+  # match a conversational/paraphrased question even though the chunk
+  # was clearly the right answer (e.g. "How often am I expected to
+  # present something beyond the syllabus to my department?" vs. the
+  # Faculty Handbook's "Every faculty must present a technical topic
+  # beyond the curriculum..." — a near-paraphrase that still scored
+  # only 0.34 cosine with all-MiniLM-L6-v2, below several wrong
+  # candidates). bge-base-en-v1.5 is a stronger, larger embedding
+  # model expected to separate paraphrases better.
+  #
+  # IMPORTANT: changing this requires re-running `make ingest` — the
+  # existing chroma_store was built with all-MiniLM-L6-v2 embeddings
+  # (384-dim); bge-base-en-v1.5 (768-dim) embeddings are not
+  # comparable to them, so the store must be rebuilt from scratch
+  # before this change has any effect on real queries.
+  model_name: "BAAI/bge-base-en-v1.5"
+  #model_name: "all-MiniLM-L6-v2"  # previous model; kept as fallback reference
   # Chunks are embedded in batches of this size during ingestion,
   # instead of one at a time, to reclaim CPU throughput.
   batch_size: 64
@@ -95,16 +112,47 @@ retrieval:
   # This used to be min_relevance_score: 0.40, a threshold on dense
   # cosine similarity ([0, 1] scale). Since the reranker score is now
   # the authoritative relevance signal (see retrieval_service.py),
-  # that old number has no meaning here — bge-reranker-base scores
-  # aren't cosine similarity. 0.35 was picked by scoring real
-  # (question, chunk) pairs from tests/evaluation-question-answers.json
-  # with the reranker and comparing scores for chunks from a
+  # that old number has no meaning here — reranker scores aren't
+  # cosine similarity. 0.35 was picked by scoring real (question,
+  # chunk) pairs from tests/evaluation-question-answers.json with
+  # bge-reranker-base and comparing scores for chunks from a
   # question's relevant_sources vs. chunks that weren't: 0.35 had the
   # best precision/recall balance (F1) of the thresholds tried. This
   # is document-level ground truth (not every chunk in a "relevant"
   # document actually answers the question), so treat it as a
   # reasonable starting point, not a precisely tuned number.
+  #
+  # Switched the model to bge-reranker-v2-m3 (see rerank.model below)
+  # after bge-reranker-base was found to score conversational/indirect
+  # phrasings of a question far lower than direct phrasings of the
+  # same question against the identical correct chunk (e.g. 0.35 vs
+  # 0.996 on one observed pair) — enough to silently drop the right
+  # chunk on real-world-style questions. Spot-checking v2-m3 on the
+  # same conversational questions showed clean separation at this same
+  # 0.35 cutoff (true hits ~0.5-0.99, true misses <0.31), so the value
+  # carried over as-is; it hasn't been independently re-tuned for
+  # v2-m3 with the full F1-sweep method used for base.
+  #
+  # Below this cutoff, GLOBAL/SECONDARY search no longer refuses
+  # outright — see low_confidence_min_score below for the fallback.
   min_reranker_score: 0.35
+  # When nothing clears min_reranker_score, the single best-scoring
+  # candidate is still returned (flagged low_confidence=True) instead
+  # of refusing, as long as its score is at least this — below it, the
+  # query is treated as genuinely unanswerable and no chunk is
+  # returned. Added after finding several correct-but-terse/bulleted
+  # chunks (e.g. "Failure in 1 subject < 5%" for a slow-learners
+  # question) scored 0.06-0.31 against a real question that chunk
+  # directly answers — under min_reranker_score, but a real answer,
+  # not noise. 0.05 was picked by checking genuinely unrelated
+  # questions ("What is the capital of France?") against this corpus,
+  # which scored ~0.0000-0.002 — comfortably below every observed real
+  # miss, so the two cases don't overlap in this sample. rag_pipeline /
+  # the UI must show a clear warning whenever low_confidence=True; this
+  # value trades a wrong-but-confident refusal for a
+  # right-but-uncertain answer, which is only safe if the caller
+  # actually surfaces the uncertainty.
+  low_confidence_min_score: 0.05
   # Used only for PRIMARY (MAPPED_DOCUMENT) search — the mapped
   # document is already trusted by the topic match, so its own chunks
   # are judged by dense cosine similarity, not the reranker score. A
@@ -164,7 +212,13 @@ retrieval:
     # chunks from the mapped document, so reranking can reorder within
     # it but can never replace it with a different document.
     enabled: true
-    model: "BAAI/bge-reranker-base"   # or ms-marco-MiniLM-L-6-v2
+    # bge-reranker-v2-m3: stronger than bge-reranker-base at matching
+    # conversational/indirect question phrasings to literal policy
+    # text (see min_reranker_score comment above for the evidence).
+    # Larger model than base, so it's slower to load and to score each
+    # candidate — worth watching query latency in production.
+    model: "BAAI/bge-reranker-v2-m3"
+    #model: "BAAI/bge-reranker-base"   # previous model; kept as fallback reference
     #model: "cross-encoder/ms-marco-MiniLM-L-6-v2" # pre-trained for small queries
     candidates: 10                      # rerank top 10 of the fused pool, keep top_k
 

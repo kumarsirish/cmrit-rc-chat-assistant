@@ -1,40 +1,40 @@
 {
-  "run_at": "2026-09-18T15:50:17.169029+00:00",
+  "run_at": "2026-09-21T05:43:56.306428+00:00",
   "judge_provider": "gemini",
   "judge_model": "gemini-2.5-flash",
   "min_score": 0.5,
   "mean_scores": {
-    "faithfulness": 0.8871212121212121,
-    "answer_relevancy": 0.8385045948717098,
-    "answer_correctness": 0.6398607211731586,
-    "context_precision": NaN,
-    "context_recall": 0.9669421487603306
+    "faithfulness": 0.8333333333333334,
+    "answer_relevancy": 0.8273853339167494,
+    "answer_correctness": 0.6277534964013342,
+    "context_precision": 0.6597222221748534,
+    "context_recall": 0.8611111111111112
   },
   "baseline_comparison": {
     "faithfulness": {
-      "current": 0.8871212121212121,
-      "baseline": 0.8833333333333333,
-      "delta": 0.0037878787878787845
+      "current": 0.8333333333333334,
+      "baseline": 0.9632352941176471,
+      "delta": -0.1299019607843137
     },
     "answer_relevancy": {
-      "current": 0.8385045948717098,
-      "baseline": 0.8307047096978022,
-      "delta": 0.007799885173907617
+      "current": 0.8273853339167494,
+      "baseline": 0.8476160806281982,
+      "delta": -0.020230746711448755
     },
     "answer_correctness": {
-      "current": 0.6398607211731586,
-      "baseline": 0.6346282958969673,
-      "delta": 0.005232425276191277
+      "current": 0.6277534964013342,
+      "baseline": 0.645820388997869,
+      "delta": -0.018066892596534823
     },
     "context_precision": {
-      "current": NaN,
-      "baseline": NaN,
-      "delta": NaN
+      "current": 0.6597222221748534,
+      "baseline": 0.8060606060076578,
+      "delta": -0.1463383838328044
     },
     "context_recall": {
-      "current": 0.9669421487603306,
-      "baseline": 0.9214876033057852,
-      "delta": 0.045454545454545414
+      "current": 0.8611111111111112,
+      "baseline": 0.9559228650137741,
+      "delta": -0.09481175390266294
     }
   },
   "unanswerable_refusals": [
@@ -51,83 +51,23 @@
   ],
   "rows": [
     {
-      "question": "what is tyl",
-      "answer": "TYL stands for \"Tie Your LACES,\" which is a program designed to make students employable and ready for corporate jobs [1]. The acronym LACES represents Language, Aptitude, Core technical, Experiential, and Soft skills [1].\n\nThe program focuses on the professional competency of students by covering these five areas, along with programming skills and industry-relevant technologies [3][4][5]. Training under TYL is provided starting from the first year and continues through all semesters [1][3].\n\nThe program includes the conduction of hackathons to help students gain competitiveness [3][4][5]. Continuous evaluation of skills is performed, and a TYL scorecard is tracked for each student [3][4][5].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.766474370529307,
-      "answer_correctness": 0.8087515119778415,
-      "context_precision": 0.8041666666465626,
-      "context_recall": 1.0
-    },
-    {
-      "question": "how to get vacation leave approved",
-      "answer": "To get vacation leave (VL) approved, staff members must follow these steps:\n\n1.  **Obtain Prior Approval:** You must obtain prior approval from the Principal for any Vacation Leave (VL) exceeding 3 days [1].\n2.  **Ensure HOD/Vice Principal Approval:** All types of leaves, including vacation leave, require approval granted from the HOD/Vice Principal and the Principal prior to the leave being taken [2].\n3.  **Complete Adjustments:** Ensure that alternate class or work adjustments have been completed and that the HOD has been informed [1].\n4.  **Submit Application:** Submit the leave application on time through the system [2].\n5.  **Attach Documents:** If applicable, attach the approval letter and necessary document proof [1].\n6.  **Submit Request:** Click on submit to route the request to the appropriate approving authority based on your designation [1].\n\nNote: For any emergency leave taken, the casual leave form should be submitted within two days [2].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.9379431038408091,
-      "answer_correctness": 0.9491473647524464,
-      "context_precision": 0.99999999995,
-      "context_recall": 1.0
-    },
-    {
-      "question": "What is the capital of France?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "category": "unanswerable",
-      "faithfulness": 0.0,
-      "answer_relevancy": -0.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.9999999999,
-      "context_recall": 0.0
-    },
-    {
-      "question": "What is the process to get a refund for a cancelled flight booking?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "category": "unanswerable",
-      "faithfulness": 0.0,
-      "answer_relevancy": -0.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.9999999999,
-      "context_recall": 0.0
-    },
-    {
       "question": "how many casual leaves are permanent staff allowed per year",
-      "answer": "Permanent staff are allowed a maximum of twelve casual leaves per calendar year [1][2][3].",
+      "answer": "Permanent staff are allowed a maximum of twelve casual leaves in a calendar year [1][4][5].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9307894003925948,
-      "answer_correctness": 0.7066462739702903,
-      "context_precision": 0.9999999999666667,
+      "answer_relevancy": 0.9666824979897166,
+      "answer_correctness": 0.7163123526706765,
+      "context_precision": 0.6999999999766667,
       "context_recall": 1.0
     },
     {
       "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
-      "answer": "The maximum vacation leave permitted per semester for staff who have completed one year of service is seven working days [1][2][3].",
+      "answer": "The maximum vacation leave permitted per semester for staff who have completed one year of service is seven working days [1][4][5].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9760914397359653,
-      "answer_correctness": 0.6178927508799537,
-      "context_precision": 0.9999999999666667,
-      "context_recall": 1.0
-    },
-    {
-      "question": "when do unused casual and vacation leaves expire",
-      "answer": "The expiration dates for unused casual and vacation leaves depend on the specific policy document referenced:\n\n*   **Casual Leaves:** Unutilized casual leaves lapse on 31st December [1][2][3].\n*   **Vacation Leaves:**\n    *   According to the Faculty Handbook and HoD Handbook, unutilized vacation leaves lapse at the end of the corresponding vacation period [1][3].\n    *   According to the Leave Information, Application and Approval Process document, unutilized vacation leaves lapse on 31st December [2].",
-      "category": "normal",
-      "faithfulness": 0.25,
-      "answer_relevancy": 0.9131355382326328,
-      "answer_correctness": 0.546944572949519,
-      "context_precision": 0.5833333333041666,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what counts as half a casual leave for coming late",
-      "answer": "Coming late after fifteen minutes from the start of the day is considered as half a casual leave [1][2][3][4].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.6399806172204219,
-      "answer_correctness": 0.5104919125347047,
-      "context_precision": 0.999999999975,
+      "answer_relevancy": 0.9745113826112757,
+      "answer_correctness": 0.6122004297464263,
+      "context_precision": 0.6999999999766667,
       "context_recall": 1.0
     },
     {
@@ -135,8 +75,8 @@
       "answer": "The probation period for new employees at CMRIT is 1 year from the date of joining [1].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9240163407685366,
-      "answer_correctness": 0.9821404981988695,
+      "answer_relevancy": 0.9815908078396672,
+      "answer_correctness": 0.9808205286089625,
       "context_precision": 0.9999999999,
       "context_recall": 1.0
     },
@@ -145,149 +85,169 @@
       "answer": "The probation completion process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date [1].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9285197681517494,
-      "answer_correctness": 0.5366395322236076,
-      "context_precision": NaN,
+      "answer_relevancy": 0.9637285930233417,
+      "answer_correctness": 0.6600875330373034,
+      "context_precision": 0.9999999999,
       "context_recall": 1.0
     },
     {
       "question": "does CMRIT provide PF and ESI benefits to staff",
-      "answer": "Yes, CMRIT provides PF and ESI benefits to all eligible employees as per the statute [1].",
+      "answer": "Yes, CMRIT provides PF and ESI benefits to staff. All eligible employees as per the statute are entitled to this facility [1].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9613869703392034,
-      "answer_correctness": 0.7889406316818983,
+      "answer_relevancy": 0.9870280786293805,
+      "answer_correctness": 0.9612749300737082,
       "context_precision": 0.9999999999,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what flexible working hours option do staff get",
-      "answer": "Staff are provided with flexible working hours that include a 1-hour window, subject to being available for scheduled activities [2]. Additionally, a leave work early option is provided to meet personal needs [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.7509784907306729,
-      "answer_correctness": 0.9948186795844717,
-      "context_precision": 0.99999999995,
       "context_recall": 1.0
     },
     {
       "question": "what compensatory off is given for working on a holiday",
-      "answer": "The compensatory off provided for working on a holiday depends on the number of hours worked:\n\n*   **Half-day compensatory off:** Provided for working beyond three hours [1][3].\n*   **One-day compensatory off:** Provided for working beyond six hours [1][3].\n\nNote: A different document states that a half-day compensatory off is provided for working four hours, and a one-day compensatory off is provided for working eight hours [2].",
+      "answer": "Staff called for work on a holiday by the head of department or Vice Principal are provided with the following compensatory-off:\n\n*   **Half day** for working beyond three hours [4][5][6].\n*   **One day** for working beyond six hours [4][5][6].\n\nNote: One source states the thresholds as working four hours for a half-day off and eight hours for a full-day off [1].",
       "category": "normal",
-      "faithfulness": 0.6,
-      "answer_relevancy": 0.9252115021140755,
-      "answer_correctness": 0.38906449895670225,
-      "context_precision": 0.99999999995,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9258575819929651,
+      "answer_correctness": 0.7775797513390721,
+      "context_precision": 0.7499999999625,
       "context_recall": 1.0
     },
     {
       "question": "what is CMRIT's quality policy",
-      "answer": "CMRIT's quality policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.9601448204051178,
-      "answer_correctness": 0.9987288842044001,
-      "context_precision": 0.9999999999,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what does tyt stand for",
-      "answer": "Touch Your TOES (TYT) is a teaching-learning process at CMRIT with the following objectives:\n*   To promote higher forms of Thinking.\n*   To achieve the expected learning Outcomes.\n*   To create a positive learning Experience for Students [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.2848035976731702,
-      "answer_correctness": 0.37119339507183235,
-      "context_precision": 0.9166666666361111,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what are the responsibilities of the Director at CMRIT",
       "answer": "I could not find any information about this query in the college policy documents.",
       "category": "normal",
       "faithfulness": 0.0,
-      "answer_relevancy": 0.0,
-      "answer_correctness": 0.0038015449925282757,
-      "context_precision": 0.0,
-      "context_recall": 0.2727272727272727
-    },
-    {
-      "question": "what is the head of department expected to focus on",
-      "answer": "The Head of Department is expected to focus on the department's vision, mission, and thrust areas by aligning all activities toward them [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.9548425718100167,
-      "answer_correctness": 0.5855774114069316,
+      "answer_relevancy": 0.5354727571084802,
+      "answer_correctness": 0.1141597706341736,
       "context_precision": 0.9999999999,
       "context_recall": 1.0
     },
     {
       "question": "what mandatory training must new faculty complete within six months of joining",
-      "answer": "New faculty must complete the following mandatory training within six months of joining:\n\n*   CO - PO Computation Training\n*   Paper & Proposal Writing Training\n*   Patent Drafting and Filing Procedures for new faculty\n*   Start-up Training for new Faculty\n*   Mentoring Process Guidelines during Orientation\n*   Mentor Development Program [1]",
+      "answer": "New faculty must complete the following mandatory training within six months of joining:\n\n*   CO - PO Computation Training\n*   Paper & Proposal Writing Training\n*   Patent Drafting and Filing Procedures for new faculty\n*   Start-up Training for new Faculty\n*   Mentoring Process Guidelines during Orientation\n*   Mentor Development Program [1]\n\nNote that Digital Marketing Training is listed in the six-month column but is explicitly marked as optional [1].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9734872115234773,
-      "answer_correctness": 0.6501369555265393,
+      "answer_relevancy": 0.9917858479763592,
+      "answer_correctness": 0.6388170644066666,
       "context_precision": 0.9999999999,
       "context_recall": 1.0
     },
     {
       "question": "how often is the faculty semester evaluation done",
-      "answer": "The faculty semester evaluation is conducted two times a year [1].\n\n*   In January for the period of July to December [1].\n*   In July for the period of January to June [1].",
+      "answer": "The faculty semester evaluation is conducted two times a year, specifically in July and January [4][5].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9434042357406973,
-      "answer_correctness": 0.9902020338491293,
-      "context_precision": 0.99999999995,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what weightage do core activities like teaching and research carry in the faculty evaluation",
-      "answer": "Core activities carry a total weightage of 60% in the faculty evaluation [1][3]. This 60% weightage is specifically attributed to TRCPIE (Teaching, Research, and other Core activities) [3].",
-      "category": "normal",
-      "faithfulness": 0.6666666666666666,
-      "answer_relevancy": 0.8714398158070265,
-      "answer_correctness": 0.35523085789068654,
-      "context_precision": 0.8333333332916666,
+      "answer_relevancy": 0.9738600990981944,
+      "answer_correctness": 0.8001706164894866,
+      "context_precision": 0.8666666666377778,
       "context_recall": 1.0
     },
     {
       "question": "what is the official CMRIT website address",
-      "answer": "The official CMRIT website address is https://www.cmrit.ac.in [1].",
+      "answer": "The official CMRIT website address is www.cmrit.ac.in [2].",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9613349697975574,
-      "answer_correctness": 0.23933645334159404,
-      "context_precision": 0.999999999975,
+      "answer_relevancy": 0.9924115166707481,
+      "answer_correctness": 0.9854584742847574,
+      "context_precision": 0.9999999999833333,
       "context_recall": 1.0
     },
     {
-      "question": "who do I contact in case of a medical emergency at CMRIT",
-      "answer": "In case of a medical emergency at CMRIT, you can contact the following individuals and numbers:\n\n*   **Nurse:** Ms. Shilpa Mariam Sooraj at 8714258097 [5].\n*   **Emergency Response Team:** Dr. Prabhat Gautam at 8982337391 [5].\n*   **Main Gate Security:** +91 08028524466 Ext. 226 [1][3].\n*   **Hostel:** +91 08028524466 Ext. 219 or 231 [1][3].\n*   **Hostel Warden:** Mr. Gurumurthy at 7338254626 [1][3].\n*   **Hostel Manager:** Mr. Johnson at 9900175008 or 8296391910 [1][3].\n*   **Additional Faculty Contact:** Prof. Muralidhara R at 9535865455 [1][3].\n\nThe Emergency Management Response Team (EMRT) arranges ambulances to escort students to nearby hospitals for medical assistance [3][4].",
+      "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+      "answer": "As a faculty member, you are required to complete at least one NPTEL Technical MOOC course during each academic year (July to June) [2]. The course must have a duration of at least 8 weeks, or you may complete two 4-week courses [2]. Additionally, you are required to complete at least one Technical Faculty Development Program (FDP) during the academic year [3].\n\n[2][3]",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9459784840874027,
-      "answer_correctness": 0.3290170211802017,
-      "context_precision": 0.699999999965,
-      "context_recall": 1.0
-    },
-    {
-      "question": "who is the contact for infrastructure related issues on campus",
-      "answer": "The contact for infrastructure-related issues on campus is Mr. Manjunath S, the Campus Manager, who can be reached at 8951399029 [3].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.9553710058259689,
-      "answer_correctness": 0.8747653025038978,
+      "answer_relevancy": 0.7868733267784994,
+      "answer_correctness": 0.4099465494878172,
       "context_precision": 0.3333333333,
+      "context_recall": 0.0
+    },
+    {
+      "question": "How often am I expected to present something beyond the syllabus to my department?",
+      "answer": "You are expected to present a technical topic beyond the curriculum during the departmental half-day [1].\n\nThis match was low-confidence \u2014 please verify against the source document directly.",
+      "category": "normal",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.7423604877527684,
+      "answer_correctness": 0.3752863379709944,
+      "context_precision": 0.0,
+      "context_recall": 0.5
+    },
+    {
+      "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+      "answer": "You need to give three months' advance notice to resign from a teaching position [4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.9625332576053712,
+      "answer_correctness": 0.5742692151493536,
+      "context_precision": 0.32499999998375,
       "context_recall": 1.0
     },
     {
-      "question": "is work from home available during a family medical emergency",
-      "answer": "Yes, the work from home option is available during a personal and family emergency on medical grounds [2].",
+      "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+      "answer": "The department needs to track student failures when the percentage of students failing in a specific number of subjects exceeds the following thresholds:\n*   Failure in 1 subject: more than 5%\n*   Failure in 2 subjects: more than 3%\n*   Failure in 3 subjects: more than 2%\n*   Failure in 4 or more subjects: more than 1%\n\n[4]\n\nThis match was low-confidence \u2014 please verify against the source document directly.",
       "category": "normal",
       "faithfulness": 1.0,
-      "answer_relevancy": 0.9417668324512126,
-      "answer_correctness": 0.8474677781314439,
-      "context_precision": 0.49999999995,
+      "answer_relevancy": 0.7911341086308598,
+      "answer_correctness": 0.6019201585221887,
+      "context_precision": 0.249999999975,
+      "context_recall": 1.0
+    },
+    {
+      "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "normal",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "answer_correctness": 0.14821357552531567,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "If the fire alarm goes off, where am I supposed to take the students?",
+      "answer": "You must escort the students to the CMRIT playground, which is designated as the Emergency Assembly Area [4].\n\nThis match was low-confidence \u2014 please verify against the source document directly.",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7846058350454505,
+      "answer_correctness": 0.6941116033268542,
+      "context_precision": 0.249999999975,
+      "context_recall": 1.0
+    },
+    {
+      "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
+      "answer": "Students can access 3D printers and laser cutters at the Makerspace [1][4].\n\nThe Makerspace is located in the Workshop and Lab area, in the basement of the First Year Block [1][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.798966253827111,
+      "answer_correctness": 0.6467525179995743,
+      "context_precision": 0.6999999999766667,
+      "context_recall": 1.0
+    },
+    {
+      "question": "If I want help filing a patent, who at CMRIT can assist me?",
+      "answer": "The IPR Cell at CMRIT can assist you with filing a patent. This cell was established in collaboration with the Karnataka State Council for Science and Technology (KSCST) and guides inventors concerning patenting their inventions with the help of an authorized patent attorney [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7335335779213011,
+      "answer_correctness": 0.6021815259506833,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0
+    },
+    {
+      "question": "What is the capital of France?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "unanswerable",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.28654948430302557,
+      "answer_correctness": 0.8500000000000001,
+      "context_precision": 0.9999999999,
+      "context_recall": 0.0
+    },
+    {
+      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "unanswerable",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.4670229271046918,
+      "answer_correctness": 1.0,
+      "context_precision": 0.9999999999666667,
       "context_recall": 1.0
     }
   ]

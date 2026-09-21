@@ -87,6 +87,11 @@ class SourceReference:
     source_link: str = ""
     page_end: int = None
     section_title: str = ""
+    # True when this chunk is the retrieval_service low-confidence
+    # fallback (nothing cleared min_reranker_score, so the single
+    # best-scoring candidate was returned anyway) — see
+    # RetrievedChunk.low_confidence.
+    low_confidence: bool = False
 
     def __post_init__(self):
         if self.page_end is None:
@@ -113,6 +118,12 @@ class RagAnswer:
     retrieval_seconds: float = None
     llm_seconds: float = None
     total_seconds: float = None
+    # True when any source is the low-confidence fallback (see
+    # SourceReference.low_confidence) — callers (dashboard.py) should
+    # show a clear warning telling the user to verify against the
+    # source directly, since this answer isn't grounded in a chunk
+    # that confidently matched the question.
+    low_confidence: bool = False
 
     def __post_init__(self):
         if self.cited_indices is None:
@@ -184,6 +195,7 @@ def process(
                 source_link=chunk.source_link,
                 page_end=chunk.page_end,
                 section_title=chunk.section_title,
+                low_confidence=chunk.low_confidence,
             )
             for chunk in chunks
         ]
@@ -200,4 +212,5 @@ def process(
         retrieval_seconds=retrieval_seconds,
         llm_seconds=llm_seconds,
         total_seconds=total_seconds,
+        low_confidence=grounded and any(source.low_confidence for source in sources),
     )

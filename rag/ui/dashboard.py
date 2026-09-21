@@ -177,6 +177,7 @@ def get_retrieval_service():
         doc_topics=doc_topics,
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
+        low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
 
 
@@ -389,6 +390,24 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
                 st.caption(f"link: <{source.source_link}>")
 
 
+def render_low_confidence_warning(low_confidence: bool) -> None:
+    """Shown whenever the answer relies on the retrieval_service
+    low-confidence fallback (see RagAnswer.low_confidence) — nothing
+    cleared the normal relevance threshold, so the single closest
+    match was used anyway. This is the only place the caveat is
+    shown — rag_pipeline.SYSTEM_PROMPT explicitly tells the LLM not
+    to add its own, so it isn't duplicated in the answer text (and
+    doesn't show up as an ungrounded claim when RAGAS scores
+    faithfulness on the answer).
+    """
+    if not low_confidence:
+        return
+    st.caption(
+        "_(This match was low-confidence — please verify against the "
+        "source document directly.)_"
+    )
+
+
 def render_topic_link(topic_name, topic_link):
     """Shows the canonical URL for the topic docs-metadata.json says the
     question was about, if one was identified (see
@@ -516,6 +535,7 @@ def render_chat_page():
         with st.chat_message(message["role"]):
             st.write(message["content"])
             if message["role"] == "assistant":
+                render_low_confidence_warning(message.get("low_confidence", False))
                 render_sources(
                     message.get("sources", []),
                     config,
@@ -582,6 +602,7 @@ def render_chat_page():
             # session's idle window.
             touch_session(session_store)
             st.write(result.answer_text)
+            render_low_confidence_warning(result.low_confidence)
             render_sources(
                 result.sources,
                 config,
@@ -610,6 +631,7 @@ def render_chat_page():
                 "topic_link": result.topic_link,
                 "cited_indices": result.cited_indices,
                 "total_seconds": result.total_seconds,
+                "low_confidence": result.low_confidence,
             }
         )
 

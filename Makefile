@@ -1,4 +1,4 @@
-.PHONY: help install download-embedding-model ingest run run-debug test test-ragas test-ragas-failures test-retrieval-eval save-ragas-baseline save-retrieval-baseline metrics experiment experiments-all mlflow-ui llm-test clean
+.PHONY: help install download-models ingest run run-debug test test-ragas test-ragas-failures test-retrieval-eval save-ragas-baseline save-retrieval-baseline metrics experiment experiments-all mlflow-ui llm-test clean
 
 .DEFAULT_GOAL := help
 
@@ -11,10 +11,11 @@ help:
 install: ## Install Python dependencies from requirements.txt
 	pip install -r requirements.txt
 
-# Downloads the sentence-transformers embedding model into the local
-# cache (safe to re-run; it's a no-op if already downloaded).
-download-embedding-model: ## Download the embedding model into the local cache
-	python scripts/download_embedding_model.py
+# Downloads the sentence-transformers embedding model and the
+# reranker model into the local cache (safe to re-run; it's a no-op
+# for whichever is already downloaded).
+download-models: ## Download the embedding and reranker models into the local cache
+	python scripts/download_models.py
 
 # Builds/rebuilds the Chroma vector index from policies_docs/.
 # Run this once after install, and again whenever the PDFs change.

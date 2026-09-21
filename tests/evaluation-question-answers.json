@@ -1,35 +1,6 @@
 [
     {
         "category": "normal",
-        "question": "what is tyl",
-        "answer": "TYL stands for Tie Your LACES, a program that focuses on professional competency of students, covering Language, Aptitude, Core domain, Experiential and Soft skills, along with programming skills and industry relevant technologies.",
-        "relevant_sources": [
-            "HoD Handbook - CMRIT.pdf",
-            "TYL - Faculty Orientation for New Joinees -August 2024.pptx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "how to get vacation leave approved",
-        "answer": "To get vacation leave (VL) approved, staff must obtain prior approval from the Principal for any VL exceeding 3 days. All leave types, including VL, require approval from the HOD/Vice Principal and the Principal before the leave is taken. Staff must ensure alternate class/work adjustments are completed and the HOD is informed, submit the leave application on time through the system, attach the approval letter and any required document proof, and submit the request to route it to the appropriate approving authority based on designation.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
-        ]
-    },
-    {
-        "category": "unanswerable",
-        "question": "What is the capital of France?",
-        "answer": "I could not find any information about this query in the college policy documents.",
-        "relevant_sources": []
-    },
-    {
-        "category": "unanswerable",
-        "question": "What is the process to get a refund for a cancelled flight booking?",
-        "answer": "I could not find any information about this query in the college policy documents.",
-        "relevant_sources": []
-    },
-    {
-        "category": "normal",
         "question": "how many casual leaves are permanent staff allowed per year",
         "answer": "A maximum of twelve casual leaves (CL) are permitted in a calendar year for permanent staff. Staff on probation instead have one casual leave created at the end of each month.",
         "relevant_sources": [
@@ -40,22 +11,6 @@
         "category": "normal",
         "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
         "answer": "Staff who have completed one year of service (till the last working day of the semester) are permitted a maximum of seven working days of vacation leave per semester. Those who have completed six months of service are permitted a maximum of three working days, and no vacation leave is permitted for those with less than six months of service.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "when do unused casual and vacation leaves expire",
-        "answer": "Unutilized casual leaves, vacation leaves, OODs and OEDs as on 31st December shall lapse. Compensatory-off lapses at the end of three months from the corresponding working holiday.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what counts as half a casual leave for coming late",
-        "answer": "Coming to work after fifteen minutes of the day start is considered as half CL. An employee also loses half CL if they are late up to fifteen minutes of the day start for three days in a month, and missing one of the biometric punch-in/punch-out is considered as half CL.",
         "relevant_sources": [
             "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
         ]
@@ -86,14 +41,6 @@
     },
     {
         "category": "normal",
-        "question": "what flexible working hours option do staff get",
-        "answer": "Staff are given flexible working hours with a 1-hour window, subject to being available for scheduled activities. A Leave Work Early option is also provided to meet personal needs.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
         "question": "what compensatory off is given for working on a holiday",
         "answer": "Staff called for work on a holiday by the head of department/Vice Principal are provided compensatory-off of half a day for working four hours, and compensatory-off of one day for working eight hours.",
         "relevant_sources": [
@@ -106,31 +53,6 @@
         "answer": "CMRIT's Quality Policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress.",
         "relevant_sources": [
             "CMRIT Quality Policy.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what does tyt stand for",
-        "answer": "TYT stands for Touch Your 'TOES', where TOES stands for Thinking Outcome Experience of Students.",
-        "relevant_sources": [
-            "HoD Handbook - CMRIT.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what are the responsibilities of the Director at CMRIT",
-        "answer": "The Director leads functions, operations, and strategic/cross-functional initiatives; proposes a strategic roadmap; works with the leadership team in alignment with the institution's vision, mission and objectives; forms policies and detailed plans; works across departments to realize objectives; leads functional/virtual organizations across departments; interfaces with external parties and represents the institution; maintains stakeholder relationships; manages budgets and resources prudently; contributes to overall growth; and monitors and improves initiatives based on stakeholder feedback.",
-        "relevant_sources": [
-            "Roles and Responsibilities.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what is the head of department expected to focus on",
-        "answer": "The Head of Department is expected to focus on the department's vision, mission and thrust areas by aligning all activities toward them, and to create a healthy, competitive ecosystem conducive to the growth of students, faculty, the department and the organization, including setting up processes and systems.",
-        "relevant_sources": [
-            "HoD Handbook - CMRIT.pdf",
-            "Roles and Responsibilities.docx.pdf"
         ]
     },
     {
@@ -151,36 +73,84 @@
     },
     {
         "category": "normal",
-        "question": "what weightage do core activities like teaching and research carry in the faculty evaluation",
-        "answer": "Core activities (such as Teaching, Research Papers, Consultancy, Research Proposals, Innovation and Entrepreneurship) carry a 60% weightage in the Faculty Semester Evaluation.",
-        "relevant_sources": [
-            "CMRIT_Faculty_Evaluation_Form_AY_2024-25.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
         "question": "what is the official CMRIT website address",
         "answer": "The official CMRIT website is http://www.cmrit.ac.in.",
         "relevant_sources": []
     },
     {
         "category": "normal",
-        "question": "who do I contact in case of a medical emergency at CMRIT",
-        "answer": "For a medical emergency at CMRIT, contact Ms. Shilpa Mariam Sooraj, Nurse, CMRIT, Bangalore, at 8714258097.",
-        "relevant_sources": []
-    },
-    {
-        "category": "normal",
-        "question": "who is the contact for infrastructure related issues on campus",
-        "answer": "For infrastructure-related issues, contact Mr. Manjunath S, Campus Manager CMRIT, at 8951399029.",
-        "relevant_sources": []
-    },
-    {
-        "category": "normal",
-        "question": "is work from home available during a family medical emergency",
-        "answer": "Yes, a work from home option is available during a personal and family emergency on medical grounds.",
+        "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+        "answer": "Every faculty member is required to complete at least one 8-week MOOC per year, unless exempted by the Principal, CMRIT. Only MOOCs offered by NPTEL are considered, and from academic year 2021-22 onward each faculty must score a minimum of 75% (a Silver Certificate) in a course that closely matches the subject they teach. Exemptions apply to faculty undertaking 3 or more Ph.D. coursework subjects in one attempt, engineering faculty who cleared GATE with a 90 percentile or better, and Basic Sciences faculty who cleared NET (CSIR-UGC) or SET before 1st June 2002.",
         "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
+            "Faculty Handbook-CMRIT.docx.pdf"
         ]
+    },
+    {
+        "category": "normal",
+        "question": "How often am I expected to present something beyond the syllabus to my department?",
+        "answer": "Every faculty member must present a technical topic beyond the curriculum during the departmental half-day, with the topic reviewed by the DRC beforehand. This is called a Tech Talk, given for one hour per week by faculty members in rotation, and the Tech Talk material must be uploaded to the library portal.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+        "answer": "Teaching staff, including teaching assistants, must submit a resignation with three months' notice period. Technical and non-teaching staff must give two months' notice. Otherwise, staff should follow the institution's norms.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+        "answer": "The institution restricts failure rates as follows: failure in 1 subject should be under 5%, failure in 2 subjects under 3%, failure in 3 subjects under 2%, and failure in 4 or more subjects under 1%. A list of probable ineligible students is created at the beginning of the semester, and Intensive Coaching Program (ICP) sessions are held after the 2nd internal test for such students.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
+        "answer": "Complaints can be submitted through a link on the CMRIT website, which are addressed by the Grievance Redressal Committee. The committee decides the nature of the grievance and submits a report to the Principal/Vice Principal, who takes action accordingly; if required, the Principal sets up an inquiry committee to study and resolve the matter. Suggestion/complaint boxes are also placed at prominent locations on campus and opened regularly.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If the fire alarm goes off, where am I supposed to take the students?",
+        "answer": "The CMRIT playground is identified as the emergency assembly area. The evacuation plan is triggered by an alarm of 4 consecutive sirens of 5 seconds each with a 5 second pause; upon hearing it, faculty and staff must escort students to assemble at the playground, and wardens and the EMRT ensure full evacuation of the hostel building.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
+        "answer": "These are available at the Makerspace, located in the Workshop and Lab area in the basement of the First Year Block. It is equipped with hand tools, power tools, a laser cutter, a CNC router, 3D printers, the Maker Store, a workshop/ideation zone, and a junk store.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "If I want help filing a patent, who at CMRIT can assist me?",
+        "answer": "CMRIT has an IPR Cell established in collaboration with KSCST (Karnataka State Council for Science and Technology), which creates awareness about IPRs through workshops and training, enables patent searches, guides inventors on patenting with an authorized patent attorney, and arranges periodic meetings with officers of the Patent Information Centre to identify patentable inventions.",
+        "relevant_sources": [
+            "Faculty Handbook-CMRIT.docx.pdf"
+        ]
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the capital of France?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
+    },
+    {
+        "category": "unanswerable",
+        "question": "What is the process to get a refund for a cancelled flight booking?",
+        "answer": "I could not find any information about this query in the college policy documents.",
+        "relevant_sources": []
     }
 ]

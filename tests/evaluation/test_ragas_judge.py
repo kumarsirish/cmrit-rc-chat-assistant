@@ -125,6 +125,7 @@ def pipeline_and_retriever(config):
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
+        low_confidence_min_score=config.retrieval.low_confidence_min_score,
         topic_match_threshold=config.retrieval.topic_match_threshold,
     )
     capturing_retrieval_service = _CapturingRetrievalService(retrieval_service)
