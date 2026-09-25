@@ -28,6 +28,7 @@ from rag.generation.llm_client import LlmClient
 from rag.response import response_processor
 from rag.response.response_processor import NO_MATCH_MESSAGE, RagAnswer, SourceReference  # re-exported
 from rag.retrieval.retrieval_service import RetrievalService
+from rag.routing import query_expander
 
 SYSTEM_PROMPT = (
     "You are an assistant that answers questions about CMRIT college "
@@ -41,7 +42,16 @@ SYSTEM_PROMPT = (
     "supports an answer, use it and cite it, even if other sources in "
     "the CONTEXT are noisy, poorly formatted, or unrelated to the "
     "question. Never let noise or irrelevance in one source stop you "
-    "from using a clear answer found in another. "
+    "from using a clear answer found in another. In particular, some "
+    "sources are just a navigation link, table-of-contents row, or "
+    "bare mention of a policy's name (e.g. a bullet reading only "
+    "'Staff Leave Policy' with no other detail) rather than that "
+    "policy's actual content — this is still noise, not a competing "
+    "or more authoritative source. If another source in the CONTEXT "
+    "contains that same policy's substantive text (the actual rules, "
+    "numbers, or definition), answer from that one; do not let a bare "
+    "name-only mention make you doubt, hedge on, or refuse to use a "
+    "source that genuinely answers the question. "
     "If the CONTEXT does not contain the answer, reply exactly: "
     f'"{NO_MATCH_MESSAGE}" '
     "Answer ONLY the specific question asked — nothing more. Do not "
@@ -75,12 +85,21 @@ SYSTEM_PROMPT = (
     "sentences each, and when the answer describes a sequence of "
     "steps, a process, or a list of items, use numbered steps or "
     "bullet points instead of prose. "
-    "A source tagged '— LOW-CONFIDENCE MATCH' did not clearly match "
-    "the question during retrieval, but is the closest thing found. "
-    "If it genuinely answers the question, use it and cite it as "
-    "normal — the UI already warns the user this match is "
-    "low-confidence, so do not add your own caveat sentence about it. "
-    "If it does not answer the question, refuse normally with the "
+    "A source tagged '— LOW-CONFIDENCE MATCH' scored below the "
+    "confident-match threshold during retrieval, but is still the "
+    "single best-matching passage found across the entire document "
+    "collection — every other candidate scored even lower. Read it "
+    "carefully before refusing: policy text is often terse or uses "
+    "different wording than the question (e.g. a duty listed as a "
+    "recurring task, like a weekly requirement, can be the answer to "
+    "a 'how often' question even without using the word 'often' or "
+    "'frequency'). If it genuinely answers the question, use it and "
+    "cite it as normal — the UI already warns the user this match is "
+    "low-confidence, so do not add your own caveat sentence about it, "
+    "and do not refuse merely because it is tagged low-confidence. "
+    "Only refuse if, after that careful reading, the source's actual "
+    "subject matter has nothing to do with what was asked. If it does "
+    "not answer the question, refuse normally with the "
     "exact refusal sentence above; do not stretch a low-confidence "
     "source to seem more relevant than it is."
 )
@@ -91,9 +110,21 @@ logger = logging.getLogger(__name__)
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
-    def __init__(self, retrieval_service: RetrievalService, llm_client: LlmClient):
+    def __init__(
+        self,
+        retrieval_service: RetrievalService,
+        llm_client: LlmClient,
+        glossary: dict = None,
+    ):
+        """glossary, if given (see rag.ingestion.glossary_extractor),
+        expands the retrieval query with matched institutional
+        acronyms before topic-matching/dense retrieval — see
+        rag.routing.query_expander. The index is built once here, not
+        per-question, since it never changes between calls."""
         self._retrieval_service = retrieval_service
         self._llm_client = llm_client
+        self._glossary = glossary or {}
+        self._glossary_index = query_expander.build_glossary_index(self._glossary)
 
     def answer(
         self,
@@ -117,10 +148,17 @@ class RagPipeline:
         retrieval_service.retrieve() returns the matched topic along
         with the chunks, so it only has to detect/embed the topic
         match once per question instead of a second time here.
+
+        The retrieval query itself may differ from question — see
+        query_expander.expand_query — but only for topic-matching/
+        embedding; question (unexpanded) is still what's sent to the
+        LLM and everything user-facing, so answer phrasing and
+        citations are unaffected by glossary expansion.
         """
         overall_start = time.perf_counter()
+        retrieval_query = query_expander.expand_query(question, self._glossary, self._glossary_index)
         chunks, matched_topic = self._retrieval_service.retrieve(
-            question, top_k=top_k, min_reranker_score=min_reranker_score
+            retrieval_query, top_k=top_k, min_reranker_score=min_reranker_score
         )
         retrieval_seconds = time.perf_counter() - overall_start
 

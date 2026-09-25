@@ -1,14 +1,9 @@
 # Configuration for the CMRIT College Policies RAG application.
-# Every tunable value used by the application lives here so that
-# components (answer LLM, embedding model, Chroma DB, etc.) can be
-# swapped later without touching any Python code.
+# All tunables live here so components can be swapped without touching code.
 
 llm:
-  # Which provider generates real user-facing answers. Switching this
-  # (and, if needed, adding a section below for the new provider) is
-  # the only change required to move the answer LLM — rag_pipeline.py
-  # and everything above it only ever calls LlmClient.generate_answer().
-  provider: "groq"  # "ollama" or "groq"
+  # Which provider answers user questions: "ollama" or "groq".
+  provider: "groq"
 
   ollama:
     base_url: "http://localhost:11434"
@@ -16,60 +11,29 @@ llm:
     model: "llama3.1:8b"
     temperature: 0
     request_timeout_seconds: 300
-    # CPU threads llama.cpp (inside Ollama) uses for inference. Set this
-    # to the number of CPU cores available (e.g. `nproc`); Ollama's
-    # auto-detection can undershoot the real core count on WSL2.
+    # CPU threads for Ollama inference; set to `nproc` (auto-detect undershoots on WSL2).
     num_thread: 8
-    # Hard cap on generated tokens per answer. Without this, generation
-    # only stops at a natural end-of-response or the model's context
-    # limit — on slow CPU inference that makes worst-case latency
-    # unbounded for no benefit, since a policy answer never legitimately
-    # needs more than a few hundred tokens. Kept low (not e.g. 512): at
-    # this machine's measured ~3.8 tokens/sec CPU inference speed, 512
-    # tokens (~135s) leaves too little margin under a contended/slower
-    # moment before request_timeout_seconds kills the call outright
-    # (observed: a real request ran past 300s and errored while Ollama
-    # kept generating in the background, orphaned). 220 tokens (~58s at
-    # the measured rate) leaves several times that margin; risks
-    # truncating an unusually long answer, but a client-side timeout
-    # error is worse than a shorter one.
+    # Max generated tokens. Kept low to stay well under request_timeout_seconds
+    # at this machine's ~3.8 tok/s CPU speed.
     num_predict: 220
 
   groq:
     model: "qwen/qwen3.8-27b"
     temperature: 0
     request_timeout_seconds: 300
-    # Groq is hosted (no CPU inference budget to protect), so this is
-    # just an answer-length cap, not a latency safety valve like
-    # ollama.num_predict.
     max_tokens: 800
-    # Name of the environment variable holding the Groq API key. Kept
-    # configurable (rather than hard-coding GROQ_API_KEY) because this
-    # deployment's key is already set as GROQ_KEY.
+    # Env var holding the Groq API key (this deployment uses GROQ_KEY).
     api_key_env: "GROQ_KEY"
 
 embedding:
-  # Local sentence-transformers model used to embed chunks and queries.
-  # Switched from all-MiniLM-L6-v2 to bge-base-en-v1.5 after finding
-  # dense retrieval missing chunks whose embedding didn't strongly
-  # match a conversational/paraphrased question even though the chunk
-  # was clearly the right answer (e.g. "How often am I expected to
-  # present something beyond the syllabus to my department?" vs. the
-  # Faculty Handbook's "Every faculty must present a technical topic
-  # beyond the curriculum..." — a near-paraphrase that still scored
-  # only 0.34 cosine with all-MiniLM-L6-v2, below several wrong
-  # candidates). bge-base-en-v1.5 is a stronger, larger embedding
-  # model expected to separate paraphrases better.
+  # Local sentence-transformers model for embedding chunks and queries.
+  # bge-base-en-v1.5 chosen over all-MiniLM-L6-v2 for better paraphrase matching.
   #
-  # IMPORTANT: changing this requires re-running `make ingest` — the
-  # existing chroma_store was built with all-MiniLM-L6-v2 embeddings
-  # (384-dim); bge-base-en-v1.5 (768-dim) embeddings are not
-  # comparable to them, so the store must be rebuilt from scratch
-  # before this change has any effect on real queries.
+  # IMPORTANT: changing this requires re-running `make ingest` to rebuild
+  # chroma_store — embeddings from different models aren't comparable.
   model_name: "BAAI/bge-base-en-v1.5"
   #model_name: "all-MiniLM-L6-v2"  # previous model; kept as fallback reference
-  # Chunks are embedded in batches of this size during ingestion,
-  # instead of one at a time, to reclaim CPU throughput.
+  # Batch size for embedding chunks during ingestion.
   batch_size: 64
 
 chroma:
@@ -78,14 +42,17 @@ chroma:
 
 documents:
   source_directory: "./policies_docs"
-  # Topic -> canonical URL (and, for most topics, local PDF filename)
-  # lookup. Used to tag ingested chunks with their source URL and to
-  # detect which topic a query is about at retrieval/answer time.
+  # Topic -> canonical URL / local PDF filename lookup, used to tag chunks
+  # and detect a query's topic at retrieval time.
   metadata_file: "./docs-metadata.json"
+  # Acronym -> full-phrase glossary, auto-extracted at ingest time
+  # (rag/ingestion/glossary_extractor.py). Used by rag/routing/query_expander.py
+  # to expand plain-language questions with institutional terms.
+  glossary_file: "./glossary.json"
 
 chunking:
-  # Recursive splitter: tries paragraph breaks first, then line breaks,
-  # then sentence stops, then hard character limit as a last resort.
+  # Recursive splitter: paragraph breaks, then line breaks, sentence stops,
+  # then hard character limit as a last resort.
   chunk_size: 800
   chunk_overlap: 120
   separators:
@@ -95,128 +62,48 @@ chunking:
     - " "
 
 retrieval:
-  # Final number of chunks sent to the LLM. Applies to GLOBAL-mode
-  # queries directly, and is the overall budget MAPPED_DOCUMENT-mode
-  # queries split between the mapped document's own chunks (PRIMARY,
-  # up to MAPPED_DOCUMENT_PRIMARY_TOP_K in retriever.py) and a
-  # secondary cross-document search that fills whatever's left
-  # (SECONDARY) — see retriever.py's module docstring. Raised from 5 to
-  # 8: the wide_top_k MLflow experiment (see experiments.yaml) scored
-  # best across recall/precision/MRR/NDCG of all runs compared, with no
-  # regression on the unanswerable-question category.
-  top_k: 8 #Changed to 8 from 5 after MLFLOW wide_top_k experiment
-  # Minimum cross-encoder reranker score to keep a chunk; anything
-  # below this is treated as "not relevant enough" so the assistant
-  # can refuse instead of guessing from unrelated context.
-  #
-  # This used to be min_relevance_score: 0.40, a threshold on dense
-  # cosine similarity ([0, 1] scale). Since the reranker score is now
-  # the authoritative relevance signal (see retrieval_service.py),
-  # that old number has no meaning here — reranker scores aren't
-  # cosine similarity. 0.35 was picked by scoring real (question,
-  # chunk) pairs from tests/evaluation-question-answers.json with
-  # bge-reranker-base and comparing scores for chunks from a
-  # question's relevant_sources vs. chunks that weren't: 0.35 had the
-  # best precision/recall balance (F1) of the thresholds tried. This
-  # is document-level ground truth (not every chunk in a "relevant"
-  # document actually answers the question), so treat it as a
-  # reasonable starting point, not a precisely tuned number.
-  #
-  # Switched the model to bge-reranker-v2-m3 (see rerank.model below)
-  # after bge-reranker-base was found to score conversational/indirect
-  # phrasings of a question far lower than direct phrasings of the
-  # same question against the identical correct chunk (e.g. 0.35 vs
-  # 0.996 on one observed pair) — enough to silently drop the right
-  # chunk on real-world-style questions. Spot-checking v2-m3 on the
-  # same conversational questions showed clean separation at this same
-  # 0.35 cutoff (true hits ~0.5-0.99, true misses <0.31), so the value
-  # carried over as-is; it hasn't been independently re-tuned for
-  # v2-m3 with the full F1-sweep method used for base.
-  #
-  # Below this cutoff, GLOBAL/SECONDARY search no longer refuses
-  # outright — see low_confidence_min_score below for the fallback.
+  # Final number of chunks sent to the LLM. Applies directly in GLOBAL mode;
+  # in MAPPED_DOCUMENT mode it's the budget split between PRIMARY (mapped
+  # document, up to mapped_document_primary_top_k) and SECONDARY (cross-doc
+  # fallback) — see retriever.py. Raised 5->8 per MLflow wide_top_k experiment.
+  top_k: 8
+  # Minimum cross-encoder reranker score to keep a chunk (below = refuse
+  # rather than guess). Tuned to 0.35 against bge-reranker-v2-m3 (see
+  # rerank.model) using real (question, chunk) pairs from
+  # tests/evaluation-question-answers.json.
   min_reranker_score: 0.35
-  # When nothing clears min_reranker_score, the single best-scoring
-  # candidate is still returned (flagged low_confidence=True) instead
-  # of refusing, as long as its score is at least this — below it, the
-  # query is treated as genuinely unanswerable and no chunk is
-  # returned. Added after finding several correct-but-terse/bulleted
-  # chunks (e.g. "Failure in 1 subject < 5%" for a slow-learners
-  # question) scored 0.06-0.31 against a real question that chunk
-  # directly answers — under min_reranker_score, but a real answer,
-  # not noise. 0.05 was picked by checking genuinely unrelated
-  # questions ("What is the capital of France?") against this corpus,
-  # which scored ~0.0000-0.002 — comfortably below every observed real
-  # miss, so the two cases don't overlap in this sample. rag_pipeline /
-  # the UI must show a clear warning whenever low_confidence=True; this
-  # value trades a wrong-but-confident refusal for a
-  # right-but-uncertain answer, which is only safe if the caller
-  # actually surfaces the uncertainty.
+  # If nothing clears min_reranker_score, still return the single best
+  # candidate (flagged low_confidence=True) as long as it scores at least
+  # this; below it, treat the query as unanswerable. Callers must surface
+  # low_confidence=True clearly to the user.
   low_confidence_min_score: 0.05
-  # Used only for PRIMARY (MAPPED_DOCUMENT) search — the mapped
-  # document is already trusted by the topic match, so its own chunks
-  # are judged by dense cosine similarity, not the reranker score. A
-  # cross-encoder can genuinely score a short/heading-like chunk low
-  # even when it's clearly the right one (observed: "Welfare Measures
-  # for Teaching and Non-Teaching Staff" scored 0.18 by the reranker,
-  # despite being the #1 dense AND lexical hit in its own document) —
-  # letting that evict PRIMARY's own top chunk just forces a worse
-  # GLOBAL fallback. The reranker still reorders PRIMARY's results,
-  # it just can't drop one outright. This is the original 0.40 cosine
-  # threshold from before reranker_score became the gate elsewhere.
+  # PRIMARY (MAPPED_DOCUMENT) chunks are judged by dense cosine similarity
+  # instead of reranker score, since the mapped document is already trusted
+  # by topic match and the reranker can undervalue short/heading-like chunks.
   min_relevance_score: 0.40
-  # Cap on how many of the mapped document's own chunks ("PRIMARY")
-  # are kept, out of top_k, before any remaining slots go to a
-  # SECONDARY, cross-document search — see retriever.py's
-  # MAPPED_DOCUMENT_PRIMARY_TOP_K docstring for the full rationale.
-  # Deliberately small rather than top_k itself: a short,
-  # single-subject policy PDF frequently has several chunks that
-  # individually clear min_reranker_score, which would otherwise let
-  # PRIMARY silently consume the entire top_k budget on its own every
-  # time and leave SECONDARY no room to ever run.
-  mapped_document_primary_top_k: 3 #Changed to 3 from 2 after MLFLOW wide_top_k experiment
-  # Minimum cosine similarity (embedding-based, see
-  # rag/indexing/topic_matcher.py) between a query and a topic's name
-  # (docs-metadata.json) for that topic to be considered a match.
-  # Below this, the query is treated as unmatched and retrieval falls
-  # back to GLOBAL mode.
+  # Cap on PRIMARY chunks kept before remaining top_k slots go to SECONDARY
+  # cross-document search. Kept small so PRIMARY can't consume the whole budget.
+  mapped_document_primary_top_k: 3
+  # Minimum query-topic cosine similarity (rag/indexing/topic_matcher.py) to
+  # count as a topic match; below this, retrieval falls back to GLOBAL mode.
   topic_match_threshold: 0.5
   hybrid:
-    # GLOBAL mode (fallback) only — see rag/retriever.py. When a query
-    # matches a topic with a locally-indexed document (docs-metadata.json),
-    # retrieval is restricted to that document instead (MAPPED_DOCUMENT
-    # mode) and this hybrid/RRF path isn't used at all.
-    #
-    # When enabled, GLOBAL-mode retrieval runs dense (embedding) search
-    # and BM25 (lexical/keyword) search in parallel over the whole
-    # collection and combines both result lists with Reciprocal Rank
-    # Fusion. When disabled, GLOBAL-mode retrieval is dense-only (BM25
-    # index is not queried).
+    # GLOBAL mode only (MAPPED_DOCUMENT mode skips this). When enabled,
+    # dense + BM25 search run in parallel and are combined via Reciprocal
+    # Rank Fusion; when disabled, GLOBAL mode is dense-only.
     enabled: true
     candidates: 10   # chunks fetched from EACH of dense/lexical search before fusion
-    # How much each search method's rank counts toward the fused RRF
-    # score. Equal by default — neither method is trusted more than
-    # the other without evidence one should be.
+    # Weight each method contributes to the fused RRF score.
     dense_weight: 0.5
     lexical_weight: 0.5
   rerank:
-    # When enabled, the candidate pool (fused dense+lexical for GLOBAL
-    # mode, or the small mapped-document dense pool for MAPPED_DOCUMENT
-    # mode) is over-fetched to `candidates` chunks (instead of just
-    # top_k), scores each (question, chunk) pair jointly with a
-    # cross-encoder, and keeps only the best top_k of those.
-    # Cross-encoders are far more accurate than comparing two
-    # independent embeddings, but too slow to run over the whole
-    # collection, hence the two-stage retrieve-then-rerank shape. In
-    # MAPPED_DOCUMENT mode the candidate pool only ever contains
-    # chunks from the mapped document, so reranking can reorder within
-    # it but can never replace it with a different document.
+    # When enabled, over-fetch the candidate pool to `candidates`, score
+    # each (question, chunk) pair with a cross-encoder, and keep the best
+    # top_k. In MAPPED_DOCUMENT mode this can only reorder within the
+    # mapped document, never replace it.
     enabled: true
-    # bge-reranker-v2-m3: stronger than bge-reranker-base at matching
-    # conversational/indirect question phrasings to literal policy
-    # text (see min_reranker_score comment above for the evidence).
-    # Larger model than base, so it's slower to load and to score each
-    # candidate — worth watching query latency in production.
+    # Stronger than bge-reranker-base at matching conversational phrasings
+    # to literal policy text; slower to load/score, so watch latency.
     model: "BAAI/bge-reranker-v2-m3"
     #model: "BAAI/bge-reranker-base"   # previous model; kept as fallback reference
     #model: "cross-encoder/ms-marco-MiniLM-L-6-v2" # pre-trained for small queries
@@ -224,37 +111,26 @@ retrieval:
 
 session:
   timeout_minutes: 5
-  # A countdown warning is shown once idle time reaches
-  # (timeout_minutes * 60 - warning_seconds_before_timeout) seconds,
-  # i.e. this many seconds before the session actually resets.
+  # Countdown warning shows this many seconds before the session resets.
   warning_seconds_before_timeout: 60
-  # How many of the most recent chat messages (user + assistant turns
-  # combined) are sent to the LLM as conversation context for a new
-  # question. Capped so a long-running session doesn't keep growing
-  # the prompt (and generation time) indefinitely.
+  # How many recent chat messages (user + assistant) are sent as context
+  # for a new question, capped to bound prompt/generation growth.
   max_history_messages: 1
 
 evaluation:
-  # RAGAS judge: scores answers the live RAG pipeline produces for the
-  # question/reference-answer pairs in test_data_path, using a second,
-  # separate model as the judge (kept distinct from ollama.model, the
-  # one that answers real user questions, so the judge doesn't grade
-  # its own generations).
-  # judge_provider selects which client tests/evaluation/test_ragas_judge.py
-  # builds for judge_model: "ollama" (local, via ollama.base_url) or
-  # "gemini" (hosted, needs GOOGLE_API_KEY in the environment).
+  # RAGAS judge: scores live pipeline answers against test_data_path using
+  # a separate judge model (not the answer LLM, so it doesn't grade itself).
+  # judge_provider: "ollama" (local), "groq" (needs llm.groq.api_key_env),
+  # or "gemini" (needs GOOGLE_API_KEY).
+  #judge_provider: "groq"
+  #judge_model: "openai/gpt-oss-20b"
   judge_provider: "gemini"
-  judge_model: "gemini-2.5-flash"
+  judge_model: "gemini-3.1-flash-lite"
   judge_temperature: 0
-  # Gemini free-tier quota is rate-limited per minute, not CPU-bound —
-  # too much concurrency (judge_max_workers) triggers throttling that
-  # shows up as silent per-call timeouts (a timed-out row becomes NaN,
-  # which poisons the metric's mean). A generous timeout absorbs
-  # queuing/backoff from the API instead of failing the row outright.
+  # Generous timeout to absorb free-tier API queuing/backoff instead of
+  # failing the row (a timeout becomes NaN and poisons the mean).
   judge_timeout_seconds: 300
-  # Keep this low for a Gemini free-tier key. RAGAS's default of 16
-  # concurrent calls (and even 4) reliably hits per-minute rate limits
-  # and causes calls to return truncated results or time out.
+  # Keep low for a free-tier key; RAGAS's default concurrency hits rate limits.
   judge_max_workers: 1
   test_data_path: "./tests/evaluation-question-answers.json"
   metrics:
@@ -263,39 +139,27 @@ evaluation:
     - answer_correctness
     - context_precision
     - context_recall
-  # A metric's mean score across all test cases must be at least this
-  # to pass. RAGAS metrics are on a [0, 1] scale.
+  # Minimum mean score per metric (RAGAS metrics are [0, 1]) to pass.
   min_score: 0.5
-  # tests/evaluation/test_ragas_judge.py writes the mean score per metric here
-  # after each `make test-ragas` run, so the System Info page can show
-  # the latest scores without re-running the (slow) evaluation.
-  results_path: "./tests/ragas_results.json"
-  # Snapshot of results_path saved via `make save-ragas-baseline`. Every
-  # later `make test-ragas` run compares its mean_scores against this
-  # file (if present) and reports the delta per metric, so regressions
-  # are visible without manually diffing two results files.
-  baseline_path: "./tests/ragas_baseline.json"
+  # Written by tests/evaluation/test_judge.py after each `make eval`
+  # run, so the UI can show latest scores without re-running evaluation.
+  results_path: "./tests/judge_results.json"
+  # Snapshot saved via `make save-eval-baseline`; later runs diff against it.
+  baseline_path: "./tests/judge_baseline.json"
 
   retrieval:
-    # tests/evaluation/test_retrieval_eval.py: classic IR metrics (Recall/
-    # Precision/MRR/NDCG @ retrieval.top_k) for test cases that carry
-    # a ground-truth "relevant_sources" list, scored against the real
-    # retriever with no LLM involved — separate from the LLM-judged
-    # RAGAS metrics above, which conflate retrieval and generation
-    # quality into one score.
+    # tests/evaluation/test_retrieval_eval.py: Recall/Precision/MRR/NDCG
+    # @ retrieval.top_k against ground-truth relevant_sources, no LLM
+    # involved (separate from the LLM-judged metrics above).
     min_recall: 0.6
     min_mrr: 0.5
     results_path: "./tests/retrieval_results.json"
-    # Snapshot of results_path saved via `make save-retrieval-baseline`.
-    # Every later `make test-retrieval-eval` run compares its
-    # mean_scores against this file (if present) and reports the delta
-    # per metric.
+    # Snapshot saved via `make save-eval-baseline`; later runs diff against it.
     baseline_path: "./tests/retrieval_baseline.json"
 
 database:
-  # Session/history storage in MySQL. The password can be overridden
-  # with the RAG_DB_PASSWORD environment variable instead of editing
-  # this file.
+  # Session/history storage in MySQL. Password can be overridden via the
+  # RAG_DB_PASSWORD environment variable instead of editing this file.
   host: "127.0.0.1"
   port: 3306
   user: "sirkumar"

@@ -1,11 +1,11 @@
 """Filters tests/evaluation-question-answers.json down to just the
 questions that scored faithfulness < 1 (or NaN, e.g. a timed-out judge
-call) in the last `make test-ragas` run, so that run's fixes can be
+call) in the last `make eval` run, so that run's fixes can be
 re-checked with `make test-ragas-failures` without re-running the
 whole (slow) suite.
 
-Requires tests/ragas_results.json (config.evaluation.results_path) to
-already exist — run `make test-ragas` first.
+Requires tests/judge_results.json (config.evaluation.results_path) to
+already exist — run `make eval` first.
 
 Usage:
     python scripts/filter_low_faithfulness.py
@@ -26,9 +26,9 @@ FILTERED_TEST_DATA_PATH = "tests/evaluation-question-answers.low-faithfulness.js
 
 
 def _needs_recheck(faithfulness) -> bool:
-    """True for a score below 1, or NaN — RAGAS writes NaN when a
-    judge call times out/errors rather than raising, so a NaN score is
-    just as unverified as a low one and belongs in the recheck set."""
+    """True for a score below 1, or NaN — test_judge.py writes NaN when
+    a judge call times out/errors rather than raising, so a NaN score
+    is just as unverified as a low one and belongs in the recheck set."""
     if faithfulness is None:
         return True
     if isinstance(faithfulness, float) and math.isnan(faithfulness):
@@ -38,7 +38,7 @@ def _needs_recheck(faithfulness) -> bool:
 
 def select_low_faithfulness_questions(rows: list) -> list:
     """Returns the question text of every row in rows (as written to
-    ragas_results.json) whose faithfulness needs a recheck."""
+    judge_results.json) whose faithfulness needs a recheck."""
     return [row["question"] for row in rows if _needs_recheck(row.get("faithfulness"))]
 
 
@@ -56,7 +56,7 @@ def main():
 
     if not results_path.exists():
         print(
-            f"No results file at {results_path} — run `make test-ragas` first, "
+            f"No results file at {results_path} — run `make eval` first, "
             "then re-run this."
         )
         sys.exit(1)

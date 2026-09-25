@@ -202,7 +202,7 @@ entirely rather than trying to out-tune it.
 | MySQL for sessions instead of only in-memory Streamlit state | Streamlit's `session_state` is per-browser-tab and lost on refresh/restart; MySQL gives durable session/chat history across restarts and a shared store that scales to the expected <50 concurrent users. |
 | Sessions identified by email, not anonymous UUID only | Ties conversation history in MySQL back to a real person (`rag/user_identity.py` validates the address) rather than being fully anonymous. |
 | 5-minute inactivity timeout | Chosen per requirement; implemented as "no query in the last 5 minutes" (`sessions.last_active_at`), not a hard session lifetime — an actively-chatting user is never cut off. |
-| Two separate evaluation suites, not one | `test_retrieval_eval.py` scores the retriever alone (classic IR metrics — Recall/Precision/MRR/NDCG@k) with no LLM call, so retrieval regressions are cheap and fast to catch. `test_ragas_judge.py` scores the full pipeline's generated answers with an external judge model (faithfulness/relevancy/correctness), which conflates retrieval and generation quality but is what actually matters to a user. Keeping them separate makes it possible to tell "retrieval is fine, generation is the problem" apart from the reverse. |
+| Two separate evaluation suites, not one | `test_retrieval_eval.py` scores the retriever alone (classic IR metrics — Recall/Precision/MRR/NDCG@k) with no LLM call, so retrieval regressions are cheap and fast to catch. `test_judge.py` scores the full pipeline's generated answers with an external judge model (faithfulness/relevancy/correctness), which conflates retrieval and generation quality but is what actually matters to a user. Keeping them separate makes it possible to tell "retrieval is fine, generation is the problem" apart from the reverse. |
 | RAGAS judge is Gemini (`gemini-2.5-flash`), not the same Ollama model that answers | A judge grading its own generations is a biased signal (it tends to rate its own phrasing/reasoning favorably). Gemini also runs faster/more capably than the local CPU-bound Ollama model would for a judge role. |
 | No lambdas; plain functions/classes everywhere | Readability requirement — every transformation has a name and can be stepped through or unit-tested directly. |
 | Configuration centralized in `config.yaml` | Every tunable (model names, chunk size/overlap, retrieval/rerank/hybrid settings, evaluation thresholds, timeouts, DB connection) lives in one file, loaded by `rag/config.py` into typed dataclasses — no magic numbers scattered through the code. |
@@ -312,25 +312,26 @@ make run-debug
 | `make ingest` | (Re)builds the Chroma vector index from `policies_docs/` |
 | `make run` | Starts the Streamlit app |
 | `make run-debug` | Starts the Streamlit app with `--logger.level=debug` and an in-app debug panel |
-| `make test` | Runs the unit test suite (excludes `test-retrieval-eval`/`test-ragas`, which need live services — see below) |
-| `make test-retrieval-eval` | Runs the retrieval-only IR metrics (Recall/Precision/MRR/NDCG@k) against the real Chroma store, no LLM call |
-| `make test-ragas` | Runs the RAGAS judge evaluation against the real pipeline (needs Ollama + an ingested Chroma store) |
-| `make metrics` | Runs `test-retrieval-eval` then `test-ragas` back to back |
+| `make test` | Runs the unit test suite (excludes the `eval` suite, which needs live services — see below) |
+| `make eval` | Runs the retrieval-only IR metrics (Recall/Precision/MRR/NDCG@k, no LLM call) then the live DeepEval judge evaluation against the real pipeline (needs the judge provider reachable + an ingested Chroma store) |
+| `make test-ragas-failures` | Re-runs the judge only for questions that scored faithfulness < 1 in the last `make eval` run |
+| `make save-eval-baseline` | Saves the latest `make eval` results (both retrieval and judge) as the baseline future runs are compared against |
 | `make experiment` | Runs one retrieval evaluation (config.yaml as-is, no overrides) and logs it as an MLflow run — see "Experiment tracking" below |
 | `make experiments-all` | Runs every named block in `experiments.yaml` back to back, then opens the MLflow UI automatically |
 | `make mlflow-ui` | Opens the MLflow UI to compare experiment runs |
 
 ## Experiment tracking (MLflow)
 
-`make test-retrieval-eval` is a pass/fail gate (did retrieval stay
-above `min_recall`/`min_mrr`); it doesn't keep history. For comparing
-*different* models/hyperparameters against each other over time —
-"is `top_k=8` better than `top_k=5`?", "does swapping the reranker
-model help?" — `scripts/run_experiment.py` runs the same classic IR
-evaluation (Recall/Precision/MRR/NDCG@k) but logs the result as a
-comparable MLflow run instead of just asserting a threshold.
-**RAGAS is never involved here** — no judge-model call, no live
-generation pipeline call, no `tests/ragas_results.json` write; only
+The retrieval half of `make eval` is a pass/fail gate (did retrieval
+stay above `min_recall`/`min_mrr`); it doesn't keep history. For
+comparing *different* models/hyperparameters against each other over
+time — "is `top_k=8` better than `top_k=5`?", "does swapping the
+reranker model help?" — `scripts/run_experiment.py` runs the same
+classic IR evaluation (Recall/Precision/MRR/NDCG@k) but logs the
+result as a comparable MLflow run instead of just asserting a
+threshold.
+**The judge model is never involved here** — no judge-model call, no live
+generation pipeline call, no `tests/judge_results.json` write; only
 retrieval is scored, which is what keeps each run fast.
 
 Tracking is entirely local — no server, no Docker: run metadata
@@ -414,7 +415,7 @@ Sort/filter by any metric or tag in the UI to compare runs — e.g. sort
 by `recall` descending to find the best-performing configuration tried
 so far. Better IR metrics don't automatically mean better final
 answers (more/different chunks retrieved is still only an input to
-generation) — `make test-ragas` is the only place generation quality
+generation) — `make eval` is the only place generation quality
 (faithfulness/answer correctness) actually gets checked, so confirm
 there before promoting an experiment's settings into `config.yaml`.
 
@@ -463,10 +464,10 @@ session.
 | `retrieval.rerank` | `candidates` | `8` | Top N of the candidate pool handed to the reranker; the final `top_k` is chosen from these |
 | `session` | `timeout_minutes` | `5` | Inactivity timeout before a session is treated as expired |
 | `session` | `max_history_messages` | `1` | Most recent chat turns sent to the LLM as conversation context |
-| `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `test-ragas`, kept separate from whichever `llm.provider` answers real questions so it isn't grading its own generations |
-| `evaluation` | `test_data_path` | `./tests/evaluation-question-answers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both eval suites |
-| `evaluation` | `min_score` | `0.5` | Minimum mean RAGAS metric score to pass `test-ragas` |
-| `evaluation.retrieval` | `min_recall` / `min_mrr` | `0.6` / `0.5` | Minimum mean Recall@k / MRR to pass `test-retrieval-eval` |
+| `evaluation` | `judge_provider` / `judge_model` | `gemini` / `gemini-2.5-flash` | External judge for `make eval`, kept separate from whichever `llm.provider` answers real questions so it isn't grading its own generations |
+| `evaluation` | `test_data_path` | `./tests/evaluation-question-answers.json` | Question/reference-answer (+ optional `relevant_sources`) test cases used by both halves of `make eval` |
+| `evaluation` | `min_score` | `0.5` | Minimum mean judge metric score to pass the judge half of `make eval` |
+| `evaluation.retrieval` | `min_recall` / `min_mrr` | `0.6` / `0.5` | Minimum mean Recall@k / MRR to pass the retrieval half of `make eval` |
 | `database` | `host` / `port` / `user` / `database` | `127.0.0.1` / `3306` / `sirkumar` / `rag_sessions` | MySQL connection for session/chat history |
 | `database` | `password` | — | Can be overridden with the `RAG_DB_PASSWORD` env var instead of editing the file |
 
@@ -477,14 +478,13 @@ make test
 ```
 
 Tests that need a live MySQL server are skipped automatically if one
-is not reachable. `test_retrieval_eval.py` and `test_ragas_judge.py`
+is not reachable. `test_retrieval_eval.py` and `test_judge.py`
 need a live answer-LLM provider (whichever `llm.provider` selects)
 and/or an ingested Chroma store and are excluded from `make test` by
-default (`pytest.ini`); run them via `make test-retrieval-eval` /
-`make test-ragas` / `make metrics`. `rag_pipeline` and `retriever`
-unit tests use fakes instead of real network calls.
+default (`pytest.ini`); run them via `make eval`. `rag_pipeline` and
+`retriever` unit tests use fakes instead of real network calls.
 
-`make test-ragas` runs `pytest -s` so its progress is visible live
+The judge half of `make eval` runs `pytest -s` so its progress is visible live
 instead of only appearing after the run finishes: a `[i/N] answering:
 ...` / `[i/N] answered (... chars)` line per test case while the real
 pipeline generates each answer, then RAGAS's own progress bar while
@@ -492,16 +492,16 @@ the judge model scores them.
 
 ## Current metrics — what they say, and what's still weak
 
-`make metrics` writes fresh numbers to `tests/retrieval_results.json`
-(classic IR) and `tests/ragas_results.json` (LLM-judged), both also
+`make eval` writes fresh numbers to `tests/retrieval_results.json`
+(classic IR) and `tests/judge_results.json` (LLM-judged), both also
 readable from the app's System Info page.
 
 **The numbers in this section predate `retrieval.top_k` moving from 5
 to 8** (see "Configuration" above and the `wide_top_k` MLflow
-experiment) — re-run `make metrics` to refresh them against the
+experiment) — re-run `make eval` to refresh them against the
 current config.
 
-### Retrieval-only (`test-retrieval-eval`, k=5, 24 labeled questions)
+### Retrieval-only (`make eval`, k=5, 24 labeled questions)
 
 Retrieval was reworked to use a LangChain-backed dense retriever, a
 cross-encoder reranker (`HuggingFaceCrossEncoder`) as the sole
@@ -523,10 +523,10 @@ so several correctly-ranked-but-lower-relevance chunks fill out the
 remaining slots — this is a `top_k` sizing effect, not a sign
 retrieval is picking wrong documents (recall/MRR are high).
 
-### RAGAS judge (`test-ragas`, gemini-2.5-flash judge, current 4-question set)
+### Judge eval (`make eval`, gemini-2.5-flash judge, current 4-question set)
 
 These numbers are from before the MAPPED_DOCUMENT/GLOBAL retrieval
-rework above and haven't been rerun yet (`make test-ragas` takes
+rework above and haven't been rerun yet (`make eval` takes
 ~10-30 minutes against 4 questions); treat them as the prior
 baseline, not current fact, until it's rerun.
 
@@ -538,7 +538,7 @@ context_precision:  0.37   (min_score: 0.5 — FAIL)
 context_recall:     0.50   (min_score: 0.5 — pass, right on the floor)
 ```
 
-`make test-ragas` currently **fails** on this test set (it passed
+`make eval` currently **fails** on this test set (it passed
 before only because the committed result predated the test set growing
 from 1 to 4 questions). The pattern is consistent with the retrieval
 gaps above: **faithfulness stays high** — the model reliably sticks to
@@ -610,8 +610,8 @@ showing up here as low context_precision.
    a question whose true answer depends on which of two contradicting
    source PDFs is authoritative — this is a data-quality issue to flag
    to whoever owns those documents, not a code fix.
-6. **Re-run `make test-ragas` and `make test-retrieval-eval`** on the
-   current config — the committed `ragas_results.json` and
+6. **Re-run `make eval`** on the
+   current config — the committed `judge_results.json` and
    `retrieval_results.json` predate `retrieval.top_k` moving from 5 to
    8, `mapped_document_primary_top_k` moving from 2 to 3, and the Leave
    topic `keywords` fix (added after the Leave topic's name alone

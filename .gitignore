@@ -52,3 +52,6 @@ Thumbs.db
 # make experiments-all, etc.)
 nohup.out
 nohup.out.*
+nohup*
+
+.deepeval

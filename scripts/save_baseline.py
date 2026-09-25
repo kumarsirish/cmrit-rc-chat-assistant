@@ -5,13 +5,13 @@ Usage:
     python scripts/save_baseline.py ragas
     python scripts/save_baseline.py retrieval
 
-Copies tests/ragas_results.json -> tests/ragas_baseline.json (or the
+Copies tests/judge_results.json -> tests/judge_baseline.json (or the
 retrieval equivalent), both read from config.yaml so this stays in
 sync with wherever evaluation.results_path/baseline_path actually
-point. Run this right after a `make test-ragas` / `make
-test-retrieval-eval` run you want to treat as the reference point —
-every later run of that suite will report its delta against this
-snapshot (see rag/evaluation/baseline.py).
+point. Called by `make save-eval-baseline` right after a `make eval`
+run you want to treat as the reference point — every later `make eval`
+run will report its delta against this snapshot (see
+rag/evaluation/baseline.py).
 """
 
 import shutil

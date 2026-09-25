@@ -81,9 +81,23 @@ def load_pdf(pdf_path: Path) -> list:
     or if every page turns out empty (a scanned/image-only PDF with no
     extractable text layer) — either way, nothing usable came out of
     this file.
+
+    extraction_mode="layout" (rather than pypdf's default "plain")
+    uses glyph positions to reconstruct lines instead of a
+    cursor-jump heuristic. Several of policies_docs's PDFs are
+    DOCX/PPTX exports with justified or widely-spaced text, which the
+    default mode was observed splitting into one word per line (e.g.
+    "Quality Policy: To deliver quality technical education to
+    inculcate ... social\n\ncommitment\n\nin\n\nour\n\nstudents..."),
+    fragmented enough that the LLM sometimes couldn't recognize the
+    text as an answer even though it was the right chunk (see the
+    "what is CMRIT's quality policy" investigation). "layout" mode was
+    checked against this file plus three known-good ones (including a
+    table-shaped PDF, where column alignment survived) before
+    switching — see PR discussion, not just this file's history.
     """
     try:
-        documents = PyPDFLoader(str(pdf_path)).load()
+        documents = PyPDFLoader(str(pdf_path), extraction_mode="layout").load()
     except Exception as exc:
         raise DocumentLoadError(f"Could not open/parse PDF {pdf_path.name}: {exc}") from exc
 

@@ -1,8 +1,8 @@
 """Runs one retrieval evaluation and logs it as an MLflow run, so
 different models/hyperparameters can be compared over time.
 
-Unlike `make test-retrieval-eval` (a plain pytest pass/fail gate, no
-MLflow involved), every run of this script becomes one comparable
+Unlike the retrieval half of `make eval` (a plain pytest pass/fail
+gate, no MLflow involved), every run of this script becomes one comparable
 MLflow run, tracked locally in ./mlflow.db (SQLite, no server) with
 artifacts under ./mlruns/.
 
@@ -19,7 +19,7 @@ typing --set flags:
 Only classic IR metrics (Recall/Precision/MRR/NDCG@k, via
 rag/evaluation/evaluate_retrieval.py) are logged here -- RAGAS is never
 invoked by this script, so a run never costs a judge-model call and
-never touches tests/ragas_results.json.
+never touches tests/judge_results.json.
 
 An override that changes embedding.model_name or any chunking.* value
 changes what the index itself must contain, not just how it's

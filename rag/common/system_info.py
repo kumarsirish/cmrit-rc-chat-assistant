@@ -87,7 +87,7 @@ RETRIEVAL_METRIC_FORMULAS = {
 
 def _format_score(score) -> str:
     """"—" for missing/NaN (a NaN mean score means a judge call timed
-    out/errored on the last run — see test_ragas_judge.py), otherwise
+    out/errored on the last run — see test_judge.py), otherwise
     3 decimal places."""
     if score is None or (isinstance(score, float) and math.isnan(score)):
         return "—"
@@ -223,7 +223,7 @@ def _render_ragas_section(config):
     results = None
     if not results_path.exists():
         st.caption(
-            f"No results yet — run `make test-ragas` to generate "
+            f"No results yet — run `make eval` to generate "
             f"`{results_path.name}`."
         )
     else:
@@ -253,7 +253,7 @@ def _render_ragas_section(config):
     )
     if baseline_scores is None:
         st.caption(
-            "No baseline saved yet — run `make save-ragas-baseline` to "
+            "No baseline saved yet — run `make save-eval-baseline` to "
             "compare future runs against this one."
         )
 
@@ -266,7 +266,7 @@ def _render_ragas_section(config):
             test_cases = json.load(test_file, strict=False)
         st.caption(
             f"{len(test_cases)} reference Q&A pairs in `{test_data_path.name}`. "
-            "Run `make test-ragas` to score the live pipeline against them."
+            "Run `make eval` to score the live pipeline against them."
         )
     except (json.JSONDecodeError, OSError) as error:
         st.caption(f"Could not read {test_data_path.name}: {error}")
@@ -284,7 +284,7 @@ def _render_retrieval_eval_section(config):
     results = None
     if not results_path.exists():
         st.caption(
-            f"No results yet — run `make test-retrieval-eval` to generate "
+            f"No results yet — run `make eval` to generate "
             f"`{results_path.name}`."
         )
     else:
@@ -311,7 +311,7 @@ def _render_retrieval_eval_section(config):
     )
     if baseline_scores is None:
         st.caption(
-            "No baseline saved yet — run `make save-retrieval-baseline` to "
+            "No baseline saved yet — run `make save-eval-baseline` to "
             "compare future runs against this one."
         )
 

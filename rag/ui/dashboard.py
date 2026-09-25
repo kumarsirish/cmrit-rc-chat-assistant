@@ -25,11 +25,14 @@ from rag.retrieval.bm25_retriever import BM25Index
 from rag.retrieval.dense_retriever import DenseRetriever
 from rag.retrieval.reranker import Reranker
 from rag.retrieval.retrieval_service import TRACE_LOGGER_NAME, RetrievalService
+from rag.ingestion.glossary_extractor import load_glossary
 from rag.routing.docs_metadata import load_doc_topics
 
 APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icon.png"
 
-st.set_page_config(page_title="CMRIT-RAG", page_icon=str(APP_ICON_PATH), layout="wide")
+st.set_page_config(
+    page_title="CMRIT-RAG", page_icon=str(APP_ICON_PATH), layout="wide", initial_sidebar_state="collapsed"
+)
 
 # Streamlit's default centered layout leaves large blank margins on
 # either side of the chat, plus a tall gap above the title. Constrain
@@ -187,8 +190,18 @@ def get_llm_client():
     return LlmClient.from_config(config.llm, temperature=_default_llm_temperature(config))
 
 
+@st.cache_resource
+def get_glossary():
+    config = get_config()
+    return load_glossary(config.documents.glossary_file)
+
+
 def get_rag_pipeline():
-    return RagPipeline(retrieval_service=get_retrieval_service(), llm_client=get_llm_client())
+    return RagPipeline(
+        retrieval_service=get_retrieval_service(),
+        llm_client=get_llm_client(),
+        glossary=get_glossary(),
+    )
 
 
 @st.cache_resource

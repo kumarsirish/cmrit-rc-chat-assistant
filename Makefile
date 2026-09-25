@@ -1,4 +1,4 @@
-.PHONY: help install download-models ingest run run-debug test test-ragas test-ragas-failures test-retrieval-eval save-ragas-baseline save-retrieval-baseline metrics experiment experiments-all mlflow-ui llm-test clean
+.PHONY: help install download-models ingest run run-debug test test-ragas-failures eval save-eval-baseline experiment experiments-all mlflow-ui llm-test clean
 
 .DEFAULT_GOAL := help
 
@@ -34,64 +34,54 @@ run-debug: ## Start the Streamlit app with debug logging and in-app debug panel
 test: ## Run the default test suite (excludes ragas/retrieval_eval)
 	pytest tests/
 
-# Live RAGAS judge evaluation: scores real pipeline answers against
-# tests/evaluation-question-answers.json using the judge model configured
-# in config.yaml. Needs Ollama running (both ollama.model and
-# evaluation.judge_model pulled) and an ingested Chroma store (`make
-# ingest`), so it's excluded from the default `make test`.
-test-ragas: ## Run the live RAGAS judge evaluation (slow, needs a judge LLM)
-	# -s disables pytest's output capture so the per-question progress
-	# prints in test_ragas_judge.py (and RAGAS's own progress bar during
-	# judging) show up live instead of only appearing after the run
-	# finishes (or gets silently buffered on failure).
-	pytest tests/evaluation/test_ragas_judge.py -m ragas -v -s
-
-# Re-runs test-ragas against only the questions that scored
+# Re-runs the DeepEval judge only for questions that scored
 # faithfulness < 1 (or NaN, e.g. a timed-out judge call) in the last
-# tests/ragas_results.json — a fast way to check, during debugging,
+# tests/judge_results.json — a fast way to check, during debugging,
 # whether a retrieval/prompt change actually fixed the answers that
 # were broken, without paying for the whole suite again. Requires
-# tests/ragas_results.json to already exist (`make test-ragas`).
+# tests/judge_results.json to already exist (`make eval`).
 # RAG_EVAL_RESULTS_PATH points this run's output at a scratch file so
 # it doesn't overwrite the full-suite results/baseline comparison.
-test-ragas-failures: ## Re-run RAGAS only for questions with faithfulness < 1 in the last run
+test-ragas-failures: ## Re-run the judge only for questions with faithfulness < 1 in the last run
 	python scripts/filter_low_faithfulness.py
 	@if [ -f tests/evaluation-question-answers.low-faithfulness.json ]; then \
 		RAG_EVAL_TEST_DATA_PATH=tests/evaluation-question-answers.low-faithfulness.json \
-		RAG_EVAL_RESULTS_PATH=tests/ragas_results.low-faithfulness.json \
-			pytest tests/evaluation/test_ragas_judge.py -m ragas -v -s; \
+		RAG_EVAL_RESULTS_PATH=tests/judge_results.low-faithfulness.json \
+			pytest tests/evaluation/test_judge.py -m ragas -v -s; \
 	fi
 
-# Retrieval-only evaluation: Recall/Precision/MRR/NDCG @ top_k for
-# test cases with a "relevant_sources" ground truth, scored against
-# the real retriever with no LLM call — much faster than
-# `make test-ragas` and a good first check after tuning retrieval.
-# Needs an ingested Chroma store (`make ingest`).
-test-retrieval-eval: ## Run retrieval-only IR metrics (Recall/Precision/MRR/NDCG)
+# Runs both evaluation suites back to back:
+# 1. Retrieval-only IR metrics (Recall/Precision/MRR/NDCG @ top_k),
+#    scored against the real retriever with no LLM call — needs an
+#    ingested Chroma store (`make ingest`).
+# 2. The live DeepEval judge evaluation: scores real pipeline answers
+#    against tests/evaluation-question-answers.json using the judge
+#    model configured in config.yaml — needs the judge provider
+#    reachable (Ollama running with both models pulled, or a Groq/
+#    Gemini API key in the environment) and an ingested Chroma store.
+# -s disables pytest's output capture so the per-question progress
+# prints in test_judge.py show up live instead of only appearing
+# after the run finishes (or gets silently buffered on failure).
+# Both are excluded from the default `make test`.
+eval: ## Run retrieval IR metrics + the live DeepEval judge evaluation
 	pytest tests/evaluation/test_retrieval_eval.py -m retrieval_eval -v
+	pytest tests/evaluation/test_judge.py -m ragas -v -s
 
-# Snapshots the latest tests/ragas_results.json / tests/retrieval_results.json
-# as the baseline that all later `make test-ragas` / `make
-# test-retrieval-eval` runs report their delta against (see
-# rag/evaluation/baseline.py). Re-run after a deliberate change you
-# want to become the new reference point.
-save-ragas-baseline: ## Save the latest RAGAS results as the baseline for future comparisons
-	python scripts/save_baseline.py ragas
-
-save-retrieval-baseline: ## Save the latest retrieval-eval results as the baseline for future comparisons
+# Snapshots the latest tests/retrieval_results.json and
+# tests/judge_results.json as the baselines that every later `make
+# eval` run reports its delta against (see rag/evaluation/baseline.py).
+# Re-run after a deliberate change you want to become the new
+# reference point.
+save-eval-baseline: ## Save the latest eval results as the baseline for future comparisons
 	python scripts/save_baseline.py retrieval
-
-# Runs both evaluation suites back to back: retrieval-only metrics
-# (Recall/Precision/MRR/NDCG, see test-retrieval-eval) and the RAGAS
-# judge metrics (faithfulness/answer_relevancy/etc, see test-ragas).
-# Needs an ingested Chroma store and, for test-ragas, Ollama running.
-metrics: test-retrieval-eval test-ragas ## Run both retrieval-eval and ragas suites back to back
+	python scripts/save_baseline.py ragas
 
 # Runs one retrieval evaluation and logs it as an MLflow run (params,
 # metrics, resolved config) to ./mlflow.db, for comparing model/
-# hyperparameter changes over time. Unlike test-retrieval-eval this is
-# not a pass/fail gate — it's the tool for deliberate experiments. For
-# --set overrides or --run-name, call the script directly instead:
+# hyperparameter changes over time. Unlike the retrieval half of
+# `make eval` this is not a pass/fail gate — it's the tool for
+# deliberate experiments. For --set overrides or --run-name, call the
+# script directly instead:
 #   python scripts/run_experiment.py --set retrieval.top_k=3 --run-name my-experiment
 experiment: ## Run one retrieval experiment and log it to MLflow
 	python scripts/run_experiment.py
@@ -120,7 +110,7 @@ mlflow-ui: ## Open the MLflow UI over ./mlflow.db
 
 # Standalone connectivity/rate-limit checks for the hosted LLM providers
 # (Gemini judge latency, Groq rate-limit headers) — not pytest tests,
-# just quick diagnostics to run before a slow make test-ragas/experiment
+# just quick diagnostics to run before a slow make eval/experiment
 # to confirm the provider is actually reachable and not quota-exhausted.
 llm-test: ## Check Gemini judge latency and Groq rate-limit headroom
 	python llm-diagnostics/check_gemini_latency.py

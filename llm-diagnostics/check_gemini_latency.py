@@ -1,5 +1,5 @@
 """Time a single bare Gemini call, to isolate whether RAGAS judge
-slowness (test_ragas_judge.py, judge_provider: gemini) is the Gemini
+slowness (test_judge.py, judge_provider: gemini) is the Gemini
 API itself or something in RAGAS's own timeout/retry path.
 
 Run from the repo root:

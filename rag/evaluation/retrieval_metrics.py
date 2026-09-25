@@ -1,5 +1,5 @@
 """Classic IR metrics for judging retrieval quality on its own, apart
-from the LLM-judged generation metrics in test_ragas_judge.py.
+from the LLM-judged generation metrics in test_judge.py.
 
 Every function takes retrieved_sources — a ranked list of source_file
 strings, most relevant first, exactly as Retriever.retrieve() returns

@@ -57,6 +57,11 @@ class ChromaConfig:
 class DocumentsConfig:
     source_directory: str
     metadata_file: str
+    # Acronym -> full-phrase glossary auto-extracted from the source
+    # documents at ingest time (see rag.ingestion.glossary_extractor).
+    # Used to expand jargon-free questions before retrieval — see
+    # rag.routing.query_expander.
+    glossary_file: str
 
 
 @dataclass
@@ -187,6 +192,7 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     documents_cfg = DocumentsConfig(
         source_directory=_resolve_path(documents_raw["source_directory"]),
         metadata_file=_resolve_path(documents_raw["metadata_file"]),
+        glossary_file=_resolve_path(documents_raw["glossary_file"]),
     )
 
     chunking_cfg = ChunkingConfig(**raw["chunking"])
@@ -200,9 +206,9 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
 
     evaluation_raw = dict(raw["evaluation"])
     # Both overridable so a debugging run (see scripts/filter_low_faithfulness.py
-    # / `make test-ragas-failures`) can point test-ragas at a filtered
+    # / `make test-ragas-failures`) can point the judge eval at a filtered
     # question set and a scratch results file, without touching
-    # config.yaml or clobbering the full-suite tests/ragas_results.json.
+    # config.yaml or clobbering the full-suite tests/judge_results.json.
     evaluation_raw["test_data_path"] = _resolve_path(
         os.environ.get("RAG_EVAL_TEST_DATA_PATH", evaluation_raw["test_data_path"])
     )

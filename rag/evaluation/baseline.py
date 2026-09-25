@@ -1,10 +1,9 @@
 """Baseline comparison for evaluation runs.
 
 A "baseline" is just a snapshot of a previous evaluation results file
-(tests/ragas_results.json or tests/retrieval_results.json), saved to
-a separate path via `make save-ragas-baseline` / `make
-save-retrieval-baseline` (see scripts/save_baseline.py). Every
-subsequent `make test-ragas` / `make test-retrieval-eval` run loads
+(tests/judge_results.json or tests/retrieval_results.json), saved to
+a separate path via `make save-eval-baseline` (see
+scripts/save_baseline.py). Every subsequent `make eval` run loads
 that snapshot, if present, and reports each metric's delta against it
 so regressions/improvements are visible without manually diffing two
 JSON files.

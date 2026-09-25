@@ -21,6 +21,7 @@ from rag.generation.llm_client import LlmClient
 from rag.generation.rag_pipeline import RagPipeline
 from rag.indexing.vector_store import VectorStore
 from rag.ingestion.embeddings import EmbeddingGenerator
+from rag.ingestion.glossary_extractor import load_glossary
 from rag.retrieval.bm25_retriever import BM25Index
 from rag.retrieval.dense_retriever import DenseRetriever
 from rag.retrieval.reranker import Reranker
@@ -62,7 +63,8 @@ def build_pipeline(config):
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
     llm_client = LlmClient.from_config(config.llm)
-    return RagPipeline(retrieval_service=retrieval_service, llm_client=llm_client)
+    glossary = load_glossary(config.documents.glossary_file)
+    return RagPipeline(retrieval_service=retrieval_service, llm_client=llm_client, glossary=glossary)
 
 
 def main() -> None:

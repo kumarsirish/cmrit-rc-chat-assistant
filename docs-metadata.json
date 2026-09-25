@@ -31,13 +31,15 @@
       "topic": "Faculty Handbook (Initiatives, Teaching & Learning, Mentoring, Policies, leave information, Faculty evaluation, Facilities, Contact Details etc.)",
       "link": "https://docs.google.com/document/d/1XjJM5Kdu3m7IDc-rvMZgVEDNjtvPzsp9/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
       "additional_link": "https://sites.google.com/cmrit.ac.in/internalqualityassurancecell/templatesdocuments?authuser=0",
-      "docs": "Faculty Handbook-CMRIT.docx.pdf"
+      "docs": "Faculty Handbook-CMRIT.docx.pdf",
+      "keywords": "complaint, grievance, redressal, disciplinary"
     },
     {
       "s_no": 6,
       "topic": "HOD Handbook (Initiatives, Teaching & Learning, Mentoring, Policies, leave information, Faculty evaluation, Department Evaluation, Exam conduction, Facilities etc.)",
       "link": "https://drive.google.com/file/d/1tOp0qMH-oYqKYSGZ2tczQ7U_AVVfNXtr/view?usp=drive_link",
-      "docs": "HoD Handbook - CMRIT.pdf"
+      "docs": "HoD Handbook - CMRIT.pdf",
+      "keywords": "complaint, grievance, redressal, disciplinary"
     },
     {
       "s_no": 7,
@@ -67,7 +69,8 @@
       "s_no": 11,
       "topic": "Student Handbook",
       "link": "https://docs.google.com/document/d/1490YQf87CTk65GjFX2s8DhhUkKUQZvI7/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
-      "docs" : "Student Handbook-CMRIT.docx.pdf"
+      "docs" : "Student Handbook-CMRIT.docx.pdf",
+      "keywords": "complaint, grievance, redressal, disciplinary"
     },
     {
       "s_no": 12,

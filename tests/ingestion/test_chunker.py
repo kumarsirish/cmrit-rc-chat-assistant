@@ -171,6 +171,26 @@ def test_table_like_block_is_not_split_mid_row():
     assert "Paper Writing" in chunks[0].text
 
 
+def test_indented_bullet_list_is_not_mistaken_for_a_table():
+    # A wide-indented bulleted list (e.g. a Faculty Handbook duties
+    # list exported from Word) has exactly one 3+-space gap per line —
+    # the indentation before the bullet/heading — same as a genuine
+    # table's column gap would look in isolation. Left undistinguished
+    # from a real table (which has 2+ gaps per row, one per column),
+    # this chained dozens of unrelated bullets into a single opaque
+    # block bypassing chunk_size entirely, burying a real answer among
+    # unrelated bullet points no reranker could find it under.
+    bullets = "\n".join(
+        f"               {bullet}   Item number {index} of the duties list."
+        for index, bullet in enumerate(["●"] * 20)
+    )
+    pages = [PageDocument(text=bullets, source_file="handbook.pdf", page_number=1)]
+    chunks = chunk_documents(pages, chunk_size=200, chunk_overlap=20, separators=SEPARATORS)
+    assert len(chunks) > 1
+    for chunk in chunks:
+        assert len(chunk.text) <= 200 + 20
+
+
 def test_double_spaced_prose_is_not_mistaken_for_a_table():
     # Word/Google Docs -> PDF export commonly doubles every single
     # space between words as a justification artifact. A table-line
@@ -215,6 +235,67 @@ def test_chunk_documents_drops_link_index_chunks():
     pages = [PageDocument(text=index_text, source_file="onboarding.pdf", page_number=1)]
     chunks = chunk_documents(pages, chunk_size=1000, chunk_overlap=0, separators=SEPARATORS)
     assert chunks == []
+
+
+def test_chunk_documents_strips_breadcrumb_link_list_but_keeps_real_content():
+    # Reproduces the "what is CMRIT's quality policy" regression: a
+    # page footer/sidebar navigation aside ("Cells ----> IQAC ---->
+    # Templates" followed by bulleted document titles) got chunked
+    # alongside genuine numbered-section content. The bullet
+    # "CMRIT Quality Policy" named the exact document a question asked
+    # about, so retrieval/the answer LLM treated it as a second,
+    # conflicting source and refused to answer even though another
+    # chunk had the real policy text.
+    text = (
+        "(https://www.cmrit.ac.in/ ----> Cells ----> Research Committee ---> Downloads)\n\n"
+        "●   RC Norms\n"
+        "●   CMRIT IPR Policy\n\n"
+        "(https://www.cmrit.ac.in/ ----> Cells ----> IQAC ---> Templates)\n\n"
+        "●    CMRIT Quality Policy\n"
+        "●    Staff Welfare Measures\n\n"
+        "27. Other Points\n\n"
+        "●    Maintain STR book up-to date.\n"
+        "●    RC approval of technical documents is a must.\n"
+    )
+    pages = [PageDocument(text=text, source_file="hod_handbook.pdf", page_number=59)]
+    chunks = chunk_documents(pages, chunk_size=1000, chunk_overlap=0, separators=SEPARATORS)
+    assert len(chunks) == 1
+    assert "CMRIT Quality Policy" not in chunks[0].text
+    assert "Staff Welfare Measures" not in chunks[0].text
+    assert "cmrit.ac.in" not in chunks[0].text
+    assert "Maintain STR book up-to date." in chunks[0].text
+    assert "RC approval of technical documents is a must." in chunks[0].text
+
+
+def test_chunk_documents_strips_breadcrumb_link_list_across_a_page_break():
+    # The breadcrumb line can be the last line of one page while its
+    # bulleted document titles start the next page (PDF page breaks
+    # split the navigation aside mid-block) — stripping must still
+    # catch the whole block once pages are joined, not just the half
+    # that happens to share a page with the breadcrumb.
+    page_one_text = (
+        "Rules for Parking apply as stated above.\n"
+        "26.     Policies and Documents\n"
+        "Below are the links of some important policies and documents available on CMRIT website:\n\n"
+        "(https://www.cmrit.ac.in/ ----> Cells ----> IQAC ---> Templates)"
+    )
+    page_two_text = (
+        "●    CMRIT Quality Policy\n"
+        "●    Staff Welfare Measures\n\n"
+        "27. Other Points\n\n"
+        "●    Maintain STR book up-to date.\n"
+    )
+    pages = [
+        PageDocument(text=page_one_text, source_file="handbook.pdf", page_number=46),
+        PageDocument(text=page_two_text, source_file="handbook.pdf", page_number=47),
+    ]
+    chunks = chunk_documents(pages, chunk_size=1000, chunk_overlap=0, separators=SEPARATORS)
+    combined_text = "\n".join(chunk.text for chunk in chunks)
+    assert "CMRIT Quality Policy" not in combined_text
+    assert "Staff Welfare Measures" not in combined_text
+    assert "cmrit.ac.in" not in combined_text
+    assert "Maintain STR book up-to date." in combined_text
+    assert "Rules for Parking apply as stated above." in combined_text
 
 
 def test_chunk_documents_keeps_real_prose_with_incidental_repetition():

@@ -142,6 +142,166 @@
         ]
     },
     {
+        "category": "normal",
+        "question": "what is the maximum number of OOD and OED leaves permitted per year",
+        "answer": "The maximum OOD (On-Official-Duty) leaves permitted per year is fourteen days, and the maximum OED (On-Exam-Duty) leaves permitted per year is also fourteen days.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what counts as half a casual leave for late coming",
+        "answer": "Late coming, after fifteen minutes of the day start, is considered as half a CL. An employee will also lose half a CL if they are late up to fifteen minutes at the day start for three days in a month. Missing one of the biometric punch-in/punch-out is also considered as half a CL.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "how is loss-of-pay calculated if leave rules are not followed",
+        "answer": "Leaves will be treated as Loss-of-pay (LOP) if the leave rules are not followed, and an LOP is equivalent to 1.25 times one day's salary.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "within how many days should an emergency leave be applied for",
+        "answer": "For any emergency leave taken, the leave should be applied within two days of reporting to work.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "how long must academic departments retain hard copies of leave approval letters and proof",
+        "answer": "For Academics Departments, all hard copies of the approval letters and proof should be maintained by the DOE for a period of at least one year.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what recommendations can a reporting manager make at the end of an employee's probation period",
+        "answer": "The Reporting Manager selects one of four recommendations: that the employee has successfully completed probation and the appointment be confirmed, that the employee's probation be extended, that the employee has not successfully completed probation and a performance improvement plan is recommended, or that the separation process be initiated.",
+        "relevant_sources": [
+            "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what mandatory training must new faculty complete within one year of joining",
+        "answer": "Within one year, new faculty must complete Customer Interaction Training, Patent Drafting and Filing Procedures, Start-up Training for new Faculty, and the Mentor Development Program, along with the optional Product Development Training and Digital Marketing Training.",
+        "relevant_sources": [
+            "Mandatory Training for New Faculty - Sheet1.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "does CMRIT provide salary advances or loans to staff",
+        "answer": "Yes, the institute provides salary advances and interest-free loans to staff.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what incentive does CMRIT give faculty for publishing in SCOPUS Q1 or Q2 journals",
+        "answer": "Faculty who publish papers in SCOPUS Q1 or Q2 journals can claim incentives of Rs. 15,000 for Q1 and Rs. 10,000 for Q2, whether the publication is non-paid within core load or paid/non-paid over and above core load.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
+        "category": "normal",
+        "question": "what are the core responsibilities of a teaching assistant at CMRIT",
+        "answer": "A Teaching Assistant assists teachers in conducting laboratory and tutorial sessions, runs experiments prior to regular sessions to demonstrate techniques, develops knowledge of lab equipment, assists in evaluating lab experiments, records, assignments and answer scripts, supports classroom activities, helps students with difficult concepts and project work, and is expected to maintain professional ethics and organizational discipline while developing teaching and mentoring skills.",
+        "relevant_sources": [
+            "Roles and Responsibilities.docx.pdf"
+        ]
+    },
+    {
+        "category": "topic",
+        "question": "can you give me an overview of the leave policy at CMRIT",
+        "answer": "CMRIT's leave types are Casual Leave (CL), On-Official-Duty (OOD), On-Exam-Duty (OED), Vacation Leave (VL), Compensatory-off (CO), and Special Duty Leave (SDL), each with its own yearly or semester-wise caps and crediting/lapse rules. Leave is applied for through Darwinbox by logging in with SSO, selecting the leave type under Time Management, and attaching any required approval letters or proof; requests are then routed to the appropriate approving authority based on the employee's designation (e.g. HOD for faculty, Vice Principal or Dean for senior roles) and must be approved or rejected within two days. Supporting documents are required for OOD, OED and Special Duty Leave, and leave taken without following the rules is treated as Loss-of-Pay.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "topic",
+        "question": "tell me about the roles and responsibilities defined for teaching staff at CMRIT",
+        "answer": "CMRIT defines a career ladder of teaching roles, each building on the one below it: Assistant Professor, Associate Professor, Professor, and Head of Department, with the Director and Associate Director setting institution-wide strategy above them. Assistant Professors focus on effective teaching, mentoring and monitoring student progress; Associate and full Professors take on guiding junior faculty, curriculum development, external funding and research impact; and the HOD is responsible for department vision, budgeting, faculty workload, academic processes like CO/PO target setting, and monitoring teaching and mentoring effectiveness. Teaching Assistants and Lab Supervisors/Technicians support these roles by running labs and assisting with evaluation and equipment.",
+        "relevant_sources": [
+            "Roles and Responsibilities.docx.pdf"
+        ]
+    },
+    {
+        "category": "topic",
+        "question": "what welfare measures does CMRIT provide for its staff",
+        "answer": "CMRIT offers a broad range of welfare measures: statutory PF and ESI for eligible employees, subsidized transport and mess facilities, gym and sports access, salary advances/interest-free loans, flexible working hours with an early-leave option, advance leave for emergencies, work-from-home during personal/family medical emergencies, fee concessions for employees' wards enrolled at CMRIT, maternity leave, free health check-up camps, hostel accommodation, and financial literacy sessions. It also supports faculty growth through research/consultancy/publication incentives, sponsorship for conferences and workshops, in-house faculty and staff development programs, and skill-upgrade training for non-teaching staff.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
+        "category": "topic",
+        "question": "what does the probation period completion process at CMRIT involve",
+        "answer": "CMRIT's probation period is one year from the date of joining. The completion process is automatically triggered in Darwinbox 30 days before the probation end date, notifying the Reporting Manager and, depending on department, the Deans or Vice Principal. The Reporting Manager then assesses the employee across ten criteria (job knowledge, performance, attendance, punctuality, etc.), submits one of four recommendations (confirm, extend, performance improvement plan, or separation), and that recommendation is reviewed and approved by the Deans or Vice Principal. HR then takes final action: confirming the employee and generating a confirmation letter, extending probation with a revised end date, or initiating separation.",
+        "relevant_sources": [
+            "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "topic",
+        "question": "what qualities and requirements does CMRIT expect from an effective teacher",
+        "answer": "CMRIT expects teachers to combine strong subject knowledge and OBE-aligned preparation with clear, structured teaching skills and a mix of chalk-and-talk, digital tools and LMS platforms. Effective classroom management means starting on time, engaging students, and supporting both slow and fast learners, while student-centered strategies call for approachability, varied pedagogy, and mentoring on projects, internships and career paths. Teachers are also expected to design fair and well-covered assessments, follow professional conduct and institutional procedures, contribute to research and student guidance, and pursue continuous improvement through feedback and staying current with technology and industry trends.",
+        "relevant_sources": [
+            "Essential Requirements and Key Qualities for an Effective Teaching - Learning Process.pdf"
+        ]
+    },
+    {
+        "category": "indirect",
+        "question": "I clocked in twenty minutes late three times this month, is that going to cost me any leave?",
+        "answer": "Yes. Coming in more than fifteen minutes after the day start counts as half a casual leave (CL) on that day. Separately, being up to fifteen minutes late at the day start for three days in a month also causes you to lose an additional half CL.",
+        "relevant_sources": [
+            "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "indirect",
+        "question": "I'm about to hit my one-year mark here, what happens with my job status around that time?",
+        "answer": "Around your one-year mark, Darwinbox automatically starts the probation completion process 30 days before your probation end date, notifying your Reporting Manager and the Deans or Vice Principal. Your Reporting Manager assesses your performance and recommends confirmation, an extension, a performance improvement plan, or separation, which is then approved by the Deans or Vice Principal. If confirmed, HR updates your status to \"Confirmed\" and issues a confirmation letter.",
+        "relevant_sources": [
+            "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+        ]
+    },
+    {
+        "category": "indirect",
+        "question": "My kid could study at CMRIT, would that save us any money?",
+        "answer": "Yes, employees get a concession on fees for their ward if enrolled at CMRIT.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
+        "category": "indirect",
+        "question": "I'm a new Assistant Professor, what's expected of me day-to-day beyond just teaching classes?",
+        "answer": "Beyond teaching, an Assistant Professor is expected to monitor, evaluate and support students' academic progress, guide students in projects and technical activities, and act as an effective mentor. They should also focus on research and innovation, guide and support teaching assistants and lab instructors, lead department-level teams or projects, maintain professional ethics and discipline, and actively participate in committee, departmental and organizational meetings.",
+        "relevant_sources": [
+            "Roles and Responsibilities.docx.pdf"
+        ]
+    },
+    {
+        "category": "indirect",
+        "question": "If I publish a paper in a top-tier journal, does the college recognize that in any way?",
+        "answer": "Yes, faculty who publish in SCOPUS Q1 or Q2 journals can claim incentives of Rs. 15,000 for Q1 and Rs. 10,000 for Q2. There is also an incentive of Rs. 5,000 for faculty output over and above their assigned core activities.",
+        "relevant_sources": [
+            "CMRIT Staff -Welfare Measures.docx.pdf"
+        ]
+    },
+    {
         "category": "unanswerable",
         "question": "What is the capital of France?",
         "answer": "I could not find any information about this query in the college policy documents.",

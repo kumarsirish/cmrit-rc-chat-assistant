@@ -25,6 +25,7 @@ from rag.indexing.vector_store import VectorStore
 from rag.ingestion.chunker import Chunk, chunk_documents
 from rag.ingestion.document_loader import load_all_documents
 from rag.ingestion.embeddings import EmbeddingGenerator
+from rag.ingestion.glossary_extractor import extract_glossary, save_glossary
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 logging.getLogger("rag").setLevel(logging.INFO)
@@ -53,6 +54,19 @@ def chunk_pages(config: AppConfig, pages: list) -> list:
     )
     logger.info("Created %d chunks.", len(chunks))
     return chunks
+
+
+def build_glossary(config: AppConfig, pages: list) -> dict:
+    """Stage 3b (glossary): acronym -> full-phrase glossary extracted
+    from the same pages chunking runs over — see glossary_extractor
+    for how definitions are detected. Runs on raw pages, not chunks,
+    since a definition and its acronym can end up split across chunk
+    boundaries but rarely span a whole page."""
+    logger.info("Extracting institutional glossary from %d pages ...", len(pages))
+    glossary = extract_glossary(pages)
+    logger.info("Extracted %d glossary entries.", len(glossary))
+    save_glossary(glossary, config.documents.glossary_file)
+    return glossary
 
 
 def build_chunk_metadata(config: AppConfig, chunks: list) -> tuple:
@@ -153,6 +167,7 @@ def run_ingestion(config: AppConfig = None) -> None:
         config = load_config()
 
     pages: list = load_pages(config)
+    build_glossary(config, pages)
     chunks: list = chunk_pages(config, pages)
     ids, metadatas = build_chunk_metadata(config, chunks)
     embeddings = embed_chunks(config, chunks, metadatas)

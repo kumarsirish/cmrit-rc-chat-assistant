@@ -1,5 +1,5 @@
 """Classic IR evaluation of the retriever alone, apart from the
-LLM-judged generation metrics in test_ragas_judge.py.
+LLM-judged generation metrics in test_judge.py.
 
 For every case in tests/evaluation-question-answers.json that has a
 "relevant_sources" list (the ground-truth source files for that
@@ -8,12 +8,12 @@ store and scores Recall@K/Precision@K/MRR/NDCG@K (see
 rag/evaluation/retrieval_metrics.py) against those documents.
 
 No LLM call is involved (Retriever.retrieve() is dense+BM25+rerank,
-not generation), so this is much faster than `make test-ragas` and
-needs only Ollama-free local models — but it still needs the real,
-ingested Chroma store, so it's excluded from the default `pytest`/
-`make test` run (see pytest.ini) and run explicitly:
+not generation), so this is much faster than the judge half of
+`make eval` and needs only Ollama-free local models — but it still
+needs the real, ingested Chroma store, so it's excluded from the
+default `pytest`/`make test` run (see pytest.ini) and run explicitly:
 
-    make test-retrieval-eval
+    make eval
 """
 
 import json
@@ -105,7 +105,7 @@ def test_retrieval_quality_meets_minimum_thresholds(config, retrieval_service):
     if comparison is None:
         print(
             f"\nNo baseline at {config.evaluation.retrieval.baseline_path} — run "
-            "`make save-retrieval-baseline` to compare future runs against this one."
+            "`make save-eval-baseline` to compare future runs against this one."
         )
     else:
         print(

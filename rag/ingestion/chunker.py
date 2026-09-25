@@ -88,6 +88,21 @@ PAGE_JOIN_SEPARATOR = "\n\n"
 # without swallowing doubled-space prose.
 _TABLE_LINE_PATTERN = re.compile(r"\S {3,}\S")
 _MIN_TABLE_BLOCK_LINES = 2
+# A single bullet/heading line indented with a wide left margin (e.g.
+# "               ●   Tech talk to be of one hour per week...")
+# also matches _TABLE_LINE_PATTERN once, purely from its own
+# indentation gap — that's list formatting, not a table column. A real
+# table row has 2+ such gaps (one per column boundary, e.g. "S.No   "
+# "Training   " "Deadline"). Requiring 2+ matches per line tells a
+# genuine table row apart from an indented bullet point, which
+# otherwise chained dozens of unrelated bullets (Faculty Handbook's
+# Roman-numeral list of duties) into one ~4600-character block that
+# swallowed chunk_size and buried a real answer among unrelated bullets.
+_MIN_TABLE_LINE_GAPS = 2
+
+
+def _is_table_line(line: str) -> bool:
+    return len(_TABLE_LINE_PATTERN.findall(line)) >= _MIN_TABLE_LINE_GAPS
 
 # Google Docs/Word exports of a hyperlinked table-of-contents row
 # repeat the link's display text in the plain-text extraction: either
@@ -109,6 +124,130 @@ _REPEATED_TITLE_LOOKBACK = 2
 # this guards against), so it's dropped rather than indexed.
 _MIN_LINK_INDEX_ROWS = 2
 _MIN_LINK_INDEX_ROW_RATIO = 0.3
+
+# A breadcrumb line like "(https://cmrit.ac.in/ ----> Cells ----> IQAC
+# ----> Templates)" marks a website-navigation aside embedded inline in
+# a page (a sidebar/footer captured by plain-text extraction), not
+# policy content — what follows is a bulleted list of *other*
+# documents' titles (e.g. "CMRIT Quality Policy"), not their content.
+# Left in, a bullet like that names the exact document a question is
+# asking about, outscoring the chunk with the real answer and
+# confusing the answer LLM into treating this navigation aside as a
+# second, conflicting source — see the "what is CMRIT's quality
+# policy" regression this guards against
+# (test_chunk_documents_strips_breadcrumb_link_list_but_keeps_real_content).
+#
+# Found and removed on the whole document's joined text (see
+# chunk_documents), not per-page or per-chunk: the breadcrumb line and
+# its bullets often straddle a page break (breadcrumb as the last line
+# of one page, bullets starting the next) or a chunk-splitter boundary
+# — stripping at either of those finer grains would only catch
+# whichever side happened to keep both the breadcrumb and its bullets
+# together.
+_BREADCRUMB_LINE_PATTERN = re.compile(r"-{2,}>|→")
+_BULLET_PREFIX_PATTERN = re.compile(r"^[•●▪]\s*")
+# Deliberately looser than _looks_like_heading (which requires every
+# word to start uppercase): institutional document titles routinely
+# include lowercase connector words ("Innovation and Entrepreneurship
+# policy", "Roles and Responsibilities"), which would otherwise end
+# the block after the first title and leave the rest of the link list
+# (still naming other documents) sitting in the indexed text. Gated by
+# _BULLET_PREFIX_PATTERN already only being checked for lines right
+# after a breadcrumb, so this only ever runs on candidate link-list
+# rows, not arbitrary bullets elsewhere in the document.
+_MAX_LINK_LIST_TITLE_WORDS = 8
+_SENTENCE_END_PATTERN = re.compile(r"[.!?:;]\s*$")
+
+
+def _looks_like_document_title(text: str) -> bool:
+    return bool(text) and len(text.split()) <= _MAX_LINK_LIST_TITLE_WORDS and not _SENTENCE_END_PATTERN.search(text)
+
+
+def _link_list_block_spans(text: str) -> list:
+    """Returns [(start, end), ...] character ranges in text — each a
+    breadcrumb line plus the run of bulleted document titles
+    immediately following it — to be removed by _remove_text_spans.
+    Ascending, non-overlapping.
+
+    A line right after a breadcrumb is only counted as part of the
+    block while it's a bullet whose text looks like a short document
+    title (see _looks_like_document_title) rather than a sentence —
+    the first bullet that reads like real prose (ends in sentence
+    punctuation, runs long) ends the block, so genuine bulleted policy
+    content already on the same page/chunk is never swept in.
+    """
+    lines = text.split("\n")
+    line_spans = []
+    offset = 0
+    for line in lines:
+        line_spans.append((offset, offset + len(line)))
+        offset += len(line) + 1  # + 1 for the split-out "\n"
+
+    spans = []
+    index = 0
+    while index < len(lines):
+        if not _BREADCRUMB_LINE_PATTERN.search(lines[index]):
+            index += 1
+            continue
+
+        block_start = line_spans[index][0]
+        block_end = line_spans[index][1]
+        cursor = index + 1
+        while cursor < len(lines):
+            stripped = lines[cursor].strip()
+            if not stripped:
+                cursor += 1
+                continue
+            bullet_match = _BULLET_PREFIX_PATTERN.match(stripped)
+            if bullet_match and _looks_like_document_title(stripped[bullet_match.end() :].strip()):
+                block_end = line_spans[cursor][1]
+                cursor += 1
+                continue
+            break
+
+        spans.append((block_start, block_end))
+        index = cursor
+
+    return spans
+
+
+def _remove_text_spans(text: str, spans: list) -> str:
+    """Removes each (start, end) span from text. spans must be
+    ascending and non-overlapping (see _link_list_block_spans)."""
+    if not spans:
+        return text
+    pieces = []
+    cursor = 0
+    for start, end in spans:
+        pieces.append(text[cursor:start])
+        cursor = end
+    pieces.append(text[cursor:])
+    return "".join(pieces)
+
+
+def _shift_page_spans(page_spans: list, removed_spans: list) -> list:
+    """Adjusts page_spans' (start, end, page_number) offsets to match
+    the text with removed_spans (ascending, non-overlapping, in the
+    original/unshifted coordinates) taken out — same idea as
+    _pages_for_span working on offsets, but here keeping page
+    boundaries valid after _remove_text_spans shortens the text they
+    were computed against."""
+    if not removed_spans:
+        return page_spans
+
+    def shift(offset: int) -> int:
+        removed_before = 0
+        for removed_start, removed_end in removed_spans:
+            if removed_end <= offset:
+                removed_before += removed_end - removed_start
+            elif removed_start < offset:
+                removed_before += offset - removed_start
+                break
+            else:
+                break
+        return offset - removed_before
+
+    return [(shift(start), shift(end), page_number) for start, end, page_number in page_spans]
 
 
 def _looks_like_link_index(text: str) -> bool:
@@ -189,22 +328,20 @@ def _mask_tables(text: str) -> tuple:
     index = 0
     table_count = 0
     while index < len(lines):
-        if not _TABLE_LINE_PATTERN.search(lines[index]):
+        if not _is_table_line(lines[index]):
             result_lines.append(lines[index])
             index += 1
             continue
 
         start = index
-        while index < len(lines) and (
-            _TABLE_LINE_PATTERN.search(lines[index]) or lines[index].strip() == ""
-        ):
+        while index < len(lines) and (_is_table_line(lines[index]) or lines[index].strip() == ""):
             index += 1
         end = index
         while end > start and lines[end - 1].strip() == "":
             end -= 1
 
         block_lines = lines[start:end]
-        table_line_count = sum(1 for line in block_lines if _TABLE_LINE_PATTERN.search(line))
+        table_line_count = sum(1 for line in block_lines if _is_table_line(line))
         if table_line_count >= _MIN_TABLE_BLOCK_LINES:
             placeholder = f"__TABLE_PLACEHOLDER_{table_count}__"
             placeholder_map[placeholder] = "\n".join(block_lines)
@@ -393,6 +530,10 @@ def chunk_documents(
         logger.debug("Chunking %s (%d pages) ...", source_file, len(file_pages))
 
         full_text, page_spans = _join_pages(file_pages)
+        link_list_spans = _link_list_block_spans(full_text)
+        if link_list_spans:
+            full_text = _remove_text_spans(full_text, link_list_spans)
+            page_spans = _shift_page_spans(page_spans, link_list_spans)
         headings = _detect_headings(full_text)
         heading_paths = _heading_paths(headings)
         marked_text = _insert_heading_markers(full_text, headings)
