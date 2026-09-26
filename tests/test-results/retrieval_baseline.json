@@ -1,0 +1,207 @@
+{
+  "k": 8,
+  "mean_scores": {
+    "recall": 0.85,
+    "precision": 0.49041666666666667,
+    "reciprocal_rank": 0.6791666666666667,
+    "ndcg": 0.7065464876785729
+  },
+  "mean_by_category": {
+    "normal": {
+      "recall": 0.8333333333333334,
+      "precision": 0.48935185185185187,
+      "reciprocal_rank": 0.6990740740740741,
+      "ndcg": 0.7294960974206365
+    },
+    "unanswerable": {
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.5
+    }
+  },
+  "rows": [
+    {
+      "category": "normal",
+      "question": "how many casual leaves are permanent staff allowed per year",
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "how long is the probation period for new employees at CMRIT",
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "when does the probation completion process start in Darwinbox",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "does CMRIT provide PF and ESI benefits to staff",
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what compensatory off is given for working on a holiday",
+      "recall": 1.0,
+      "precision": 0.375,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what is CMRIT's quality policy",
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what mandatory training must new faculty complete within six months of joining",
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "how often is the faculty semester evaluation done",
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "what is the official CMRIT website address",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.5
+    },
+    {
+      "category": "normal",
+      "question": "How often am I expected to present something beyond the syllabus to my department?",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+      "recall": 1.0,
+      "precision": 0.25,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.6309297535714575
+    },
+    {
+      "category": "normal",
+      "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "normal",
+      "question": "If the fire alarm goes off, where am I supposed to take the students?",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "normal",
+      "question": "If I want help filing a patent, who at CMRIT can assist me?",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the capital of France?",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "recall": 1.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    }
+  ],
+  "baseline_comparison": {
+    "recall": {
+      "current": 0.85,
+      "baseline": 0.85,
+      "delta": 0.0
+    },
+    "precision": {
+      "current": 0.49041666666666667,
+      "baseline": 0.49041666666666667,
+      "delta": 0.0
+    },
+    "reciprocal_rank": {
+      "current": 0.6791666666666667,
+      "baseline": 0.6791666666666667,
+      "delta": 0.0
+    },
+    "ndcg": {
+      "current": 0.7065464876785729,
+      "baseline": 0.7065464876785729,
+      "delta": 0.0
+    }
+  }
+}
