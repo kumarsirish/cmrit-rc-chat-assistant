@@ -1,0 +1,454 @@
+{
+  "run_at": "2026-09-25T15:09:20.644812+00:00",
+  "judge_provider": "gemini",
+  "judge_model": "gemini-3.1-flash-lite",
+  "min_score": 0.5,
+  "mean_scores": {
+    "faithfulness": 0.9649122807017544,
+    "answer_relevancy": 0.9345864661654135,
+    "answer_correctness": 0.7105263157894737,
+    "context_precision": 0.7461936090225564,
+    "context_recall": 0.875438596491228
+  },
+  "baseline_comparison": {
+    "faithfulness": {
+      "current": 0.9649122807017544,
+      "baseline": 1.0,
+      "delta": -0.03508771929824561
+    },
+    "answer_relevancy": {
+      "current": 0.9345864661654135,
+      "baseline": 0.9735449735449735,
+      "delta": -0.03895850737955997
+    },
+    "answer_correctness": {
+      "current": 0.7105263157894737,
+      "baseline": 0.7333333333333333,
+      "delta": -0.02280701754385961
+    },
+    "context_precision": {
+      "current": 0.7461936090225564,
+      "baseline": 0.7854166666666667,
+      "delta": -0.03922305764411027
+    },
+    "context_recall": {
+      "current": 0.875438596491228,
+      "baseline": 0.9722222222222222,
+      "delta": -0.0967836257309942
+    }
+  },
+  "unanswerable_refusals": [
+    {
+      "question": "What is the capital of France?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "correctly_refused": true
+    },
+    {
+      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "correctly_refused": true
+    }
+  ],
+  "rows": [
+    {
+      "question": "how many casual leaves are permanent staff allowed per year",
+      "answer": "Permanent staff are allowed a maximum of twelve casual leaves per calendar year [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
+      "answer": "The maximum vacation leave permitted per semester for staff who have completed one year of service is seven working days [1][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how long is the probation period for new employees at CMRIT",
+      "answer": "The probation period for new employees at CMRIT is 1 year from the date of joining [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "when does the probation completion process start in Darwinbox",
+      "answer": "The probation completion process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "does CMRIT provide PF and ESI benefits to staff",
+      "answer": "Yes, CMRIT provides PF and ESI benefits to all eligible employees as per the statute [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what compensatory off is given for working on a holiday",
+      "answer": "Staff called for work on a holiday by the head of department or Vice Principal are provided with:\n*   A compensatory-off of half a day for working beyond three hours.\n*   A compensatory-off of one day for working beyond six hours [4][5][6][8].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.5,
+      "context_precision": 0.5,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what is CMRIT's quality policy",
+      "answer": "CMRIT's quality policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what mandatory training must new faculty complete within six months of joining",
+      "answer": "New faculty at CMRIT must complete the following trainings within six months of joining:\n\n*   CO - PO Computation Training\n*   Paper & Proposal Writing Training\n*   Patent Drafting and Filing Procedures for new faculty\n*   Start-up Training for new Faculty\n*   Mentoring Process Guidelines during Orientation\n*   Mentor Development Program [1]",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how often is the faculty semester evaluation done",
+      "answer": "The faculty semester evaluation is conducted two times in a year [1][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.6,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what is the official CMRIT website address",
+      "answer": "The official CMRIT website address is https://www.cmrit.ac.in [4].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.30357142857142855,
+      "context_recall": 1.0
+    },
+    {
+      "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+      "answer": "As a faculty member at CMRIT, you are required to complete the following NPTEL-related tasks each academic year:\n\n*   **Complete one course:** You must complete at least one NPTEL Technical MOOC course during the academic year (July to June) [2][3].\n*   **Course Duration:** The selected course must have a duration of at least 8 weeks; alternatively, two 4-week courses are allowed [2][3].\n*   **Relevance:** The course must be relevant to science or engineering and closely match the subject you teach to UG/PG students [3][5].\n*   **Examination and Certification:** You are required to write the NPTEL exam and secure a minimum score of 75%, which qualifies for a Silver Certificate [2][4][5].\n*   **Approval and Sharing:** You must obtain prior approval for the course from the DRC Head and HoD, and you must select \"yes\" to share your scores with the college when filling out the examination form [2].[2]: TRCPIE, Non-Core, Knowledge upgrade, Mentoring - Guidelines, Allotment and Evaluation Process_ A.Y. 2026-27.docx.pdf, page 7, section: \"Knowledge Upgrade -Faculty MOOC Guidelines\"][3][4][5]: TRCPIE, Non-Core, Knowledge upgrade, Mentoring - Guidelines, Allotment and Evaluation Process_ A.Y. 2026-27.docx.pdf, page 8, section: \"Knowledge Upgrade -Faculty MOOC Guidelines\"]",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.6791666666666667,
+      "context_recall": 1.0
+    },
+    {
+      "question": "How often am I expected to present something beyond the syllabus to my department?",
+      "answer": "You are expected to present a technical topic beyond the curriculum during the departmental half-day [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 1.0,
+      "context_recall": 0.5
+    },
+    {
+      "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+      "answer": "Teaching staff, including teaching assistants, must provide three months' notice when resigning [4].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.5,
+      "context_precision": 0.25,
+      "context_recall": 1.0
+    },
+    {
+      "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+      "answer": "The department needs to track students who are failing exams based on the following thresholds for failures in internal or external exams [1][2][4]:\n\n*   Failure in 1 subject: less than 5% of the section\n*   Failure in 2 subjects: less than 3% of the section\n*   Failure in 3 subjects: less than 2% of the section\n*   Failure in 4 or more subjects: less than 1% of the section\n\nIf these limits are exceeded, the department is required to create a list of probable ineligible students at the beginning of the semester and implement interventions such as ICP sessions after the 2nd Test [1][2][4].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.75,
+      "context_recall": 1.0
+    },
+    {
+      "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
+      "answer": "After you submit a complaint, the Principal may set up an inquiry committee to study and resolve the matter if required [1]. Additionally, complaints submitted via the suggestion/complaint boxes are opened regularly, and prompt redress is done [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.6,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "If the fire alarm goes off, where am I supposed to take the students?",
+      "answer": "You must escort the students to the CMRIT playground, which is identified as the Emergency Assembly Area [4].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.5,
+      "context_precision": 0.25,
+      "context_recall": 1.0
+    },
+    {
+      "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
+      "answer": "Students can access 3D printers and laser cutters at the Makerspace, which is located in the Workshop and Lab area in the basement of the First Year Block [1][2].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.9166666666666666,
+      "context_recall": 1.0
+    },
+    {
+      "question": "If I want help filing a patent, who at CMRIT can assist me?",
+      "answer": "The IPR Cell at CMRIT can assist you with filing a patent. This cell is established in collaboration with KSCST (Karnataka State Council for Science and Technology) and aims to guide inventors concerning patenting their inventions with the help of an authorized patent attorney [1][2].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.6666666666666666,
+      "answer_correctness": 0.7,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what is the maximum number of OOD and OED leaves permitted per year",
+      "answer": "The maximum number of On-Official-Duty (OOD) leaves permitted per year is fourteen days [1][4][5].\n\nThe maximum number of On Exam-Duty (OED) leaves permitted per year is fourteen days [1][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what counts as half a casual leave for late coming",
+      "answer": "Late coming is considered as half a casual leave (CL) if it occurs after fifteen minutes from the start of the day [1][2][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how is loss-of-pay calculated if leave rules are not followed",
+      "answer": "If leave rules are not followed, the leave is treated as Loss-of-pay (LOP), which is equivalent to 1.25 times one day's salary [1][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "within how many days should an emergency leave be applied for",
+      "answer": "An emergency leave application must be submitted within two days of reporting to work [1][4][5].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.7000000000000001,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how long must academic departments retain hard copies of leave approval letters and proof",
+      "answer": "Academic departments must retain hard copies of leave approval letters and proof for a period of at least one year [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.8,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what recommendations can a reporting manager make at the end of an employee's probation period",
+      "answer": "At the end of an employee's probation period, the Reporting Manager can select one of the following four recommendations [1]:\n\n1. The employee has successfully completed probation, and it is recommended that their appointment be confirmed.\n2. The employee's probation has been extended.\n3. The employee has not successfully completed the probation, and a performance improvement plan is recommended.\n4. The separation process is to be initiated.",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what mandatory training must new faculty complete within one year of joining",
+      "answer": "Based on the provided documents, new faculty must complete the following training within one year of joining:\n\n*   Customer Interaction Training [1]\n*   Product Development Training (Optional) [1]\n*   Digital Marketing Training (Optional) [1][1]",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.5,
+      "answer_correctness": 0.3,
+      "context_precision": 1.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "does CMRIT provide salary advances or loans to staff",
+      "answer": "Yes, CMRIT provides salary advances and interest-free loans to staff [4].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.25,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what incentive does CMRIT give faculty for publishing in SCOPUS Q1 or Q2 journals",
+      "answer": "Faculty members at CMRIT can claim an incentive of Rs. 15,000/- for publishing papers in SCOPUS Q1 journals and Rs. 10,000/- for publishing in SCOPUS Q2 journals [1][2]. This incentive applies to publications that are either non-paid within the core load or paid/non-paid over and above the core load [1][2].\n\n[1][2]",
+      "category": "normal",
+      "faithfulness": 0.6666666666666666,
+      "answer_relevancy": 0.8,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what are the core responsibilities of a teaching assistant at CMRIT",
+      "answer": "The core responsibilities of a Teaching Assistant at CMRIT include:\n\n*   Assisting teachers to conduct laboratory sessions [1].\n*   Running experiments prior to regular sessions and demonstrating techniques for conducting experiments [1].\n*   Developing knowledge on the operation of all lab equipment and tools [1].\n*   Assisting teachers in the evaluation of lab experiments and records [1].\n*   Supporting classroom activities [1].\n*   Assisting students in learning difficult concepts and completing assignments and project activities [1].\n*   Assisting teachers in conducting tutorial sessions [1].\n*   Assisting teachers in the evaluation of assignments and answer scripts [1].\n*   Acquiring required knowledge in related subjects [1].\n*   Developing teaching skills as well as mentoring skills [1].",
+      "category": "normal",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.9,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "can you give me an overview of the leave policy at CMRIT",
+      "answer": "Based on the provided documents, here is an overview of the leave policy at CMRIT:\n\n**Types of Leave**\nThe following leave categories are available to staff:\n*   Casual Leave (CL)\n*   On-Official-Duty (OOD)\n*   On Exam-Duty (OED)\n*   Vacation Leave (VL)\n*   Compensatory Off (CO)\n*   Special Duty Leave (SDL) [5]\n\n**Entitlements and Limits**\n*   **Casual Leave:** Permanent staff are permitted a maximum of twelve CLs in a calendar year. Staff on probation receive one casual leave created at the end of each month [5].\n*   **On-Official-Duty (OOD):** The maximum permitted is fourteen days per year [5].\n*   **On Exam-Duty (OED):** The maximum permitted is fourteen days per year [5].\n*   **Flexibility:** All teaching and non-teaching staff are entitled to flexible Vacation and Casual Leaves, which can be utilized at any time during the academic or calendar year, subject to applicable policies [6].\n*   **Ph.D. Faculty:** Faculty members pursuing a Ph.D. are provided with a one-day OOD once a month to meet their external guide, available only after the successful completion of Ph.D. coursework. This leave requires a signed letter from the guide with the meeting date [6].\n*   **Maternity Leave:** Women employees are entitled to avail of maternity leave [6].\n*   **Compensatory Off:** Staff called for work on a holiday are provided a half-day compensatory off for working beyond three hours, and a one-day compensatory off for working beyond six hours [6].\n\n**Application Process**\nTo apply for leave, staff must follow these steps:\n1.  Open the designated login URL.\n2.  Click on \"Login with SSO: CMRIT\".\n3.  Select the SSO option corresponding to your official email domain.\n4.  Enter your official company email ID when prompted.\n5.  Complete the authentication process using your office email ID.\n6.  Navigate to Time Management - Leave.\n7.  Select the Leave category and the specific type of leave (e.g., CL, VL, OOD).\n8.  Attach the approval letter and necessary document proof for OOD, OED, and Special Duty Leave.\n9.  Click on submit [2].",
+      "category": "topic",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.4666666666666666,
+      "context_recall": 0.6
+    },
+    {
+      "question": "tell me about the roles and responsibilities defined for teaching staff at CMRIT",
+      "answer": "The roles and responsibilities for teaching staff at CMRIT are defined hierarchically, with higher-level positions required to abide by the responsibilities of lower levels.\n\n**Associate Director**\nThe Associate Director is responsible for strategic planning, staff management, and academic monitoring [1][2]. Key duties include:\n*   Setting priorities that balance short-term and long-term organizational and departmental goals [1].\n*   Ensuring active staff involvement in departmental and organizational activities [1].\n*   Assigning and evaluating faculty workload [1].\n*   Assigning coordination roles for administrative, research, innovation, consulting, and teaching tracks [1].\n*   Mentoring staff regularly and tracking their development plans [1].\n*   Planning and executing academic processes such as CO/PO target setting, calendar of events, timetables, lesson plans, assessments, and result analysis [1].\n*   Monitoring the effectiveness of the teaching-learning process and sharing best practices [1].\n*   Monitoring the student mentoring process and its effectiveness [1][2].\n*   Monitoring student feedback about faculty and guiding faculty members to improve performance based on that feedback [2].\n*   Analyzing stakeholder feedback, taking actions for improvement, and closing the loop [2].\n*   Conducting advisory board meetings annually and weekly department meetings [2].\n*   Ensuring academic discipline within the department [2].\n*   Abiding by all Roles and Responsibilities at the Professor Level [2].\n\n**Professor**\nProfessors are expected to drive external growth and make significant contributions to the department [3]. Their specific responsibilities include:\n*   Driving external activities for the growth of the department [3].\n*   Publishing research papers or patents, attending conferences, delivering expert talks, and networking in the professional field [3].\n*   Actively involving themselves in administration, admission, accreditation, recruitment, and other processes or events [3].\n*   Making an impact in their chosen field of technical expertise [3].\n*   Making a significant contribution to the development of the department or organization [3].\n*   Abiding by all Roles and Responsibilities at the Assistant Professor Level [3].\n\n**General Faculty Expectations**\nAll faculty members are expected to meet specific professional standards and play key roles within the institution [6]. These include:\n*   Being active members of two professional bodies [6].\n*   Playing key roles as a Mentor, Subject teacher, Lifelong learner, and Coordinator (departmental or organizational) [6].\n*   Matching the pace at which CMRIT wants to move through teamwork and responsiveness [6].\n*   Possessing a Ph.D. degree [6].\n\n**Head of Department (HoD) Specific Duties**\nWhile the HoD is a teaching staff member, the HoD Handbook outlines additional specific conduct and management duties [4][5]. These include:\n*   Being extra cautious in communication, ensuring internal discussions are not shared with unintended parties without prior written approval from the head of the institution [4][5].\n*   Ensuring good attendance of students and faculty at all mandatory events [4].\n*   Conducting performance evaluations fairly for both teaching and non-teaching staff [4].\n*   Conducting separate meetings with faculty mentors to explain their roles [4].\n*   Visiting classes to monitor teaching [4].\n*   Supporting and motivating faculty for full engagement [5].\n*   Ensuring teaching and non-teaching staff genuinely contribute to the department and produce quality output [5].\n*   Giving proper work to and monitoring Teaching Assistants and lab instructors [5].\n*   Allowing time in department meetings for DRC/CoE/IE/Initiatives heads to discuss their plans and activities [5].\n*   Playing the role of an HR manager [5].\n*",
+      "category": "topic",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 1.0,
+      "context_recall": 0.6666666666666666
+    },
+    {
+      "question": "what welfare measures does CMRIT provide for its staff",
+      "answer": "Based on the provided documents, CMRIT provides the following welfare measures for its teaching and non-teaching staff:\n\n*   **Compensatory Offs:** Staff called to work on a holiday receive a half-day compensatory off for working beyond three hours and a full-day compensatory off for working beyond six hours [1].\n*   **Leave Entitlements:** All staff are entitled to flexible Vacation and Casual Leaves, which can be utilized at any time during the academic or calendar year subject to applicable policies [1].\n*   **Work from Home:** A work-from-home option is available during personal or family emergencies on medical grounds [1].\n*   **Ph.D. Support:** Faculty members pursuing a Ph.D. are provided with one day of Out of Door (OOD) leave per month to meet their external guide, available only after successfully completing Ph.D. coursework and supported by a signed letter from the guide [1].\n*   **Educational Concessions:** Employees receive a fee concession for their wards if they are enrolled at CMRIT [1].\n*   **Maternity Leave:** Women employees are entitled to maternity leave [1].\n*   **Publication Incentives:**\n    *   Rs. 15,000/- for publishing papers in SCOPUS Q1 journals.\n    *   Rs. 10,000/- for publishing papers in SCOPUS Q2 journals.\n    *   These incentives apply to both paid and non-paid publications, whether within or over and above the core load [2].\n*   **Output Incentives:** Faculty members receive an incentive of Rs. 5,000/- for output over and above their assigned core activities [2].\n*   **Teaching Awards:** Awards are given to faculty for best practices in Teaching and Learning [2].\n*   **Professional Development:**\n    *   The institute sponsors faculty members to attend workshops, conferences, and seminars [2].\n    *   The institute organizes in-house programs for faculty development, administrative skills, personal development, value-based programs, and teaching-learning courses [2].\n    *   The institute motivates non-teaching staff to attend skill development and training programs [2].",
+      "category": "topic",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what does the probation period completion process at CMRIT involve",
+      "answer": "The probation period completion process at CMRIT involves the following steps:\n\n1.  **Trigger**: The process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date, which is 1 year from the date of joining [1].\n2.  **Notifications**: The system sends workflow notifications to the Reporting Manager and either the Deans (for Academic departments) or the Vice Principal (for Non-Academic departments) [1].\n3.  **Reporting Manager Recommendation**: The Reporting Manager selects one of four recommendations:\n    *   Confirm the appointment\n    *   Extend the probation\n    *   Recommend a performance improvement plan\n    *   Initiate the separation process [2].\n4.  **Approval Workflow**: The recommendation is reviewed and approved by the Deans for Academic departments or the Vice Principal for non-academic departments [2].\n5.  **Final HR Action**:\n    *   **If Confirmed**: HR changes the status to \u201cConfirmed,\u201d generates a confirmation letter, updates records, and notifies the employee [3].\n    *   **If Extended**: HR updates the revised end date, generates extension communication, and schedules a follow-up review [3].\n    *   **If Not Continued**: HR initiates the separation workflow, generates communication documents, and completes exit formalities [3].",
+      "category": "topic",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.9,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what qualities and requirements does CMRIT expect from an effective teacher",
+      "answer": "Based on the provided documents, CMRIT expects the following qualities and requirements from an effective teacher:\n\n**General Qualities**\n*   Strong subject knowledge aligned with the teaching subject [1].\n*   Good communication skills, including clear and confident delivery [1][2].\n*   Professional discipline [1].\n*   A willingness to learn and grow [1].\n*   Approachability and supportiveness towards students [1][3].\n*   Comfort with technology [1].\n*   Active involvement in research [1].\n\n**Academic & Preparation Requirements**\n*   Review the syllabus, course outcomes (COs), and curriculum structure [1].\n*   Prepare detailed lesson plans aligned with Outcome-Based Education (OBE) principles [1].\n*   Prepare detailed notes for all modules [1].\n*   Map Course Outcomes to Program Outcomes/Program Specific Outcomes (CO\u2013PO/PSO) and understand Bloom\u2019s taxonomy [1].\n\n**Teaching Skills**\n*   Ability to explain complex technical concepts in simple, structured ways [2].\n*   Use of clear, structured explanations for technical concepts [2].\n*   Integration of examples, case studies, live demos, simulations, virtual labs, and problem-solving in every class [2].\n*   Maintaining a balance between chalk-and-talk, PowerPoint presentations, and digital tools [2].\n*   Effective use of Google Drive or LMS tools (such as Google Classroom, MS Teams, or Moodle) for content sharing [2].\n*   Effective conduct of flip classes and video sessions [2].\n\n**Student-Centered Strategies & Mentoring**\n*   Adoption of pedagogy that incorporates multiple modes and techniques to accommodate varying student learning abilities [3].\n*   Guiding students in projects, internships, skill development, and career paths [3].\n*   Understanding student and classroom challenges to develop confidence in teaching practices [3].",
+      "category": "topic",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.8,
+      "context_precision": 0.8392857142857142,
+      "context_recall": 1.0
+    },
+    {
+      "question": "I clocked in twenty minutes late three times this month, is that going to cost me any leave?",
+      "answer": "Yes, being late by twenty minutes three times in a month will cost you leave. Since arriving more than fifteen minutes after the start of the day is considered a half Casual Leave (CL), each of your three late arrivals counts as a half CL [1][2].\n\nAdditionally, the policy states that an employee loses a half CL if they are late up to fifteen minutes for three days in a month [1][2]. However, because your lateness exceeded the fifteen-minute threshold, the specific rule for lateness over fifteen minutes applies, resulting in a deduction of half a CL for each instance [1][2].",
+      "category": "indirect",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8333333333333334,
+      "answer_correctness": 0.8,
+      "context_precision": 0.75,
+      "context_recall": 1.0
+    },
+    {
+      "question": "I'm about to hit my one-year mark here, what happens with my job status around that time?",
+      "answer": "Around your one-year mark, a standardized process is initiated to evaluate your performance and determine whether your employment will be confirmed, extended, or discontinued [2]. This process automatically starts in the Darwinbox system 30 days before your probation end date [2].\n\nOnce the evaluation and approval steps are complete, one of the following final actions will occur:\n\n*   **If Approved for Confirmation:** Your status will change from \u201cProbation\u201d to \u201cConfirmed,\u201d a confirmation letter will be generated, your records will be updated, and you will be notified [1].\n*   **If Probation is Extended:** Your probation end date will be revised, an extension communication will be sent, and a follow-up review will be scheduled [1].\n*   **If Not Continued:** A separation workflow will be initiated, communication documents will be generated, and exit formalities will be completed [1].",
+      "category": "indirect",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.8,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "My kid could study at CMRIT, would that save us any money?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "indirect",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "answer_correctness": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "I'm a new Assistant Professor, what's expected of me day-to-day beyond just teaching classes?",
+      "answer": "Beyond teaching classes, you are expected to:\n\n*   Monitor, evaluate, and support students\u2019 academic progress [2].\n*   Guide students in their projects and other technical activities [2].\n*   Organize and monitor student-centric activities [2].\n*   Encourage students to participate in co-curricular and extra-curricular activities [2].\n*   Perform the role of mentor effectively by transforming mentees into competent professionals and imbibing in them the attributes of a holistic personality [2].\n*   Guide and support teaching assistants and lab instructors [2].",
+      "category": "indirect",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.6,
+      "context_precision": 0.5,
+      "context_recall": 0.5
+    },
+    {
+      "question": "If I publish a paper in a top-tier journal, does the college recognize that in any way?",
+      "answer": "Based on the provided documents, the college recognizes research papers based on their acceptance in a **Scopus indexed journal**, not specifically by whether the journal is \"top-tier.\"\n\nThe Faculty Evaluation Form for AY 2024-25 lists \"Research Paper (R)\" as a core activity with a target of **2 research papers accepted in a Scopus indexed journal** [1]. The required supporting document is a copy of the published paper with page numbers and volume details, signed by the Head of Department (HoD) [1]. The documents do not mention any additional weightage or specific recognition for \"top-tier\" journals beyond the Scopus indexing requirement [1][2][3].",
+      "category": "indirect",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7142857142857143,
+      "answer_correctness": 0.2,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "What is the capital of France?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "unanswerable",
+      "faithfulness": NaN,
+      "answer_relevancy": 0.0,
+      "answer_correctness": 1.0,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "answer": "I could not find any information about this query in the college policy documents.",
+      "category": "unanswerable",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.0,
+      "answer_correctness": 1.0,
+      "context_precision": 0.0,
+      "context_recall": 1.0
+    }
+  ]
+}

@@ -24,19 +24,18 @@ env/
 .streamlit/secrets.toml
 
 # App-generated data (rebuilt by `make ingest` / at runtime, not source)
-chroma_store/
+chroma-db-store/chroma_store/
 logs/
 
-# MLflow's local experiment tracking store (scripts/run_experiment.py)
-mlflow.db
-mlruns/
+# MLflow's local experiment tracking store (helper_scripts/run_experiment.py)
+mlops/mlflow.db
+mlops/mlruns/
 # Dedicated indexes run_experiment.py builds for embedding/chunking
-# overrides that don't match config.yaml's own settings
-chroma_store_experiments/
+# overrides that don't match config/config.yaml's own settings
+chroma-db-store/chroma_store_experiments/
 
-# Scratch files from `make test-ragas-failures` (scripts/filter_low_faithfulness.py)
+# Scratch files from `make test-eval-failures` (helper_scripts/filter_low_faithfulness.py)
 tests/evaluation-question-answers.low-faithfulness.json
-tests/ragas_results.low-faithfulness.json
 
 # Editor / IDE
 .vscode/
@@ -48,10 +47,13 @@ tests/ragas_results.low-faithfulness.json
 Thumbs.db
 *:Zone.Identifier
 
-# nohup output from backgrounded long-running commands (make test-ragas,
+# nohup output from backgrounded long-running commands (make test-eval-failures,
 # make experiments-all, etc.)
 nohup.out
 nohup.out.*
 nohup*
 
 .deepeval
+
+
+chroma-db-store

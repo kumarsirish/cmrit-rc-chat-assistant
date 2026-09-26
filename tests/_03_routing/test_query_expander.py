@@ -1,0 +1,93 @@
+from rag._03_routing.query_expander import build_glossary_index, expand_query, strip_institution_name
+
+GLOSSARY = {
+    "RCPIE": "research consultancy projects innovation and entrepreneurship",
+    "IQAC": "internal quality assurance cell",
+}
+
+
+def test_expand_query_appends_matched_acronym():
+    index = build_glossary_index(GLOSSARY)
+    expanded = expand_query("what is the research consultancy load?", GLOSSARY, index)
+    assert "RCPIE" in expanded
+    assert "what is the research consultancy load?" in expanded
+
+
+def test_expand_query_returns_unchanged_when_no_match():
+    index = build_glossary_index(GLOSSARY)
+    question = "how many casual leaves am I allowed per year?"
+    assert expand_query(question, GLOSSARY, index) == question
+
+
+def test_expand_query_requires_at_least_two_matched_words():
+    index = build_glossary_index(GLOSSARY)
+    # "quality" alone is a single-word overlap with IQAC's phrase and
+    # must not be enough to pull in an unrelated acronym expansion.
+    question = "what is our quality policy"
+    assert expand_query(question, GLOSSARY, index) == question
+
+
+def test_expand_query_matches_multiple_acronyms():
+    index = build_glossary_index(GLOSSARY)
+    expanded = expand_query("who handles internal quality assurance and research consultancy?", GLOSSARY, index)
+    assert "RCPIE" in expanded
+    assert "IQAC" in expanded
+
+
+def test_expand_query_returns_unchanged_when_question_already_has_acronym():
+    index = build_glossary_index(GLOSSARY)
+    question = "what is RCPIE?"
+    expanded = expand_query(question, GLOSSARY, index)
+    assert expanded == question or expanded.startswith(question)
+
+
+def test_expand_query_handles_empty_glossary():
+    question = "how much is the consultancy load?"
+    assert expand_query(question, {}, {}) == question
+
+
+def test_strip_institution_name_removes_standalone_mention():
+    assert strip_institution_name("roles and responsibilities at CMRIT") == "roles and responsibilities at"
+
+
+def test_strip_institution_name_removes_possessive():
+    assert strip_institution_name("what is CMRIT's quality policy") == "what is quality policy"
+
+
+def test_strip_institution_name_is_case_insensitive():
+    assert strip_institution_name("cmrit leave policy") == "leave policy"
+
+
+def test_strip_institution_name_leaves_other_text_untouched():
+    question = "how many casual leaves am I allowed per year?"
+    assert strip_institution_name(question) == question
+
+
+def test_expand_query_does_not_strip_institution_name():
+    # Institution-name stripping only applies to topic-NAME matching
+    # (see RetrievalService.match_topic) — the retrieval query used for
+    # actual document search must keep "CMRIT" since it can be
+    # genuine, load-bearing content there (e.g. "study at CMRIT").
+    index = build_glossary_index(GLOSSARY)
+    question = "what is the leave policy at CMRIT"
+    assert expand_query(question, GLOSSARY, index) == question
+
+
+def test_build_glossary_index_skips_stopwords_and_short_words():
+    index = build_glossary_index({"XYZ": "the of a is"})
+    assert index == {}
+
+
+def test_build_glossary_index_drops_words_shared_by_multiple_acronyms():
+    glossary = {
+        "FDP": "faculty development program",
+        "DMS": "document management program",
+    }
+    index = build_glossary_index(glossary)
+    # "program" occurs in both phrases, so it's too generic to point at
+    # either acronym and must be dropped rather than indexed.
+    assert "program" not in index
+    assert index["faculty"] == {"FDP"}
+    assert index["development"] == {"FDP"}
+    assert index["document"] == {"DMS"}
+    assert index["management"] == {"DMS"}
