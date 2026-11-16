@@ -303,6 +303,28 @@ def test_pipeline_answers_pass_judge_thresholds(
     # Index test_results the same order deepeval_test_cases/evaluation_rows
     # were built in, so scores can be matched back to the right row.
     test_results_by_index = sorted(result.test_results, key=lambda test_result: test_result.index)
+    total_questions = len(evaluation_rows)
+    completed_questions = len(test_results_by_index)
+    print(f"\nQuestions completed: {completed_questions}/{total_questions}")
+    if completed_questions < total_questions:
+        # deepeval_evaluate() still appends a test_result for every row
+        # even when one of its metrics errors (that's how the NaN rows
+        # above surface) — ignore_errors=True never drops a row's
+        # result entirely. A row missing here means deepeval raised
+        # out of the batch (TimeoutError/CancelledError) before
+        # finishing it, which would already show up as a traceback
+        # elsewhere in this same pytest run. Naming the missing
+        # question(s) here points at which traceback to go read,
+        # rather than guessing a cause we can't actually confirm.
+        present_indices = {test_result.index for test_result in test_results_by_index}
+        missing_indices = [i for i in range(total_questions) if i not in present_indices]
+        print(
+            f"  {len(missing_indices)} question(s) never returned a result — "
+            "deepeval_evaluate() raised before finishing them (see the traceback "
+            "elsewhere in this run for the actual cause, e.g. a timeout):"
+        )
+        for index in missing_indices:
+            print(f"    [{index}] {evaluation_rows[index]['user_input'][:80]}")
     scores_by_row = [
         {
             metric_data.name: (
@@ -338,11 +360,26 @@ def test_pipeline_answers_pass_judge_thresholds(
         index for index, row in enumerate(evaluation_rows) if row["category"] == "unanswerable"
     ]
 
-    mean_scores = {
-        name: statistics.mean(scores_by_row[index][name] for index in normal_indices)
-        for name in metric_names
-    }
+    # A per-row NaN (e.g. faithfulness on a row where the pipeline
+    # refused, so there's no context to check claims against — see the
+    # unanswerable-rows comment above, which applies just as much to a
+    # normal/indirect-category row that happens to trigger a refusal)
+    # is scored as 0 rather than excluded: for a normal-category
+    # question, a refusal IS a failure to answer, so it should drag
+    # the mean down the same as a bad answer would, not disappear from
+    # the average as if it were never asked.
+    mean_scores = {}
+    nan_treated_as_zero_counts = {}
+    for name in metric_names:
+        scored_values = [scores_by_row[index][name] for index in normal_indices]
+        nan_treated_as_zero_counts[name] = sum(1 for value in scored_values if math.isnan(value))
+        mean_scores[name] = statistics.mean(0.0 if math.isnan(value) else value for value in scored_values)
     print(f"\nDeepEval mean scores (normal questions only, n={len(normal_indices)}): {mean_scores}")
+    if any(nan_treated_as_zero_counts.values()):
+        print(
+            "NaN rows treated as 0 in mean per metric (judge couldn't score, e.g. a "
+            f"refusal with no context to check): {nan_treated_as_zero_counts}"
+        )
 
     # Per-question scores, so a failing/low mean can be traced back to
     # which specific answers the judge marked down and why — the mean
@@ -401,6 +438,7 @@ def test_pipeline_answers_pass_judge_thresholds(
                 "judge_model": config.evaluation.judge_model,
                 "min_score": config.evaluation.min_score,
                 "mean_scores": mean_scores,
+                "nan_treated_as_zero_counts": nan_treated_as_zero_counts,
                 "baseline_comparison": comparison,
                 "unanswerable_refusals": unanswerable_refusals,
                 "rows": rows,

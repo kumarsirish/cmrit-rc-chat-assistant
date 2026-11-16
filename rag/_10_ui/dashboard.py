@@ -23,6 +23,7 @@ from rag._05_generation.llm_client import LlmClient
 from rag._05_generation.rag_pipeline import RagPipeline
 from rag._02_indexing.vector_store import VectorStore
 from rag._01_ingestion.embeddings import EmbeddingGenerator
+from rag._04_retrieval import faq_cache
 from rag._04_retrieval.bm25_retriever import BM25Index
 from rag._04_retrieval.dense_retriever import DenseRetriever
 from rag._04_retrieval.reranker import Reranker
@@ -167,7 +168,7 @@ def get_retrieval_service():
     embedding_generator = EmbeddingGenerator(config.embedding.model_name)
     dense_retriever = DenseRetriever(get_vector_store())
     doc_topics = get_doc_topics()
-    return RetrievalService(
+    retrieval_service = RetrievalService(
         dense_retriever=dense_retriever,
         embedding_generator=embedding_generator,
         top_k=config.retrieval.top_k,
@@ -184,6 +185,7 @@ def get_retrieval_service():
         topic_match_threshold=config.retrieval.topic_match_threshold,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
+    return faq_cache.maybe_wrap(retrieval_service, config.redis)
 
 
 @st.cache_resource

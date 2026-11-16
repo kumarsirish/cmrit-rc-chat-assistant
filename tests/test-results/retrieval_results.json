@@ -1,27 +1,27 @@
 {
   "k": 8,
   "mean_scores": {
-    "recall": 0.875,
-    "precision": 0.5023809523809524,
-    "reciprocal_rank": 0.7583333333333333,
-    "ndcg": 0.7848197315178593
+    "recall": 0.8875,
+    "precision": 0.5510119047619048,
+    "reciprocal_rank": 0.7666666666666667,
+    "ndcg": 0.7836344507944052
   },
   "mean_by_category": {
     "normal": {
-      "recall": 0.8928571428571429,
-      "precision": 0.5113095238095238,
-      "reciprocal_rank": 0.7797619047619048,
-      "ndcg": 0.8129235538265327
+      "recall": 0.9285714285714286,
+      "precision": 0.5684098639455782,
+      "reciprocal_rank": 0.7916666666666666,
+      "ndcg": 0.8250464673371175
     },
     "topic": {
-      "recall": 1.0,
-      "precision": 0.5057142857142857,
+      "recall": 0.9,
+      "precision": 0.525,
       "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "ndcg": 0.9226294385530917
     },
     "indirect": {
       "recall": 0.6,
-      "precision": 0.45,
+      "precision": 0.5,
       "reciprocal_rank": 0.5,
       "ndcg": 0.5261859507142915
     },
@@ -37,7 +37,7 @@
       "category": "normal",
       "question": "how many casual leaves are permanent staff allowed per year",
       "recall": 1.0,
-      "precision": 0.5,
+      "precision": 0.7142857142857143,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -45,9 +45,9 @@
       "category": "normal",
       "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.8,
       "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "ndcg": 0.9197207891481876
     },
     {
       "category": "normal",
@@ -77,7 +77,7 @@
       "category": "normal",
       "question": "what compensatory off is given for working on a holiday",
       "recall": 1.0,
-      "precision": 0.375,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -85,7 +85,7 @@
       "category": "normal",
       "question": "what is CMRIT's quality policy",
       "recall": 1.0,
-      "precision": 0.5,
+      "precision": 0.42857142857142855,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -93,7 +93,7 @@
       "category": "normal",
       "question": "what mandatory training must new faculty complete within six months of joining",
       "recall": 1.0,
-      "precision": 0.3333333333333333,
+      "precision": 0.25,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -101,7 +101,7 @@
       "category": "normal",
       "question": "how often is the faculty semester evaluation done",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.75,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -172,24 +172,24 @@
     {
       "category": "normal",
       "question": "If I want help filing a patent, who at CMRIT can assist me?",
-      "recall": 0.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.5
     },
     {
       "category": "normal",
       "question": "what is the maximum number of OOD and OED leaves permitted per year",
       "recall": 1.0,
-      "precision": 0.5,
+      "precision": 0.7142857142857143,
       "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "ndcg": 0.9197207891481876
     },
     {
       "category": "normal",
       "question": "what counts as half a casual leave for late coming",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.8,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -197,7 +197,7 @@
       "category": "normal",
       "question": "how is loss-of-pay calculated if leave rules are not followed",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.8,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -205,7 +205,7 @@
       "category": "normal",
       "question": "within how many days should an emergency leave be applied for",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.8,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -229,7 +229,7 @@
       "category": "normal",
       "question": "what mandatory training must new faculty complete within one year of joining",
       "recall": 1.0,
-      "precision": 0.3333333333333333,
+      "precision": 0.25,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -260,10 +260,10 @@
     {
       "category": "topic",
       "question": "can you give me an overview of the leave policy at CMRIT",
-      "recall": 1.0,
-      "precision": 0.42857142857142855,
+      "recall": 0.5,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "ndcg": 0.6131471927654584
     },
     {
       "category": "topic",
@@ -277,7 +277,7 @@
       "category": "topic",
       "question": "what welfare measures does CMRIT provide for its staff",
       "recall": 1.0,
-      "precision": 0.6,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -293,7 +293,7 @@
       "category": "topic",
       "question": "what qualities and requirements does CMRIT expect from an effective teacher",
       "recall": 1.0,
-      "precision": 0.375,
+      "precision": 0.5,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -301,7 +301,7 @@
       "category": "indirect",
       "question": "I clocked in twenty minutes late three times this month, is that going to cost me any leave?",
       "recall": 1.0,
-      "precision": 0.75,
+      "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
@@ -356,24 +356,24 @@
   ],
   "baseline_comparison": {
     "recall": {
-      "current": 0.875,
+      "current": 0.8875,
       "baseline": 0.85,
-      "delta": 0.025000000000000022
+      "delta": 0.03749999999999998
     },
     "precision": {
-      "current": 0.5023809523809524,
+      "current": 0.5510119047619048,
       "baseline": 0.49041666666666667,
-      "delta": 0.011964285714285705
+      "delta": 0.06059523809523809
     },
     "reciprocal_rank": {
-      "current": 0.7583333333333333,
+      "current": 0.7666666666666667,
       "baseline": 0.6791666666666667,
-      "delta": 0.07916666666666661
+      "delta": 0.08750000000000002
     },
     "ndcg": {
-      "current": 0.7848197315178593,
+      "current": 0.7836344507944052,
       "baseline": 0.7065464876785729,
-      "delta": 0.07827324383928647
+      "delta": 0.07708796311583233
     }
   }
 }

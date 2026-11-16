@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rag._09_common.config import AppConfig, load_config
 from rag._03_routing.docs_metadata import DocTopic, build_filename_topic_map, load_doc_topics
 from rag._02_indexing.vector_store import VectorStore
+from rag._04_retrieval import faq_cache
 from rag._01_ingestion.chunker import Chunk, chunk_documents
 from rag._01_ingestion.document_loader import load_all_documents
 from rag._01_ingestion.embeddings import EmbeddingGenerator
@@ -194,6 +195,7 @@ def run_ingestion(config: AppConfig = None) -> None:
     ids, metadatas = build_chunk_metadata(config, chunks)
     embeddings = embed_chunks(config, chunks, metadatas)
     vector_store = store_chunks(config, ids, chunks, embeddings, metadatas)
+    faq_cache.reset_if_enabled(config.redis)
 
     logger.info("Done. Collection now has %d chunks.", vector_store.count())
 

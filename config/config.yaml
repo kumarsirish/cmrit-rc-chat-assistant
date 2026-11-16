@@ -165,3 +165,22 @@ database:
   user: "sirkumar"
   password: "Issa123#"
   database: "rag_sessions"
+
+redis:
+  # Global cache of frequently-repeated questions' retrieved chunks
+  # (see rag/_04_retrieval/faq_cache.py). Off by default — turn on
+  # once a Redis server is available.
+  enabled: false
+  host: "127.0.0.1"
+  port: 6379
+  # Dedicated DB index so a `flushdb` on ingestion (see
+  # helper_scripts/ingest.py) only ever clears this cache, never any
+  # other data sharing the same Redis instance.
+  db: 1
+  password: ""
+  # A question must be asked (exact match, after normalization) at
+  # least this many times before its chunks get cached.
+  faq_cache_min_hits: 3
+  # Safety-net expiry for a cached entry, in case an ingestion run
+  # somehow doesn't trigger the cache reset.
+  cache_ttl_seconds: 86400

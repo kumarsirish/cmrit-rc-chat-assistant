@@ -11,6 +11,7 @@ from rag._01_ingestion.embeddings import EmbeddingGenerator
 from rag._01_ingestion.glossary_extractor import load_glossary
 from rag._02_indexing.vector_store import VectorStore
 from rag._03_routing.docs_metadata import load_doc_topics
+from rag._04_retrieval import faq_cache
 from rag._04_retrieval.bm25_retriever import BM25Index
 from rag._04_retrieval.dense_retriever import DenseRetriever
 from rag._04_retrieval.reranker import Reranker
@@ -49,6 +50,7 @@ def build_retrieval_service(config) -> tuple:
         topic_match_threshold=config.retrieval.topic_match_threshold,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
+    retrieval_service = faq_cache.maybe_wrap(retrieval_service, config.redis)
     return retrieval_service, vector_store
 
 

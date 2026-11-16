@@ -131,3 +131,18 @@ class LlmClient:
             )
             raise LlmGenerationError(f"{self._provider} call failed: {exc}") from exc
         return response.content
+
+
+def generate_best_effort(llm_client: LlmClient, system_prompt: str, user_prompt: str, fallback: str, label: str) -> str:
+    """A single-shot LLM call for an auxiliary suggestion (rephrasing,
+    query condensation, ...) where failure should degrade gracefully
+    rather than block the turn: returns fallback if the call raises
+    LlmGenerationError or comes back empty, otherwise the stripped
+    reply. label is only used in the failure log line.
+    """
+    try:
+        reply = llm_client.generate_answer(system_prompt, user_prompt)
+    except LlmGenerationError:
+        logger.warning("%s failed", label, exc_info=True)
+        return fallback
+    return reply.strip().strip('"') or fallback
