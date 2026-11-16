@@ -1,4 +1,6 @@
-from rag._03_routing.docs_metadata import DocTopic, build_filename_topic_map
+import json
+
+from rag._03_routing.docs_metadata import DocTopic, build_filename_topic_map, load_doc_topics
 
 
 def _sample_topics():
@@ -40,3 +42,31 @@ def test_build_filename_topic_map_maps_every_file_of_a_multi_doc_topic():
     filename_map = build_filename_topic_map([topic])
     assert filename_map["leave.pdf"] is topic
     assert filename_map["leave-addendum.pdf"] is topic
+
+
+def test_load_doc_topics_keeps_entries_with_docs_but_no_link(tmp_path):
+    metadata_file = tmp_path / "docs-metadata.json"
+    metadata_file.write_text(
+        json.dumps(
+            {
+                "resources": [
+                    {
+                        "topic": "Probation Period Completion Process",
+                        "link": "",
+                        "docs": "Probation.pdf",
+                    },
+                    {
+                        "topic": "For Emergency related SPOC",
+                        "contacts": {"medical_emergency": {"phone": "123"}},
+                    },
+                    {"topic": None, "link": "", "docs": "orphan.pdf"},
+                ]
+            }
+        )
+    )
+
+    topics = load_doc_topics(str(metadata_file))
+
+    assert [t.topic for t in topics] == ["Probation Period Completion Process"]
+    assert topics[0].link == ""
+    assert topics[0].docs_filename == ["Probation.pdf"]

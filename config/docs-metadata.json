@@ -26,7 +26,7 @@
       "topic": "Faculty Handbook (Initiatives, Teaching & Learning, Mentoring, Policies, leave information, Faculty evaluation, Facilities, Contact Details etc.)",
       "link": "https://docs.google.com/document/d/1XjJM5Kdu3m7IDc-rvMZgVEDNjtvPzsp9/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
       "additional_link": "https://sites.google.com/cmrit.ac.in/internalqualityassurancecell/templatesdocuments?authuser=0",
-      "docs": "Faculty Handbook-CMRIT.docx.pdf",
+      "docs": "Faculty Handbook-CMRIT Sep 2026.pdf",
       "keywords": "complaint, grievance, redressal, disciplinary"
     },
     {
@@ -39,15 +39,15 @@
     {
       "s_no": 7,
       "topic": "Leave Information, Application and Approval Process",
-      "link": "https://docs.google.com/document/d/1jyIKLYtMh7-JiclpLO8NuND62MvImxjosfzJZhesryM/edit?usp=sharing",
-      "docs": "CMRIT - Leave Information, Application and Approval Process - 7.7.2026.pdf",
+      "link": "",
+      "docs": "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
       "keywords": "casual leave, vacation leave, compensatory off, comp off, leave application, leave approval process, leave balance, sick leave, unused leave expiry, OOD, how many leaves am I entitled to, leave credited, CL and VL"
     },
     {
       "s_no": 8,
       "topic": "Probation Period Completion Process",
-      "link": "https://docs.google.com/document/d/1li2xzYGN5KntAQK18wSPYOkHC0NtScFj2OuaNP5H4Js/edit?usp=sharing",
-      "docs" : "CMRIT – Probation Period Completion Process - 7.7.2026.pdf"
+      "link": "",
+      "docs" : "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
     },
     {
       "s_no": 9,
@@ -63,9 +63,9 @@
     {
       "s_no": 11,
       "topic": "Student Handbook",
-      "link": "https://docs.google.com/document/d/1490YQf87CTk65GjFX2s8DhhUkKUQZvI7/edit?usp=drive_link&ouid=102183025786143051675&rtpof=true&sd=true",
-      "docs" : "Student Handbook-CMRIT.docx.pdf",
-      "keywords": "complaint, grievance, redressal, disciplinary"
+      "link": "",
+      "docs" : "Student Handbook-CMRIT Sep 2026.pdf",
+      "keywords": ""
     },
     {
       "s_no": 12,
@@ -204,6 +204,34 @@
           "phone": "8951399029"
         }
       }
+    },
+    {
+      "s_no": 33,
+      "topic": "Institutional Policy for Claiming Reimbursement of Field-Work Expenses for Research/Non-Research Externally Funded Projects",
+      "link": "https://drive.google.com/file/d/1_X53vkVMslbCIjjPKEyQxh19iVPai7bC/view?usp=sharing",
+      "docs": "Institutional Policy for Claiming Reimbursement of Field-Work Expenses for Research_Non-Research Externally Funded Projects_1_Oct 2026.docx",
+      "keywords": "Reimbursement"
+    },
+    {
+      "s_no": 34,
+      "topic": "T-Load Rubrics",
+      "link": "file://wsl$/Ubuntu/home/sirkumar/CMRIT-RAG/policies_docs/T Load Rubrics - Version 1 - Oct 2026.pdf",
+      "docs": "T Load Rubrics - Version 1 - Oct 2026.pdf",
+      "keywords": "T-Load"
+    },
+    {
+      "s_no": 34,
+      "topic": "T-Load Evaluation Process",
+      "link": "file://wsl$/Ubuntu/home/sirkumar/CMRIT-RAG/policies_docs/T-Load Evaluation Process - Version 1 - Oct 2026 (2).pdf",
+      "docs": "T-Load Evaluation Process - Version 1 - Oct 2026 (2).pdf",
+      "keywords": "T-Load"
+    },
+    {
+      "s_no": 35,
+      "topic": "TRCPIE, Non-Core, Knowledge Upgrade, Mentoring - Guidelines, Allotment and Evaluation Process",
+      "link": "file://wsl$/Ubuntu/home/sirkumar/CMRIT-RAG/policies_docs/TRCPIE, Non-Core, Knowledge upgrade, Mentoring - Guidelines, Allotment and Evaluation Process - Version 2 - Oct 2026.docx (2).pdf",
+      "docs": "TRCPIE, Non-Core, Knowledge upgrade, Mentoring - Guidelines, Allotment and Evaluation Process - Version 2 - Oct 2026.docx (2).pdf",
+      "keywords": "TRCPIE"
     }
   ],
   "closing_note": "CMRIT welcomes You!"

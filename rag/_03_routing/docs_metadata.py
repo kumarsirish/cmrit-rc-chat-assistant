@@ -55,9 +55,11 @@ class DocTopic:
 def load_doc_topics(path: str) -> list:
     """Parses docs-metadata.json into a list of DocTopic.
 
-    Entries with no "topic" or no "link" (the section-header marker
-    and the emergency-contacts entry) are skipped since they have
-    nothing to match a query against or link to.
+    Entries with no "topic", or with neither a "link" nor a "docs"
+    (the emergency-contacts entry), are skipped since they have
+    nothing to match a query against or link to. A topic can have an
+    empty "link" (e.g. pending a canonical URL) as long as it still
+    has a local "docs" PDF to match and retrieve from.
     """
     with open(path, "r", encoding="utf-8") as metadata_file:
         raw = json.load(metadata_file)
@@ -66,7 +68,8 @@ def load_doc_topics(path: str) -> list:
     for resource in raw.get("resources", []):
         topic = resource.get("topic")
         link = resource.get("link")
-        if not topic or not link:
+        docs = resource.get("docs")
+        if not topic or not (link or docs):
             continue
         topics.append(
             DocTopic(

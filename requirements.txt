@@ -44,3 +44,7 @@ rank_bm25
 # (./mlruns), no server/Docker needed. Lets retrieval evaluation runs
 # (different models/hyperparameters) be logged and compared over time.
 mlflow
+
+# Redis client for the FAQ cache (rag/_04_retrieval/faq_cache.py).
+# Only imported when config.yaml's redis.enabled is true.
+redis

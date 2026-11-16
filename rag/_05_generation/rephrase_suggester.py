@@ -18,11 +18,7 @@ retrieval automatically, so one no-result answer can't spiral into a
 chain of silent, unseen retries.
 """
 
-import logging
-
-from rag._05_generation.llm_client import LlmClient, LlmGenerationError
-
-logger = logging.getLogger(__name__)
+from rag._05_generation.llm_client import LlmClient, generate_best_effort
 
 _SYSTEM_PROMPT = (
     "A user asked a question about CMRIT college policies, and no "
@@ -41,15 +37,12 @@ _SYSTEM_PROMPT = (
 
 def suggest_rephrase(question: str, llm_client: LlmClient) -> str:
     """Returns one alternative phrasing of question, or None if the LLM
-    call fails — a missing suggestion is never treated as fatal, since
-    the original no-result answer has already been produced either
-    way (see rag_pipeline.answer)."""
-    try:
-        rephrased = llm_client.generate_answer(_SYSTEM_PROMPT, question)
-    except LlmGenerationError:
-        logger.warning("Rephrase suggestion failed for question: %r", question, exc_info=True)
-        return None
-    rephrased = rephrased.strip().strip('"')
-    if not rephrased or rephrased.lower() == question.strip().lower():
+    call fails or comes back unchanged — a missing suggestion is never
+    treated as fatal, since the original no-result answer has already
+    been produced either way (see rag_pipeline.answer)."""
+    rephrased = generate_best_effort(
+        llm_client, _SYSTEM_PROMPT, question, fallback=None, label="Rephrase suggestion"
+    )
+    if rephrased and rephrased.lower() == question.strip().lower():
         return None
     return rephrased

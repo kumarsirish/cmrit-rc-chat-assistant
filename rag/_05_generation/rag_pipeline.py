@@ -17,12 +17,18 @@ rephrase_suggester and RagAnswer.rephrase_suggestion.
 RagPipeline itself only orchestrates: it delegates context formatting
 to context_builder and citation/response assembly to
 response_processor, so each of those concerns can be read, tested, and
-changed independently of the others. Retrieval always runs on the
-current question alone — conversation history is never used to build
-the retrieval query, only passed to the LLM (see answer() below) so it
-can resolve references like "it" in its reply. This keeps retrieval
-deterministic, fast, and easy to evaluate/debug independent of session
-state.
+changed independently of the others. Retrieval runs on the current
+question alone by default — conversation history is passed to the LLM
+(see answer() below) so it can resolve references like "it" in its
+reply, but never touches the retrieval query itself, UNLESS
+query_condenser decides this question depends on the immediately
+preceding exchange, in which case only that one exchange (never the
+rest of the session's history) can rewrite the retrieval query — the
+question sent to the LLM/UI/citations is untouched either way. See
+query_condenser's docstring for the invariants this enforces. This
+keeps retrieval deterministic and easy to evaluate/debug independent
+of session state, while still letting a genuine follow-up ("how many
+days is that?") retrieve something.
 """
 
 import dataclasses
@@ -30,6 +36,7 @@ import logging
 import time
 
 from rag._05_generation import context_builder
+from rag._05_generation import query_condenser
 from rag._05_generation import rephrase_suggester
 from rag._05_generation.llm_client import LlmClient
 from rag._06_response import response_processor
@@ -154,11 +161,16 @@ class RagPipeline:
     ) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
 
-        Retrieval runs on question alone — conversation_history (prior
-        {"role", "content"} turns from the same session, if any) is
-        never used to build the retrieval query. It's only passed to
-        the LLM below, so it can resolve references like "it"/"that"
-        in its reply; retrieval never sees it.
+        conversation_history (prior {"role", "content"} turns from the
+        same session, if any) is passed to the LLM below so it can
+        resolve references like "it"/"that" in its reply. It's also
+        offered to query_condenser, which rewrites the retrieval query
+        (not question itself) IF this question depends on the single
+        most recent exchange — see query_condenser's docstring for
+        exactly how narrow that is. question (uncondensed, unexpanded)
+        is always what's sent to the LLM and everything user-facing,
+        so answer phrasing and citations never depend on either step
+        below.
 
         top_k / min_reranker_score, if given, override the retrieval
         service's configured defaults for this call only (used by
@@ -169,13 +181,15 @@ class RagPipeline:
         match once per question instead of a second time here.
 
         The retrieval query itself may differ from question — see
-        query_expander.expand_query — but only for topic-matching/
-        embedding; question (unexpanded) is still what's sent to the
-        LLM and everything user-facing, so answer phrasing and
-        citations are unaffected by glossary expansion.
+        query_condenser.condense (follow-up rewriting) and
+        query_expander.expand_query (glossary expansion), applied in
+        that order — but only for topic-matching/embedding.
         """
         overall_start = time.perf_counter()
-        retrieval_query = query_expander.expand_query(question, self._glossary, self._glossary_index)
+        condensed_question = query_condenser.condense(question, conversation_history, self._llm_client)
+        retrieval_query = query_expander.expand_query(
+            condensed_question, self._glossary, self._glossary_index
+        )
         chunks, matched_topic = self._retrieval_service.retrieve(
             retrieval_query, top_k=top_k, min_reranker_score=min_reranker_score
         )

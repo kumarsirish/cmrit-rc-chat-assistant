@@ -148,6 +148,26 @@ class DatabaseConfig:
 
 
 @dataclass
+class RedisConfig:
+    # Global cache of frequently-repeated questions' retrieved chunks
+    # (see rag/_04_retrieval/faq_cache.py) — off by default since it's
+    # optional infra (nothing else here requires a Redis server).
+    enabled: bool
+    host: str
+    port: int
+    db: int
+    password: str
+    # A question must be asked (exact match, after normalization) at
+    # least this many times before its chunks get cached.
+    faq_cache_min_hits: int
+    # Safety-net expiry for a cached entry. reset_if_enabled() (called
+    # after every ingestion run) is what normally invalidates the
+    # cache; this just bounds how stale an entry could get if that
+    # ever doesn't happen.
+    cache_ttl_seconds: int
+
+
+@dataclass
 class AppConfig:
     llm: LlmConfig
     embedding: EmbeddingConfig
@@ -158,6 +178,7 @@ class AppConfig:
     session: SessionConfig
     evaluation: EvaluationConfig
     database: DatabaseConfig
+    redis: RedisConfig
 
 
 def _resolve_path(value: str) -> str:
@@ -229,6 +250,8 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     )
     database_cfg = DatabaseConfig(**database_raw)
 
+    redis_cfg = RedisConfig(**raw["redis"])
+
     return AppConfig(
         llm=llm_cfg,
         embedding=embedding_cfg,
@@ -239,4 +262,5 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         session=session_cfg,
         evaluation=evaluation_cfg,
         database=database_cfg,
+        redis=redis_cfg,
     )
