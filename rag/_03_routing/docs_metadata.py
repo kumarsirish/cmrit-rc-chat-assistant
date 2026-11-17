@@ -1,5 +1,6 @@
-"""Reads docs-metadata.json: the topic -> canonical URL (and, for most
-topics, local PDF filename) lookup maintained alongside policies_docs.
+"""Reads and writes docs-metadata.json: the topic -> canonical URL
+(and, for most topics, local PDF filename) lookup maintained alongside
+the documents source directory.
 
 Used two ways:
 - Ingestion tags each chunk with the topic/URL of the document it came
@@ -22,7 +23,7 @@ class DocTopic:
 
     docs_filename is always a list — empty for entries that only point
     at an external resource (e.g. the college website, a shared Drive
-    folder) with no corresponding PDF ingested into policies_docs, and
+    folder) with no corresponding PDF ingested into knowledge_documents, and
     can hold more than one filename for a topic backed by several
     local PDFs. Accepts a single filename string, a list, or None at
     construction time (matching what "docs" in docs-metadata.json can
@@ -80,6 +81,91 @@ def load_doc_topics(path: str) -> list:
             )
         )
     return topics
+
+
+def add_document_to_topic(path: str, topic: str, filename: str, link: str = None, keywords: str = None) -> None:
+    """Adds filename to topic's "docs" list in docs-metadata.json,
+    creating the topic entry if none matches yet (matched
+    case-insensitively against an existing topic name so re-uploading
+    under slightly different casing doesn't create a duplicate entry).
+
+    link, if given, replaces the entry's link. keywords, if given, is
+    appended to any keywords already there rather than replacing them,
+    since a topic can accumulate keywords across several uploads.
+
+    Used by the Admin UI's upload flow so a newly uploaded document is
+    immediately retrievable under the right topic without hand-editing
+    this file.
+    """
+    with open(path, "r", encoding="utf-8") as metadata_file:
+        raw = json.load(metadata_file)
+
+    resources = raw.setdefault("resources", [])
+    normalized_topic = topic.strip().casefold()
+    resource = next(
+        (entry for entry in resources if (entry.get("topic") or "").strip().casefold() == normalized_topic),
+        None,
+    )
+    if resource is None:
+        resource = {"topic": topic.strip()}
+        resources.append(resource)
+
+    docs = resource.get("docs")
+    if docs is None:
+        docs = []
+    elif isinstance(docs, str):
+        docs = [docs]
+    else:
+        docs = list(docs)
+    if filename not in docs:
+        docs.append(filename)
+    resource["docs"] = docs
+
+    if link:
+        resource["link"] = link
+    if keywords:
+        existing_keywords = resource.get("keywords") or ""
+        resource["keywords"] = ", ".join(part for part in (existing_keywords, keywords) if part)
+
+    with open(path, "w", encoding="utf-8") as metadata_file:
+        json.dump(raw, metadata_file, indent=2, ensure_ascii=False)
+        metadata_file.write("\n")
+
+
+def remove_document_from_topic(path: str, topic: str, filename: str) -> None:
+    """Removes filename from topic's "docs" list in docs-metadata.json
+    (matched case-insensitively against the topic name, same as
+    add_document_to_topic). No-op if the topic or filename isn't found.
+
+    Used when a document is superseded (see
+    rag._03_routing.document_registry) so the old filename doesn't sit
+    around as dead metadata pointing at a file that's no longer
+    ingested.
+    """
+    with open(path, "r", encoding="utf-8") as metadata_file:
+        raw = json.load(metadata_file)
+
+    resources = raw.get("resources", [])
+    normalized_topic = topic.strip().casefold()
+    resource = next(
+        (entry for entry in resources if (entry.get("topic") or "").strip().casefold() == normalized_topic),
+        None,
+    )
+    if resource is None:
+        return
+
+    docs = resource.get("docs")
+    if docs is None:
+        return
+    docs = [docs] if isinstance(docs, str) else list(docs)
+    if filename not in docs:
+        return
+    docs.remove(filename)
+    resource["docs"] = docs
+
+    with open(path, "w", encoding="utf-8") as metadata_file:
+        json.dump(raw, metadata_file, indent=2, ensure_ascii=False)
+        metadata_file.write("\n")
 
 
 def _normalize_filename(filename: str) -> str:

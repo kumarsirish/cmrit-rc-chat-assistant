@@ -1,17 +1,22 @@
-# CMRIT College Policy Assistant (RAG)
+# RAG Assistant
 
-A Retrieval-Augmented Generation app that answers questions about
-CMRIT college policies, grounded strictly in the PDF documents in
-`policies_docs/`. It refuses to answer questions the documents don't
-cover, and links to the source PDF/page for every answer.
+A generic Retrieval-Augmented Generation app: answers questions grounded
+strictly in whatever documents (PDF, Word, plain text, Excel) are indexed
+from `knowledge_documents/`. It refuses to answer questions the documents
+don't cover, and links to the source document/page for every answer.
+Document content, category structure, and UI copy are all config-driven
+(see `config/config.yaml`), so the same app can be deployed for any
+document set — this deployment happens to be indexing CMRIT college
+policies, but nothing in the code assumes that.
 
 ## How it works (data flow)
 
-**Ingestion** (`make ingest`, run offline, ahead of time):
+**Ingestion** (`make ingest`, run offline, ahead of time, or via the
+Admin UI's "Rebuild index" button):
 
 ```
-policies_docs/*.pdf
-    -> document_loader.py   (extract text, one entry per PDF page)
+knowledge_documents/*.{pdf,docx,txt,xlsx}
+    -> document_loader.py   (extract text, one entry per page/sheet/whole file)
     -> chunker.py            (recursive, URL-safe splitting into overlapping chunks)
     -> embeddings.py         (sentence-transformers -> one vector per chunk)
     -> vector_store.py       (write chunk text + vector + metadata into Chroma)
@@ -284,7 +289,7 @@ question; it identifies their session and chat history in MySQL
 
 ## Build the vector index
 
-Run this once, and again whenever files in `policies_docs/` change:
+Run this once, and again whenever files in `knowledge_documents/` change:
 
 ```bash
 make ingest
@@ -310,7 +315,7 @@ make run-debug
 |---|---|
 | `make install` | Installs Python dependencies |
 | `make download-models` | Downloads/verifies the local embedding and reranker models (safe to re-run) |
-| `make ingest` | (Re)builds the Chroma vector index from `policies_docs/` |
+| `make ingest` | (Re)builds the Chroma vector index from `knowledge_documents/` |
 | `make run` | Starts the Streamlit app |
 | `make run-debug` | Starts the Streamlit app with `--logger.level=debug` and an in-app debug panel |
 | `make test` | Runs the unit test suite (excludes the `eval` suite, which needs live services — see below) |
@@ -448,7 +453,7 @@ session.
 | `embedding` | `batch_size` | `64` | Chunks embedded per batch during ingestion |
 | `chroma` | `persist_directory` | `./chroma-db-store/chroma_store` | On-disk location of the vector index |
 | `chroma` | `collection_name` | `college_policies` | Chroma collection name |
-| `documents` | `source_directory` | `./policies_docs` | Where source PDFs are read from |
+| `documents` | `source_directory` | `./knowledge_documents` | Where source PDFs are read from |
 | `documents` | `metadata_file` | `./config/docs-metadata.json` | Topic -> canonical URL/filename lookup, used to restrict retrieval to a topic's mapped document (MAPPED_DOCUMENT mode) and for source links |
 | `chunking` | `chunk_size` | `800` (characters) | Target chunk size — roughly one dense policy paragraph: big enough to keep a rule and its conditions together, small enough that several retrieved chunks still fit comfortably in the LLM's context window |
 | `chunking` | `chunk_overlap` | `120` (characters, ~15%) | Overlap carried between consecutive chunks, so a sentence split across a boundary isn't lost to either side |

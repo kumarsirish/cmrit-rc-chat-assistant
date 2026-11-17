@@ -1,9 +1,9 @@
-"""CMRIT-specific retrieval orchestration.
+"""Topic-aware retrieval orchestration.
 
 This is the only retrieval module that knows about topics, mapped
 documents, or the MAPPED_DOCUMENT/PRIMARY/SECONDARY/GLOBAL policy.
 dense_retriever.py, bm25_retriever.py, hybrid_retriever.py, and
-reranker.py are generic retrieval mechanisms with no CMRIT knowledge;
+reranker.py are generic retrieval mechanisms with no topic knowledge;
 this module calls them and decides what to do with the results.
 
 Two retrieval modes, chosen per query:
@@ -146,6 +146,7 @@ class RetrievalService:
         mapped_document_primary_top_k: int = MAPPED_DOCUMENT_PRIMARY_TOP_K,
         topic_match_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
         low_confidence_min_score: float = 0.05,
+        institution_name: str = None,
     ):
         self._dense_retriever = dense_retriever
         self._embedding_generator = embedding_generator
@@ -171,6 +172,7 @@ class RetrievalService:
         self._rerank_candidates = rerank_candidates
         self._low_confidence_min_score = low_confidence_min_score
         self._mapped_document_primary_top_k = mapped_document_primary_top_k
+        self._institution_name = institution_name
         self._topic_matcher = EmbeddingTopicMatcher(
             doc_topics or [], embedding_generator, similarity_threshold=topic_match_threshold
         )
@@ -188,7 +190,7 @@ class RetrievalService:
         as-is when there was nothing to strip; otherwise a fresh
         embedding is computed for the stripped text.
         """
-        stripped_query = strip_institution_name(query)
+        stripped_query = strip_institution_name(query, self._institution_name)
         if stripped_query != query:
             query_embedding = None
         return self._topic_matcher.match(stripped_query, query_embedding=query_embedding)

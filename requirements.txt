@@ -6,6 +6,11 @@ streamlit
 chromadb==1.5.9
 sentence-transformers
 pypdf
+
+# Multi-format document ingestion (rag/_01_ingestion/document_loader.py):
+# .docx and .xlsx support. .txt and .pdf need no extra library.
+python-docx
+openpyxl
 mysql-connector-python
 PyYAML
 pytest

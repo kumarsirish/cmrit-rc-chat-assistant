@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 
 from rag._07_evaluation.baseline import load_baseline_mean_scores
-from rag._01_ingestion.document_loader import find_pdf_files
+from rag._01_ingestion.document_loader import find_document_files
 
 CHROMA_SQLITE_FILENAME = "chroma.sqlite3"
 
@@ -319,22 +319,24 @@ def _render_retrieval_eval_section(config):
 def _render_documents_section(config, vector_store):
     st.subheader("Source documents")
     try:
-        pdf_paths = find_pdf_files(config.documents.source_directory)
+        document_paths = find_document_files(
+            config.documents.source_directory, config.documents.archived_subfolder_name
+        )
     except FileNotFoundError:
         st.caption(f"Documents directory not found: {config.documents.source_directory}")
         return
 
-    if not pdf_paths:
-        st.caption(f"No PDFs found in {config.documents.source_directory}")
+    if not document_paths:
+        st.caption(f"No documents found in {config.documents.source_directory}")
         return
 
-    for pdf_path in pdf_paths:
-        stat = pdf_path.stat()
+    for document_path in document_paths:
+        stat = document_path.stat()
         modified = _format_timestamp_ist(stat.st_mtime)
-        st.markdown(f"- {pdf_path.name} — {_format_bytes(stat.st_size)}, modified {modified}")
+        st.markdown(f"- {document_path.name} — {_format_bytes(stat.st_size)}, modified {modified}")
 
     st.caption(
-        f"{len(pdf_paths)} document(s) — "
+        f"{len(document_paths)} document(s) — "
         f"{vector_store.count()} chunks currently in the "
         f"`{config.chroma.collection_name}` vector store collection"
     )
@@ -366,7 +368,7 @@ def _render_ingestion_section(config):
     st.caption(
         f"Vector store last written: {last_modified} "
         f"(`{config.chroma.persist_directory}`). Re-run `make ingest` after "
-        "changing the PDFs in policies_docs."
+        f"changing the documents in `{config.documents.source_directory}`."
     )
 
 

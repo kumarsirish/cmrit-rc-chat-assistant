@@ -32,8 +32,7 @@ from rag._05_generation.llm_client import LlmClient, generate_best_effort
 
 _SYSTEM_PROMPT = (
     "You are given the single most recent exchange from an ongoing "
-    "conversation about CMRIT college policies, followed by a new "
-    "question from the same user.\n\n"
+    "conversation, followed by a new question from the same user.\n\n"
     "Decide whether the new question can only be understood by "
     "referring to that prior exchange -- e.g. it uses a pronoun "
     "('it', 'that'), an implicit reference ('the same policy', 'what "

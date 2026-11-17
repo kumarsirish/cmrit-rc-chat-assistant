@@ -58,4 +58,9 @@ def build_rag_pipeline(config) -> RagPipeline:
     retrieval_service, _ = build_retrieval_service(config)
     llm_client = LlmClient.from_config(config.llm)
     glossary = load_glossary(config.documents.glossary_file)
-    return RagPipeline(retrieval_service=retrieval_service, llm_client=llm_client, glossary=glossary)
+    return RagPipeline(
+        retrieval_service=retrieval_service,
+        llm_client=llm_client,
+        glossary=glossary,
+        no_match_message=config.app.no_match_message,
+    )

@@ -55,6 +55,35 @@ class ChromaConfig:
 
 
 @dataclass
+class AppUiConfig:
+    # Shown as the page title and intro text in the Streamlit UI, so
+    # deploying this app for a different document set doesn't require
+    # touching dashboard.py.
+    name: str
+    description: str
+    # Clickable example questions shown in the chat sidebar — deployment-
+    # specific, so they live in config rather than a hardcoded list.
+    example_queries: list
+    # Reply used when retrieval finds nothing above the relevance
+    # threshold (see rag._06_response.response_processor). Configurable
+    # so it can be worded for whatever document set this deployment
+    # indexes, instead of being locked to one domain's phrasing.
+    no_match_message: str
+    # Every chat session is attributed to this identity since there is
+    # no real login — a placeholder, not a security boundary.
+    default_user_email: str
+
+
+@dataclass
+class AdminConfig:
+    # Shared password gating the Admin tab's upload/supersede/rebuild-
+    # index controls. Overridable via RAG_ADMIN_PASSWORD so it doesn't
+    # have to live in the committed file, same pattern as
+    # DatabaseConfig.password/RAG_DB_PASSWORD.
+    password: str
+
+
+@dataclass
 class DocumentsConfig:
     source_directory: str
     metadata_file: str
@@ -63,6 +92,14 @@ class DocumentsConfig:
     # tool it was seeded from). Used to expand jargon-free questions
     # before retrieval — see rag._03_routing.query_expander.
     glossary_file: str
+    # Upload-time bookkeeping (filename/category/upload_date/status) for
+    # documents added via the Admin UI — see rag._03_routing.document_registry.
+    registry_file: str
+    # Subfolder name (under each category folder) that a superseded
+    # document is moved into. Ingestion's directory scan skips any path
+    # under a folder with this name, so an archived document stops being
+    # retrievable without needing to touch the vector store directly.
+    archived_subfolder_name: str = "_archived"
 
 
 @dataclass
@@ -169,6 +206,8 @@ class RedisConfig:
 
 @dataclass
 class AppConfig:
+    app: AppUiConfig
+    admin: AdminConfig
     llm: LlmConfig
     embedding: EmbeddingConfig
     chroma: ChromaConfig
@@ -198,6 +237,12 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     with open(config_path, "r", encoding="utf-8") as config_file:
         raw = yaml.safe_load(config_file)
 
+    app_cfg = AppUiConfig(**raw["app"])
+
+    admin_raw = dict(raw["admin"])
+    admin_raw["password"] = os.environ.get("RAG_ADMIN_PASSWORD", admin_raw["password"])
+    admin_cfg = AdminConfig(**admin_raw)
+
     llm_raw = dict(raw["llm"])
     llm_raw["ollama"] = OllamaConfig(**llm_raw["ollama"])
     llm_raw["groq"] = GroqConfig(**llm_raw["groq"])
@@ -215,6 +260,8 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         source_directory=_resolve_path(documents_raw["source_directory"]),
         metadata_file=_resolve_path(documents_raw["metadata_file"]),
         glossary_file=_resolve_path(documents_raw["glossary_file"]),
+        registry_file=_resolve_path(documents_raw["registry_file"]),
+        archived_subfolder_name=documents_raw.get("archived_subfolder_name", "_archived"),
     )
 
     chunking_cfg = ChunkingConfig(**raw["chunking"])
@@ -253,6 +300,8 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     redis_cfg = RedisConfig(**raw["redis"])
 
     return AppConfig(
+        app=app_cfg,
+        admin=admin_cfg,
         llm=llm_cfg,
         embedding=embedding_cfg,
         chroma=chroma_cfg,

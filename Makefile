@@ -17,9 +17,9 @@ install: ## Install Python dependencies from requirements.txt
 download-models: ## Download the embedding and reranker models into the local cache
 	python helper_scripts/download_models.py
 
-# Builds/rebuilds the Chroma vector index from policies_docs/.
+# Builds/rebuilds the Chroma vector index from knowledge_documents/.
 # Run this once after install, and again whenever the PDFs change.
-ingest: ## Build/rebuild the Chroma vector index from policies_docs/
+ingest: ## Build/rebuild the Chroma vector index from knowledge_documents/
 	python helper_scripts/ingest.py
 
 run: ## Start the Streamlit app

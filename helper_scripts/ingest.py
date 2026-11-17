@@ -1,7 +1,7 @@
-"""Builds the Chroma vector index from the PDFs in policies_docs.
+"""Builds the Chroma vector index from the documents in knowledge_documents.
 
 Run this once before starting the Streamlit app, and again any time
-the documents in policies_docs change:
+the documents in knowledge_documents change:
 
     python helper_scripts/ingest.py
 
@@ -41,8 +41,8 @@ def load_pages(config: AppConfig) -> list:
     """Stage 1+2 (load + validate): every usable PageDocument from
     config.documents.source_directory. See document_loader.py for what
     "usable" means and how a bad PDF is handled."""
-    logger.info("Loading PDFs from %s ...", config.documents.source_directory)
-    pages = load_all_documents(config.documents.source_directory)
+    logger.info("Loading documents from %s ...", config.documents.source_directory)
+    pages = load_all_documents(config.documents.source_directory, config.documents.archived_subfolder_name)
     logger.info("Loaded %d pages.", len(pages))
     return pages
 

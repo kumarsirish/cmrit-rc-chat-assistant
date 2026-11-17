@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass
 
 NO_MATCH_MESSAGE = (
-    "I could not find any information about this query in the college policy documents."
+    "I could not find any information about this query in the indexed documents."
 )
 
 # Belt-and-braces cleanup for a model that reverts to prose citations
@@ -136,7 +136,10 @@ class RagAnswer:
 
 
 def build_no_result_response(
-    matched_topic, retrieval_seconds: float = None, total_seconds: float = None
+    matched_topic,
+    retrieval_seconds: float = None,
+    total_seconds: float = None,
+    no_match_message: str = NO_MATCH_MESSAGE,
 ) -> RagAnswer:
     """Builds the response for "nothing was retrieved".
 
@@ -144,6 +147,10 @@ def build_no_result_response(
     means the question was recognized as being about a known topic
     that simply has no locally-indexed document — the reply points at
     that topic's official link instead of a bare refusal.
+
+    no_match_message, if given, overrides the default refusal wording
+    (see rag_pipeline, which sources it from config.app.no_match_message)
+    for deployments indexing a different document set.
     """
     if matched_topic:
         answer_text = (
@@ -160,7 +167,7 @@ def build_no_result_response(
             total_seconds=total_seconds,
         )
     return RagAnswer(
-        answer_text=NO_MATCH_MESSAGE,
+        answer_text=no_match_message,
         sources=[],
         grounded=False,
         retrieval_seconds=retrieval_seconds,
@@ -175,15 +182,20 @@ def process(
     retrieval_seconds: float = None,
     llm_seconds: float = None,
     total_seconds: float = None,
+    no_match_message: str = NO_MATCH_MESSAGE,
 ) -> RagAnswer:
     """Builds the final RagAnswer for a normal (chunks-found) turn:
     validates/normalizes the LLM's inline citations against the real
     retrieved chunks, maps each chunk to a SourceReference, and decides
     whether the answer counts as grounded.
+
+    no_match_message must match whatever the LLM was told to reply with
+    verbatim when it can't answer (see rag_pipeline's system prompt) —
+    callers must pass the same value to both or grounded detection breaks.
     """
     answer_text = _normalize_citations(raw_answer_text, num_sources=len(chunks))
     cited_indices = _cited_source_indices(answer_text, num_sources=len(chunks))
-    grounded = NO_MATCH_MESSAGE not in answer_text
+    grounded = no_match_message not in answer_text
 
     # When the LLM decided the retrieved chunks don't actually answer
     # the question (grounded=False), those chunks were context that

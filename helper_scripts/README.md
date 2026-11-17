@@ -7,7 +7,7 @@ a script directly unless you need its flags.
 
 | File | Run via | What it does |
 |---|---|---|
-| `ingest.py` | `make ingest` | Builds/rebuilds the Chroma vector index from `policies_docs/`: load PDFs, chunk, embed, write to Chroma. Also usable for a one-off `main.py ingest`. |
+| `ingest.py` | `make ingest` | Builds/rebuilds the Chroma vector index from `knowledge_documents/`: load PDFs, chunk, embed, write to Chroma. Also usable for a one-off `main.py ingest`. |
 | `download_models.py` | `make download-models` | Downloads/verifies the embedding and reranker models into the local HuggingFace cache. |
 | `log_pipeline_answers.py` | — | Runs the real RAG pipeline (retrieval + LLM, no judge) over every question in the configured test set and writes a plain question/expected/actual log to `logs/pipeline_answers.json`. Useful for eyeballing answers without paying for a judge pass. |
 | `run_experiment.py` | `make experiment` / `make experiments-all` | Runs one retrieval evaluation with optional config overrides and logs it as an MLflow run under `mlops/`. See `config/experiments.yaml` for named hyperparameter sets. |

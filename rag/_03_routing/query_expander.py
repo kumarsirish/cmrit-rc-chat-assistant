@@ -22,15 +22,15 @@ from collections import defaultdict
 
 _WORD_PATTERN = re.compile(r"[A-Za-z']+")
 
-# The institution's own name appears in nearly every topic name, so it
-# carries no discriminative signal for topic-NAME similarity — it just
-# makes a short, generic topic name spuriously out-score a real match
-# for any question that happens to say "CMRIT" (see
+# The deploying organization's own name (config.app.institution_name,
+# if set) tends to appear in nearly every topic name, so it carries no
+# discriminative signal for topic-NAME similarity — it just makes a
+# short, generic topic name spuriously out-score a real match for any
+# question that happens to mention the organization (see
 # retrieval_service.RetrievalService.match_topic, the only place this
 # is used). Deliberately NOT stripped from the retrieval query used
-# for actual dense/BM25 document search — "CMRIT" can be genuine,
-# load-bearing content there (e.g. "study at CMRIT", "CMRIT website").
-_INSTITUTION_NAME_PATTERN = re.compile(r"\bCMRIT(?:'s)?\b", re.IGNORECASE)
+# for actual dense/BM25 document search — the name can be genuine,
+# load-bearing content there (e.g. "study at Acme", "Acme website").
 
 # Skipped when indexing/matching so a common word inside a glossary
 # phrase (e.g. "and", "of") doesn't make every question containing it
@@ -58,10 +58,15 @@ def _significant_words(text: str) -> set:
     return {word for word in words if word not in _STOPWORDS and len(word) >= _MIN_WORD_LENGTH}
 
 
-def strip_institution_name(question: str) -> str:
-    """Removes standalone "CMRIT" from question, collapsing any
-    resulting double spaces. See _INSTITUTION_NAME_PATTERN for why."""
-    stripped = _INSTITUTION_NAME_PATTERN.sub("", question)
+def strip_institution_name(question: str, institution_name: str = None) -> str:
+    """Removes standalone occurrences of institution_name from question
+    (plus a trailing "'s"), collapsing any resulting double spaces. A
+    no-op when institution_name isn't configured. See the comment above
+    for why this only matters for topic-NAME matching."""
+    if not institution_name:
+        return question
+    pattern = re.compile(rf"\b{re.escape(institution_name)}(?:'s)?\b", re.IGNORECASE)
+    stripped = pattern.sub("", question)
     return re.sub(r"\s+", " ", stripped).strip()
 
 

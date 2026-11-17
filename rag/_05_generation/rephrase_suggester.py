@@ -21,13 +21,13 @@ chain of silent, unseen retries.
 from rag._05_generation.llm_client import LlmClient, generate_best_effort
 
 _SYSTEM_PROMPT = (
-    "A user asked a question about CMRIT college policies, and no "
-    "matching information was found in the indexed policy documents. "
+    "A user asked a question and no matching information was found in "
+    "the indexed documents. "
     "Write ONE alternative phrasing of the same question that is more "
-    "likely to match how a formal college policy document would "
-    "phrase the topic — e.g. using the likely official policy/section "
-    "name, more formal or specific terminology, or spelling out an "
-    "acronym the user may have abbreviated or vice versa. "
+    "likely to match how a formal document would phrase the topic — "
+    "e.g. using the likely official section name, more formal or "
+    "specific terminology, or spelling out an acronym the user may "
+    "have abbreviated or vice versa. "
     "Keep it a single question asking about the same underlying topic "
     "— do not change what is being asked about, do not answer it, and "
     "do not add any preamble, quotation marks, or explanation. Reply "

@@ -78,6 +78,21 @@ def test_answer_offers_a_rephrase_suggestion_when_nothing_is_found():
     assert llm_client.last_user_prompt == "how many leaves do i get"
 
 
+def test_answer_skips_rephrase_suggestion_when_suggest_rephrase_is_false():
+    """A retry of a previous rephrase suggestion (see
+    dashboard.render_rephrase_suggestion/render_chat_page) must not
+    chain into offering yet another rephrase if it also fails."""
+    retriever = FakeRetrievalService(chunks=[])
+    llm_client = FakeLlmClient(reply="A rephrased question that also fails?")
+
+    pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
+    result = pipeline.answer("What is CMRIT's official leave policy?", suggest_rephrase=False)
+
+    assert result.answer_text == NO_MATCH_MESSAGE
+    assert result.rephrase_suggestion is None
+    assert llm_client.call_count == 0
+
+
 def test_answer_has_no_rephrase_suggestion_when_topic_matched_without_a_document():
     from dataclasses import dataclass
 

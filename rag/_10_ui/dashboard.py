@@ -1,10 +1,11 @@
-"""Streamlit dashboard for the CMRIT college policy assistant.
+"""Streamlit dashboard for this RAG app.
 
-This is the only module that contains UI/dashboard code; every other
-module is a plain Python component that this module calls into.
-`main.py` is the entry point Streamlit runs (`streamlit run main.py`);
-it detects it's running under Streamlit and calls this module's
-main() directly instead of going through its own CLI.
+This is the only module that contains UI/dashboard code (besides
+admin_page.py, the Admin tab's counterpart); every other module is a
+plain Python component that this module calls into. `main.py` is the
+entry point Streamlit runs (`streamlit run main.py`); it detects it's
+running under Streamlit and calls this module's main() directly
+instead of going through its own CLI.
 """
 
 import logging
@@ -19,6 +20,7 @@ from rag._08_auth.session_store import SessionStore
 from rag._08_auth.user_identity import normalize_email
 from rag._09_common.config import PROJECT_ROOT, load_config
 from rag._09_common.system_info import render_system_info_page
+from rag._10_ui.admin_page import render_admin_page
 from rag._05_generation.llm_client import LlmClient
 from rag._05_generation.rag_pipeline import RagPipeline
 from rag._02_indexing.vector_store import VectorStore
@@ -33,8 +35,15 @@ from rag._03_routing.docs_metadata import load_doc_topics
 
 APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icon.png"
 
+# st.set_page_config must run before any other Streamlit call, which
+# is before get_config() (an @st.cache_resource function) is normally
+# reachable — so this one read uses an uncached, module-load-time
+# load_config() call purely to source the page title from config.app.name.
 st.set_page_config(
-    page_title="CMRIT-RAG", page_icon=str(APP_ICON_PATH), layout="wide", initial_sidebar_state="collapsed"
+    page_title=load_config().app.name,
+    page_icon=str(APP_ICON_PATH),
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # Streamlit's default centered layout leaves large blank margins on
@@ -85,10 +94,6 @@ st.markdown(
 DEBUG_ENABLED = os.environ.get("RAG_DEBUG", "false").lower() == "true"
 
 RETRIEVAL_DEBUG_LOG_PATH = PROJECT_ROOT / "logs" / "retrieval_debug.log"
-
-# The email gate is skipped for now; every session is attributed to
-# this address instead.
-DEFAULT_USER_EMAIL = normalize_email("sirish.k@cmrit.ac.in")
 
 
 def render_page_title(title):
@@ -201,10 +206,12 @@ def get_glossary():
 
 
 def get_rag_pipeline():
+    config = get_config()
     return RagPipeline(
         retrieval_service=get_retrieval_service(),
         llm_client=get_llm_client(),
         glossary=get_glossary(),
+        no_match_message=config.app.no_match_message,
     )
 
 
@@ -452,6 +459,10 @@ def render_rephrase_suggestion(rephrase_suggestion, message_index):
     st.info("Try reframing your question. For example:")
     if st.button(rephrase_suggestion, key=f"rephrase-{message_index}", use_container_width=True):
         st.session_state.pending_question = rephrase_suggestion
+        # Marks this retry so render_chat_page tells the pipeline not to
+        # offer yet another rephrase suggestion if this one also fails —
+        # see RagPipeline.answer's suggest_rephrase parameter.
+        st.session_state.pending_question_is_rephrase_retry = True
         st.rerun()
 
 
@@ -488,32 +499,20 @@ def render_answer_time(total_seconds):
     st.caption(f"⏱️ Answered in {total_seconds:.1f}s")
 
 
-# A handful of representative, already-indexed policy questions shown
-# as one-click starting points, so a new user isn't stuck guessing
-# what to type. Limited to questions verified to score RAGAS
-# faithfulness == 1.0 against the live pipeline — "grievance
-# redressal" and "anti-ragging" were dropped because the pipeline
-# currently can't answer them at all (no matching indexed document),
-# so clicking them would only produce a refusal.
-EXAMPLE_QUERIES = [
-    "Give details on the leave application and approval process?",
-    "Give details on the probation period completion process?",
-    "What are the staff welfare measures at CMRIT?",
-    "What is the CMRIT quality policy?",
-]
-
-
-def render_example_queries():
-    """Shows EXAMPLE_QUERIES as clickable buttons in the sidebar, in
-    place of typing. Rendered in the sidebar rather than the main chat
-    page so it doesn't compete for space with the answer/citations,
-    and kept visible for the whole session (not just before the first
-    question) so it stays available as a quick shortcut throughout the
-    conversation.
+def render_example_queries(example_queries):
+    """Shows example_queries (config.app.example_queries — a handful of
+    representative, already-indexed questions, deployment-specific) as
+    clickable buttons in the sidebar, in place of typing. Rendered in
+    the sidebar rather than the main chat page so it doesn't compete
+    for space with the answer/citations, and kept visible for the whole
+    session (not just before the first question) so it stays available
+    as a quick shortcut throughout the conversation.
     """
+    if not example_queries:
+        return
     with st.sidebar:
         st.caption("Try one of these:")
-        for example_query in EXAMPLE_QUERIES:
+        for example_query in example_queries:
             if st.button(example_query, key=f"example-{example_query}", use_container_width=True):
                 st.session_state.pending_question = example_query
                 st.rerun()
@@ -564,19 +563,11 @@ def render_chat_page():
     session_store = get_session_store()
     ensure_active_session(session_store, config.session.timeout_minutes)
 
-    render_page_title("CMRIT College Policy Assistant")
-    st.write(
-        "This assistant answers questions about CMRIT college policies "
-        "using only the official policy documents. It will not answer "
-        "questions unrelated to those policies."
-    )
-    st.caption(
-        "Ask a question about CMRIT college policies. Answers are grounded "
-        "in the official policy documents."
-    )
+    render_page_title(config.app.name)
+    st.write(config.app.description)
     render_session_countdown(session_store, config)
     render_estimated_response_time(session_store)
-    render_example_queries()
+    render_example_queries(config.app.example_queries)
 
     for message_index, message in enumerate(st.session_state.chat_history):
         with st.chat_message(message["role"]):
@@ -594,13 +585,19 @@ def render_chat_page():
                 render_answer_time(message.get("total_seconds"))
                 render_debug_panel(message.get("question", ""), message.get("sources", []))
 
-    question = st.chat_input("Ask about a college policy...")
+    question = st.chat_input("Ask a question about the indexed documents...")
     is_new_question = question is not None
+    is_rephrase_retry = False
     if not question:
-        # Set by render_example_queries() when the user clicks a
-        # readymade question instead of typing one.
+        # Set by render_example_queries() (or render_rephrase_suggestion)
+        # when the user clicks a readymade question instead of typing one.
         question = st.session_state.pop("pending_question", None)
         is_new_question = question is not None
+        # Only set when the readymade question was itself a rephrase
+        # suggestion (see render_rephrase_suggestion) — tells
+        # rag_pipeline.answer not to offer yet another one if this
+        # retry also fails.
+        is_rephrase_retry = st.session_state.pop("pending_question_is_rephrase_retry", False)
     if not question:
         # Nothing typed/clicked this run. If the last turn is a user
         # message with no assistant reply after it, the run that was
@@ -638,11 +635,12 @@ def render_chat_page():
             )
 
         with st.chat_message("assistant"):
-            with st.spinner("Checking the policy documents..."):
+            with st.spinner("Checking the indexed documents..."):
                 rag_pipeline = get_rag_pipeline()
                 result = rag_pipeline.answer(
                     question,
                     conversation_history=conversation_history,
+                    suggest_rephrase=not is_rephrase_retry,
                 )
             # Idle countdown restarts from when the answer is delivered,
             # not from when the question was submitted, so a slow
@@ -691,11 +689,15 @@ def render_system_info():
     render_system_info_page(config, get_vector_store(), st.session_state.user_email)
 
 
+def render_admin():
+    render_admin_page(get_config())
+
+
 def main():
     config = get_config()
 
     if "user_email" not in st.session_state:
-        st.session_state.user_email = DEFAULT_USER_EMAIL
+        st.session_state.user_email = normalize_email(config.app.default_user_email)
 
     render_sidebar(config, get_session_store())
 
@@ -703,6 +705,7 @@ def main():
         [
             st.Page(render_chat_page, title="Chat", icon="💬", default=True),
             st.Page(render_system_info, title="System Info", icon="ℹ️"),
+            st.Page(render_admin, title="Admin", icon="🔧"),
         ]
     )
     pages.run()

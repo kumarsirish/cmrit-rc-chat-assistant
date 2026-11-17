@@ -47,19 +47,27 @@ def test_expand_query_handles_empty_glossary():
 
 
 def test_strip_institution_name_removes_standalone_mention():
-    assert strip_institution_name("roles and responsibilities at CMRIT") == "roles and responsibilities at"
+    assert (
+        strip_institution_name("roles and responsibilities at CMRIT", "CMRIT")
+        == "roles and responsibilities at"
+    )
 
 
 def test_strip_institution_name_removes_possessive():
-    assert strip_institution_name("what is CMRIT's quality policy") == "what is quality policy"
+    assert strip_institution_name("what is CMRIT's quality policy", "CMRIT") == "what is quality policy"
 
 
 def test_strip_institution_name_is_case_insensitive():
-    assert strip_institution_name("cmrit leave policy") == "leave policy"
+    assert strip_institution_name("cmrit leave policy", "CMRIT") == "leave policy"
 
 
 def test_strip_institution_name_leaves_other_text_untouched():
     question = "how many casual leaves am I allowed per year?"
+    assert strip_institution_name(question, "CMRIT") == question
+
+
+def test_strip_institution_name_is_a_no_op_when_not_configured():
+    question = "roles and responsibilities at CMRIT"
     assert strip_institution_name(question) == question
 
 

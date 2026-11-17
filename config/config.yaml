@@ -1,5 +1,28 @@
-# Configuration for the CMRIT College Policies RAG application.
+# Configuration for this RAG application.
 # All tunables live here so components can be swapped without touching code.
+
+app:
+  # Shown as the page title and intro text in the UI.
+  name: "RAG Assistant"
+  description: "Ask questions about the documents that have been indexed. Answers are grounded only in those documents."
+  # Clickable example questions shown in the chat sidebar. Replace with
+  # questions relevant to whatever documents this deployment indexes.
+  example_queries:
+    - "Give details on the leave application and approval process?"
+    - "Give details on the probation period completion process?"
+    - "What are the staff welfare measures at CMRIT?"
+    - "What is the CMRIT quality policy?"
+  # Shown when retrieval finds nothing above the relevance threshold.
+  no_match_message: "I could not find any information about this query in the indexed documents."
+  # Every chat session is attributed to this identity since there is no
+  # real login yet — a placeholder, not a security boundary.
+  default_user_email: "admin@example.com"
+
+admin:
+  # Shared password gating the Admin tab (document upload/supersede/
+  # rebuild-index). Override with the RAG_ADMIN_PASSWORD env var instead
+  # of editing this file.
+  password: "change-me"
 
 llm:
   # Which provider answers user questions: "ollama" or "groq".
@@ -38,10 +61,13 @@ embedding:
 
 chroma:
   persist_directory: "./chroma-db-store/chroma_store"
-  collection_name: "college_policies"
+  collection_name: "knowledge_base"
 
 documents:
-  source_directory: "./policies_docs"
+  # Documents (PDF, Word, plain text, Excel) can be arranged category-wise
+  # in subfolders under this directory (e.g. source_directory/"Leave
+  # Policy"/*.pdf) or sit directly in it — both are picked up recursively.
+  source_directory: "./knowledge_documents"
   # Topic -> canonical URL / local PDF filename lookup, used to tag chunks
   # and detect a query's topic at retrieval time.
   metadata_file: "./config/docs-metadata.json"
@@ -49,6 +75,12 @@ documents:
   # by ingest). Used by rag/_03_routing/query_expander.py to expand
   # plain-language questions with institutional terms.
   glossary_file: "./config/glossary.json"
+  # Upload-time bookkeeping (filename/category/upload_date/status) for
+  # documents added via the Admin UI.
+  registry_file: "./config/document_registry.json"
+  # Subfolder name (under each category folder) a superseded document is
+  # moved into; ingestion's directory scan skips anything under it.
+  archived_subfolder_name: "_archived"
 
 chunking:
   # Recursive splitter: paragraph breaks, then line breaks, sentence stops,
