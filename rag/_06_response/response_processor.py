@@ -129,6 +129,12 @@ class RagAnswer:
     # rag._05_generation.rephrase_suggester. None whenever grounded is
     # True, or when generating a suggestion itself failed.
     rephrase_suggestion: str = None
+    # True when query_condenser.condense() actually rewrote the
+    # retrieval query — i.e. this question depended on the immediately
+    # preceding exchange, not a self-contained/unrelated one. Set by
+    # rag_pipeline.answer(); used by dashboard.py to count consecutive
+    # follow-ups toward its per-thread limit (see render_chat_page).
+    used_conversation_context: bool = False
 
     def __post_init__(self):
         if self.cited_indices is None:

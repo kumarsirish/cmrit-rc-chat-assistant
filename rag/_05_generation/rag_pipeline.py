@@ -158,24 +158,35 @@ class RagPipeline:
         self._no_match_message = no_match_message
         self._system_prompt = _build_system_prompt(no_match_message)
 
-    def _with_rephrase_suggestion(
-        self, rag_answer: RagAnswer, question: str, suggest_rephrase: bool = True
+    def _finalize(
+        self,
+        rag_answer: RagAnswer,
+        question: str,
+        suggest_rephrase: bool,
+        used_conversation_context: bool,
     ) -> RagAnswer:
         """Attaches an alternative phrasing suggestion (see
-        rephrase_suggester), but only for the plain "nothing found"
-        refusal (self._no_match_message) — the topic-matched branch of
-        build_no_result_response is also ungrounded but already gives
-        the user a concrete official link instead, so a rephrasing
-        suggestion there would just be clutter, not a next step.
+        rephrase_suggester) and used_conversation_context (see
+        RagAnswer's docstring) — the two bits every answer() return
+        point needs stamped onto its result, done here once instead of
+        at each of the two return points separately.
+
+        The rephrase suggestion only applies to the plain "nothing
+        found" refusal (self._no_match_message) — the topic-matched
+        branch of build_no_result_response is also ungrounded but
+        already gives the user a concrete official link instead, so a
+        rephrasing suggestion there would just be clutter, not a next
+        step.
 
         suggest_rephrase=False (passed by callers retrying a question
         that IS ITSELF a previous rephrase suggestion — see
-        rag_pipeline.answer) skips this entirely, so a failed rephrase
-        attempt doesn't chain into offering yet another one."""
-        if not suggest_rephrase or rag_answer.answer_text != self._no_match_message:
-            return rag_answer
-        suggestion = rephrase_suggester.suggest_rephrase(question, self._llm_client)
-        return dataclasses.replace(rag_answer, rephrase_suggestion=suggestion)
+        rag_pipeline.answer) skips the suggestion entirely, so a
+        failed rephrase attempt doesn't chain into offering yet
+        another one."""
+        if suggest_rephrase and rag_answer.answer_text == self._no_match_message:
+            suggestion = rephrase_suggester.suggest_rephrase(question, self._llm_client)
+            rag_answer = dataclasses.replace(rag_answer, rephrase_suggestion=suggestion)
+        return dataclasses.replace(rag_answer, used_conversation_context=used_conversation_context)
 
     def answer(
         self,
@@ -184,6 +195,7 @@ class RagPipeline:
         top_k: int = None,
         min_reranker_score: float = None,
         suggest_rephrase: bool = True,
+        category_override: str = None,
     ) -> RagAnswer:
         """Answers question, grounded in freshly retrieved chunks.
 
@@ -192,6 +204,12 @@ class RagPipeline:
         is itself a retry of a previous rephrase suggestion, so a
         failed retry doesn't chain into offering yet another rephrase
         (see dashboard.render_rephrase_suggestion/render_chat_page).
+
+        category_override, if given (see dashboard.py's Chat page
+        category picker), is passed straight through to
+        retrieval_service.retrieve() — see its docstring for exactly
+        what a concrete category name vs.
+        retrieval_service.ALL_CATEGORIES vs. None each do.
 
         conversation_history (prior {"role", "content"} turns from the
         same session, if any) is passed to the LLM below so it can
@@ -219,11 +237,16 @@ class RagPipeline:
         """
         overall_start = time.perf_counter()
         condensed_question = query_condenser.condense(question, conversation_history, self._llm_client)
+        # True iff condense() actually rewrote the query, i.e. this
+        # question depended on the immediately preceding exchange —
+        # see RagAnswer.used_conversation_context.
+        used_conversation_context = condensed_question != question
         retrieval_query = query_expander.expand_query(
             condensed_question, self._glossary, self._glossary_index
         )
         chunks, matched_topic = self._retrieval_service.retrieve(
-            retrieval_query, top_k=top_k, min_reranker_score=min_reranker_score
+            retrieval_query, top_k=top_k, min_reranker_score=min_reranker_score,
+            category_override=category_override,
         )
         retrieval_seconds = time.perf_counter() - overall_start
 
@@ -240,7 +263,7 @@ class RagPipeline:
                 total_seconds=total_seconds,
                 no_match_message=self._no_match_message,
             )
-            return self._with_rephrase_suggestion(no_result, question, suggest_rephrase)
+            return self._finalize(no_result, question, suggest_rephrase, used_conversation_context)
 
         context = context_builder.build(chunks)
         user_prompt = f"CONTEXT:\n{context}\n\nQUESTION: {question}"
@@ -267,4 +290,4 @@ class RagPipeline:
             total_seconds=total_seconds,
             no_match_message=self._no_match_message,
         )
-        return self._with_rephrase_suggestion(result, question, suggest_rephrase)
+        return self._finalize(result, question, suggest_rephrase, used_conversation_context)

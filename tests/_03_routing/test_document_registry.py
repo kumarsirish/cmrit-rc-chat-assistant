@@ -51,6 +51,17 @@ def test_register_upload_with_supersedes_archives_the_old_record_and_moves_its_f
     assert archived_path.read_text() == "old content"
 
 
+def test_register_upload_with_same_filename_refreshes_upload_date_instead_of_duplicating(tmp_path):
+    registry_path = tmp_path / "registry.json"
+
+    first = register_upload(str(registry_path), str(tmp_path), "leave.pdf", "Leave Policy")
+    second = register_upload(str(registry_path), str(tmp_path), "leave.pdf", "Leave Policy")
+
+    records = load_registry(str(registry_path))
+    assert len(records) == 1
+    assert second.upload_date >= first.upload_date
+
+
 def test_register_upload_with_supersedes_but_no_matching_active_record_is_a_noop_archive(tmp_path):
     registry_path = tmp_path / "registry.json"
 

@@ -140,9 +140,10 @@ class _CapturingRetrievalService:
         self._retrieval_service = retrieval_service
         self.last_chunks = []
 
-    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None):
+    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None, category_override=None):
         self.last_chunks, matched_topic = self._retrieval_service.retrieve(
-            query, metadata_filter, top_k=top_k, min_reranker_score=min_reranker_score
+            query, metadata_filter, top_k=top_k, min_reranker_score=min_reranker_score,
+            category_override=category_override,
         )
         return self.last_chunks, matched_topic
 

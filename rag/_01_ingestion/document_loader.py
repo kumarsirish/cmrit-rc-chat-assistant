@@ -1,11 +1,12 @@
 """Step 1: Document loading.
 
-Finds the documents (PDF, Word, plain text, Excel) in the configured
-source directory (optionally arranged into per-category subfolders) and
-extracts their raw text, one entry per logical "page" (PDF page, whole
-docx/txt file, or Excel worksheet), via format-specific loaders below.
-Later steps (chunking, embedding) build on top of the PageDocument
-objects returned here, regardless of which format produced them.
+Finds the documents (PDF, Word, plain text, Excel, PowerPoint) in the
+configured source directory (optionally arranged into per-category
+subfolders) and extracts their raw text, one entry per logical "page"
+(PDF page, whole docx/txt file, Excel worksheet, or PowerPoint slide),
+via format-specific loaders below. Later steps (chunking, embedding)
+build on top of the PageDocument objects returned here, regardless of
+which format produced them.
 
 Basic validation lives here too, since it's the same stage that would
 otherwise let a bad document in silently: a file that can't be
@@ -17,12 +18,19 @@ nothing loaded at all.
 
 import logging
 import re
+import zipfile
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
 import openpyxl
 from docx import Document as DocxDocument
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
+from docx.table import Table as DocxTable
+from docx.text.paragraph import Paragraph as DocxParagraph
 from langchain_community.document_loaders import PyPDFLoader
+from pptx import Presentation
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +99,19 @@ def find_document_files(source_directory: str, archived_subfolder_name: str = "_
     return sorted(document_paths)
 
 
+def list_categories(source_directory: str) -> list:
+    """Subfolder names directly under source_directory, each one an
+    existing category a document has already been saved into — used
+    both by the Admin UI's category picker and by the category
+    classifier (rag._03_routing.category_matcher) built from this same
+    list. A brand-new deployment with nothing uploaded yet simply has
+    none."""
+    directory = Path(source_directory)
+    if not directory.exists():
+        return []
+    return sorted(path.name for path in directory.iterdir() if path.is_dir())
+
+
 _UNSAFE_FOLDER_CHARS_PATTERN = re.compile(r"[^\w\s\-().,&]")
 
 
@@ -120,6 +141,43 @@ def save_uploaded_document(source_directory: str, topic: str, filename: str, con
     document_path = topic_directory / Path(filename).name
     document_path.write_bytes(content)
     return document_path
+
+
+def extract_zip_archive(source_directory: str, topic: str, zip_content: bytes) -> list:
+    """Extracts every supported document file from a zip archive's
+    bytes into source_directory/<topic folder>, for the Admin UI's
+    bulk-upload flow (uploading a .zip instead of a single document).
+
+    Any folder structure inside the zip is flattened — only each
+    entry's basename is used, same path-traversal protection as
+    save_uploaded_document — and a same-named existing file is
+    overwritten, so re-uploading a zip to update several documents at
+    once just replaces them in place. Entries that are directories, or
+    whose extension isn't in _LOADERS_BY_EXTENSION (including zip
+    metadata cruft like __MACOSX/ or .DS_Store), are skipped.
+
+    The zip itself is never written to disk — it's read entirely from
+    the bytes already held in memory (the Admin UI's uploaded file),
+    so there is nothing left to clean up once this returns.
+
+    Returns the filenames actually extracted.
+    """
+    topic_directory = Path(source_directory) / sanitize_topic_folder_name(topic)
+    topic_directory.mkdir(parents=True, exist_ok=True)
+
+    extracted_filenames = []
+    with zipfile.ZipFile(BytesIO(zip_content)) as archive:
+        for entry in archive.infolist():
+            if entry.is_dir():
+                continue
+            filename = Path(entry.filename).name
+            if not filename or filename.startswith("."):
+                continue
+            if Path(filename).suffix.lower() not in _LOADERS_BY_EXTENSION:
+                continue
+            (topic_directory / filename).write_bytes(archive.read(entry))
+            extracted_filenames.append(filename)
+    return extracted_filenames
 
 
 def load_pdf(pdf_path: Path) -> list:
@@ -183,8 +241,39 @@ def load_pdf(pdf_path: Path) -> list:
     return pages
 
 
+def _iter_docx_blocks(document):
+    """Yields each top-level paragraph/table in the document's actual
+    reading order. python-docx's own document.paragraphs/document.tables
+    are separate flat lists that lose how paragraphs and tables are
+    interleaved in the real document — walking the body's own XML
+    children instead preserves that order."""
+    for child in document.element.body.iterchildren():
+        if isinstance(child, CT_P):
+            yield DocxParagraph(child, document)
+        elif isinstance(child, CT_Tbl):
+            yield DocxTable(child, document)
+
+
+def _table_text(table) -> str:
+    """One line per row, cells joined with a wide gap — a plain-text
+    shape chunker.py's table-line heuristic already recognizes as a
+    table (see chunker.py's _TABLE_LINE_PATTERN), same as how a table
+    inside a PDF reads once PyPDFLoader flattens it to text."""
+    lines = []
+    for row in table.rows:
+        cells = [cell.text.strip() for cell in row.cells]
+        if any(cells):
+            lines.append("   ".join(cells))
+    return "\n".join(lines)
+
+
 def load_docx(docx_path: Path) -> list:
-    """Extracts text from a Word document.
+    """Extracts text from a Word document — both ordinary paragraphs
+    and any tables (a checklist or form laid out entirely as a table,
+    with no body paragraphs at all, previously yielded nothing: see the
+    "Checklist for RC Submission.docx" investigation, where
+    document.paragraphs was empty because every line of real content
+    sat inside two tables).
 
     python-docx has no reliable way to recover Word's own page breaks
     (they're a rendering-time concept, not stored per-paragraph), so
@@ -195,11 +284,16 @@ def load_docx(docx_path: Path) -> list:
     the whole document is a valid, if less granular, value for that.
     """
     try:
-        paragraphs = [paragraph.text for paragraph in DocxDocument(str(docx_path)).paragraphs]
+        document = DocxDocument(str(docx_path))
+        blocks = []
+        for block in _iter_docx_blocks(document):
+            block_text = block.text if isinstance(block, DocxParagraph) else _table_text(block)
+            if block_text.strip():
+                blocks.append(block_text)
     except Exception as exc:
         raise DocumentLoadError(f"Could not open/parse Word document {docx_path.name}: {exc}") from exc
 
-    text = "\n".join(paragraphs).strip()
+    text = "\n\n".join(blocks).strip()
     if not text:
         raise DocumentLoadError(f"{docx_path.name} yielded no extractable text.")
     return [PageDocument(text=text, source_file=docx_path.name, page_number=1)]
@@ -248,11 +342,48 @@ def load_xlsx(xlsx_path: Path) -> list:
     return pages
 
 
+def load_pptx(pptx_path: Path) -> list:
+    """Extracts text from a PowerPoint deck, one PageDocument per slide
+    (page_number = the slide's 1-indexed position) — slides are the
+    natural "page" unit here, same reasoning as one PageDocument per
+    Excel worksheet in load_xlsx.
+
+    Every shape with a text frame (title, body, text boxes) has its
+    paragraphs joined into that slide's text; shapes with no text
+    (images, plain lines/connectors) contribute nothing. Slides with no
+    extractable text at all (e.g. image-only) are skipped, same as a
+    blank PDF page.
+    """
+    try:
+        presentation = Presentation(str(pptx_path))
+    except Exception as exc:
+        raise DocumentLoadError(f"Could not open/parse PowerPoint file {pptx_path.name}: {exc}") from exc
+
+    pages = []
+    for slide_index, slide in enumerate(presentation.slides, start=1):
+        lines = []
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for paragraph in shape.text_frame.paragraphs:
+                paragraph_text = "".join(run.text for run in paragraph.runs).strip()
+                if paragraph_text:
+                    lines.append(paragraph_text)
+        slide_text = "\n".join(lines).strip()
+        if slide_text:
+            pages.append(PageDocument(text=slide_text, source_file=pptx_path.name, page_number=slide_index))
+
+    if not pages:
+        raise DocumentLoadError(f"{pptx_path.name} yielded no extractable text on any slide.")
+    return pages
+
+
 _LOADERS_BY_EXTENSION = {
     ".pdf": load_pdf,
     ".docx": load_docx,
     ".txt": load_txt,
     ".xlsx": load_xlsx,
+    ".pptx": load_pptx,
 }
 
 

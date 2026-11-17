@@ -6,6 +6,7 @@ timeouts, etc.) can be changed in one place.
 """
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +15,21 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 DEFAULT_CONFIG_PATH = CONFIG_DIR / "config.yaml"
+
+_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
+
+
+def slugify_app_name(app_name: str) -> str:
+    """Turns app.name into a safe identifier — lowercased, every run of
+    non-alphanumeric characters collapsed to a single underscore, and
+    trimmed. Used to derive the Chroma collection name and the MySQL
+    database name from app.name, so multiple deployments sharing one
+    Chroma/MySQL instance (different config.yaml, same servers) each
+    get their own collection/database instead of mixing data —
+    renaming app.name is then the one place that changes which
+    collection/database this deployment reads and writes."""
+    slug = _SLUG_PATTERN.sub("_", app_name.strip().lower()).strip("_")
+    return slug or "app"
 
 
 @dataclass
@@ -51,6 +67,10 @@ class EmbeddingConfig:
 @dataclass
 class ChromaConfig:
     persist_directory: str
+    # Derived from app.name (see slugify_app_name), not read from
+    # config.yaml directly — so each deployment's collection is named
+    # after its own app, even when several deployments share one
+    # Chroma persist_directory/server.
     collection_name: str
 
 
@@ -100,6 +120,12 @@ class DocumentsConfig:
     # under a folder with this name, so an archived document stops being
     # retrievable without needing to touch the vector store directly.
     archived_subfolder_name: str = "_archived"
+    # Records the duration of the last successful run_ingestion() call
+    # (see helper_scripts/ingest.py's save_ingestion_stats) — read by
+    # the Admin tab's "Rebuild index" button to show an estimated time
+    # before the next run, since there's no other way to predict how
+    # long a given document set will take to re-embed.
+    ingestion_stats_file: str = "./config/ingestion_stats.json"
 
 
 @dataclass
@@ -140,6 +166,12 @@ class RetrievalConfig:
     # score is at least this — below it, the query is treated as
     # genuinely unanswerable and no chunk is returned at all.
     low_confidence_min_score: float = 0.05
+    # Minimum cosine similarity a query must clear against a category
+    # name (see rag._03_routing.category_matcher.EmbeddingCategoryMatcher)
+    # for that category to scope an otherwise-GLOBAL search. An untuned
+    # starting default, unlike topic_match_threshold/min_reranker_score
+    # above — revisit once there's evaluation data for it.
+    category_match_threshold: float = 0.35
 
 
 @dataclass
@@ -181,6 +213,11 @@ class DatabaseConfig:
     port: int
     user: str
     password: str
+    # Derived from app.name (see slugify_app_name), not read from
+    # config.yaml directly — so each deployment gets its own MySQL
+    # database (sessions/messages/timing all scoped to it) even when
+    # several deployments share one MySQL server, instead of mixing
+    # session history and "estimated answer time" stats across apps.
     database: str
 
 
@@ -252,7 +289,7 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     chroma_raw = raw["chroma"]
     chroma_cfg = ChromaConfig(
         persist_directory=_resolve_path(chroma_raw["persist_directory"]),
-        collection_name=chroma_raw["collection_name"],
+        collection_name=slugify_app_name(app_cfg.name),
     )
 
     documents_raw = raw["documents"]
@@ -262,6 +299,9 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         glossary_file=_resolve_path(documents_raw["glossary_file"]),
         registry_file=_resolve_path(documents_raw["registry_file"]),
         archived_subfolder_name=documents_raw.get("archived_subfolder_name", "_archived"),
+        ingestion_stats_file=_resolve_path(
+            documents_raw.get("ingestion_stats_file", "./config/ingestion_stats.json")
+        ),
     )
 
     chunking_cfg = ChunkingConfig(**raw["chunking"])
@@ -295,6 +335,7 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     database_raw["password"] = os.environ.get(
         "RAG_DB_PASSWORD", database_raw["password"]
     )
+    database_raw["database"] = f"{slugify_app_name(app_cfg.name)}_sessions"
     database_cfg = DatabaseConfig(**database_raw)
 
     redis_cfg = RedisConfig(**raw["redis"])

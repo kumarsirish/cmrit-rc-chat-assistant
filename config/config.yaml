@@ -3,15 +3,12 @@
 
 app:
   # Shown as the page title and intro text in the UI.
-  name: "RAG Assistant"
+  name: "RC Assistant"
   description: "Ask questions about the documents that have been indexed. Answers are grounded only in those documents."
-  # Clickable example questions shown in the chat sidebar. Replace with
-  # questions relevant to whatever documents this deployment indexes.
-  example_queries:
-    - "Give details on the leave application and approval process?"
-    - "Give details on the probation period completion process?"
-    - "What are the staff welfare measures at CMRIT?"
-    - "What is the CMRIT quality policy?"
+  # Clickable example questions shown in the chat sidebar. Empty means
+  # none are shown; fill in questions relevant to whatever documents
+  # this deployment indexes.
+  example_queries: []
   # Shown when retrieval finds nothing above the relevance threshold.
   no_match_message: "I could not find any information about this query in the indexed documents."
   # Every chat session is attributed to this identity since there is no
@@ -61,7 +58,10 @@ embedding:
 
 chroma:
   persist_directory: "./chroma-db-store/chroma_store"
-  collection_name: "knowledge_base"
+  # Collection name is derived from app.name above, not set here — so
+  # renaming app.name is the one place that changes which collection
+  # this deployment reads/writes, even if several deployments share
+  # one Chroma persist_directory.
 
 documents:
   # Documents (PDF, Word, plain text, Excel) can be arranged category-wise
@@ -81,6 +81,9 @@ documents:
   # Subfolder name (under each category folder) a superseded document is
   # moved into; ingestion's directory scan skips anything under it.
   archived_subfolder_name: "_archived"
+  # Records the last successful ingestion run's duration, so the Admin
+  # tab's "Rebuild index" button can show an estimated time.
+  ingestion_stats_file: "./config/ingestion_stats.json"
 
 chunking:
   # Recursive splitter: paragraph breaks, then line breaks, sentence stops,
@@ -119,6 +122,11 @@ retrieval:
   # Minimum query-topic cosine similarity (rag/_03_routing/topic_matcher.py) to
   # count as a topic match; below this, retrieval falls back to GLOBAL mode.
   topic_match_threshold: 0.5
+  # Minimum query-category cosine similarity (rag/_03_routing/category_matcher.py)
+  # for a category to scope an otherwise-GLOBAL search. Untuned starting
+  # default — lower than topic_match_threshold since category names are
+  # broader/less specific than topic names.
+  category_match_threshold: 0.35
   hybrid:
     # GLOBAL mode only (MAPPED_DOCUMENT mode skips this). When enabled,
     # dense + BM25 search run in parallel and are combined via Reciprocal
@@ -147,7 +155,7 @@ session:
   warning_seconds_before_timeout: 60
   # How many recent chat messages (user + assistant) are sent as context
   # for a new question, capped to bound prompt/generation growth.
-  max_history_messages: 1
+  max_history_messages: 2
 
 evaluation:
   # RAGAS judge: scores live pipeline answers against test_data_path using
@@ -192,11 +200,13 @@ evaluation:
 database:
   # Session/history storage in MySQL. Password can be overridden via the
   # RAG_DB_PASSWORD environment variable instead of editing this file.
+  # The database name itself is derived from app.name above (not set
+  # here), so each deployment's sessions/messages/timing stats stay in
+  # their own database even if several deployments share one MySQL server.
   host: "127.0.0.1"
   port: 3306
   user: "sirkumar"
   password: "Issa123#"
-  database: "rag_sessions"
 
 redis:
   # Global cache of frequently-repeated questions' retrieved chunks

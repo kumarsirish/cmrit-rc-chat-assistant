@@ -1,14 +1,14 @@
 {
-  "run_at": "2026-10-01T08:13:14.705995+00:00",
+  "run_at": "2026-11-17T09:46:30.437894+00:00",
   "judge_provider": "gemini",
   "judge_model": "gemini-3.1-flash-lite",
   "min_score": 0.5,
   "mean_scores": {
-    "faithfulness": 0.9649122807017544,
-    "answer_relevancy": 0.9477443609022557,
-    "answer_correctness": 0.7,
-    "context_precision": 0.7680061761546724,
-    "context_recall": 0.8359649122807018
+    "faithfulness": 0.7894736842105263,
+    "answer_relevancy": 0.8665413533834586,
+    "answer_correctness": 0.5736842105263158,
+    "context_precision": 0.5565789473684211,
+    "context_recall": 0.6789473684210526
   },
   "nan_treated_as_zero_counts": {
     "faithfulness": 0,
@@ -17,100 +17,39 @@
     "context_precision": 0,
     "context_recall": 0
   },
-  "baseline_comparison": {
-    "faithfulness": {
-      "current": 0.9649122807017544,
-      "baseline": 1.0,
-      "delta": -0.03508771929824561
-    },
-    "answer_relevancy": {
-      "current": 0.9477443609022557,
-      "baseline": 0.9735449735449735,
-      "delta": -0.025800612642717824
-    },
-    "answer_correctness": {
-      "current": 0.7,
-      "baseline": 0.7333333333333333,
-      "delta": -0.033333333333333326
-    },
-    "context_precision": {
-      "current": 0.7680061761546724,
-      "baseline": 0.7854166666666667,
-      "delta": -0.01741049051199428
-    },
-    "context_recall": {
-      "current": 0.8359649122807018,
-      "baseline": 0.9722222222222222,
-      "delta": -0.1362573099415204
-    }
-  },
+  "baseline_comparison": null,
   "unanswerable_refusals": [
     {
-      "question": "What is the capital of France?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "correctly_refused": true
-    },
-    {
-      "question": "What is the process to get a refund for a cancelled flight booking?",
-      "answer": "I could not find any information about this query in the college policy documents.",
+      "question": "what is the principal's email address",
+      "answer": "I could not find any information about this query in the indexed documents.",
       "correctly_refused": true
     }
   ],
   "rows": [
     {
-      "question": "how many casual leaves are permanent staff allowed per year",
-      "answer": "Permanent staff are allowed a maximum of twelve casual leaves per calendar year [1][4][5].",
-      "category": "normal",
+      "question": "how much registration fee can be reimbursed for presenting a paper at an external conference and what are the conditions",
+      "answer": "Faculty members can request reimbursement for the registration fee for presenting a research paper at an external Scopus-indexed conference, up to a maximum amount of Rs. 8,000/- [3][4]. This reimbursement is limited to one paper per academic year [3][4].\n\nThe conditions for claiming this reimbursement are:\n*   Pre-approval must be obtained from the Principal before remitting the registration fee [3][4].\n*   The Pre-approval Request form is available on the CMRIT website [3][4].\n*   If approved, the reimbursement claim must be submitted within one month after attending the conference [3].\n*   No other incentives can be claimed for the paper for which the registration fee is reimbursed [3].\n*   If multiple authors of the paper are from CMRIT, only the one faculty member presenting the paper can claim the amount, and all other CMRIT authors must provide a no-objection certificate while taking pre-approval [3].\n\nAdditionally, general rules for conference registration and travel expense reimbursement state that the publication must meet the criteria for Research Publications, be above the faculty's designated workload, and have an estimate of costs approved by the Research Committee (RC) before the conference [1][5]. In such cases, the reimbursement covers 50% of the conference registration and 50% of travel expenses [5].",
+      "category": "Approval and claim forms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 0.7000000000000001,
+      "answer_correctness": 0.9,
+      "context_precision": 0.41666666666666663,
       "context_recall": 1.0
     },
     {
-      "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
-      "answer": "The maximum vacation leave permitted per semester for staff who have completed one year of service is seven working days [1][4][5].",
-      "category": "normal",
+      "question": "my conference paper has three cmrit authors who can claim the registration fee and what is required",
+      "answer": "Only one faculty member (author) who is presenting the paper can claim the registration fee reimbursement [2]. All other CMRIT authors must provide a no objection to the presenting author while the pre-approval is being taken [2].",
+      "category": "Approval and claim forms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 0.7000000000000001,
-      "context_recall": 1.0
+      "answer_correctness": 0.4,
+      "context_precision": 0.5833333333333333,
+      "context_recall": 0.6666666666666666
     },
     {
-      "question": "how long is the probation period for new employees at CMRIT",
-      "answer": "The probation period for new employees at CMRIT is 1 year from the date of joining [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "when does the probation completion process start in Darwinbox",
-      "answer": "The probation completion process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "does CMRIT provide PF and ESI benefits to staff",
-      "answer": "Yes, CMRIT provides PF and ESI benefits to staff. All eligible employees as per the statute are entitled to PF & ESI facility [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what compensatory off is given for working on a holiday",
-      "answer": "Staff called for work on a holiday by the head of department or Vice Principal are provided with the following compensatory-off:\n*   Half a day for working four hours [2].\n*   One day for working eight hours [2].\n\nAlternatively, other policy documents specify the compensatory-off as:\n*   Half a day for working beyond three hours [5][6][8].\n*   One day for working beyond six hours [5][6][8].",
-      "category": "normal",
+      "question": "how is the kapila grant released to the institute",
+      "answer": "The KAPILA grant is released to the institute on a reimbursement mode after approval by the MIC's Innovation Cell [2].",
+      "category": "Funding schemes",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
       "answer_correctness": 0.7,
@@ -118,69 +57,59 @@
       "context_recall": 1.0
     },
     {
-      "question": "what is CMRIT's quality policy",
-      "answer": "CMRIT's quality policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress [1].",
-      "category": "normal",
+      "question": "what incentive can i claim for a paper published in a scopus q1 or q2 journal",
+      "answer": "You can claim an incentive of Rs. 15,000 for a paper published in a Scopus Q1 journal and Rs. 10,000 for a paper published in a Scopus Q2 journal [4].\n\nTo be eligible, the paper's subject area must fall in Q1 or Q2 on the subcategory of the journal as verified on the Scimago Journal Ranking website [4][5]. This incentive is limited to a maximum of four papers per person per academic year, with special approval required for any additional papers [5].",
+      "category": "Policies and norms",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.9,
+      "context_precision": 0.325,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how much incentive is given for a patent grant and how is it shared",
+      "answer": "The incentive for a patent grant (Indian or non-Indian utility patent) is Rs. 25,000/- [2]. This amount should be equally divided among all the CMRIT inventors [2].",
+      "category": "Policies and norms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
       "answer_correctness": 1.0,
+      "context_precision": 0.5,
+      "context_recall": 1.0
+    },
+    {
+      "question": "how many days does the rc review process take",
+      "answer": "The RC review process involves the following timelines:\n*   The DRC is required to provide review comments within five days of receiving the submission [1].\n*   The RC is required to respond with comments within two days [1].\n\n[1]",
+      "category": "Policies and norms",
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.75,
+      "answer_correctness": 0.3,
       "context_precision": 1.0,
-      "context_recall": 1.0
+      "context_recall": 0.5
     },
     {
-      "question": "what mandatory training must new faculty complete within six months of joining",
-      "answer": "New faculty at CMRIT must complete the following mandatory training within six months of joining:\n\n*   CO - PO Computation Training\n*   Paper & Proposal Writing Training\n*   Patent Drafting and Filing Procedures for new faculty\n*   Start-up Training for new Faculty\n*   Mentoring Process Guidelines during Orientation\n*   Mentor Development Program [1][2]",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "how often is the faculty semester evaluation done",
-      "answer": "The faculty semester evaluation is conducted two times in a year [1].\n\n*   In January for the period of July to December.\n*   In July for the period of January to June [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.75,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what is the official CMRIT website address",
-      "answer": "The official CMRIT website address is https://www.cmrit.ac.in [4].",
-      "category": "normal",
-      "faithfulness": 1.0,
+      "question": "how much other incentive can a faculty member claim if they worked at cmrit for 7 months in an academic year",
+      "answer": "A faculty member who worked at CMRIT for 7 months in an academic year can claim an \"Other Incentives\" amount of Rs. 2250/- [4].",
+      "category": "Policies and norms",
+      "faithfulness": 0.0,
       "answer_relevancy": 1.0,
       "answer_correctness": 1.0,
       "context_precision": 0.25,
       "context_recall": 1.0
     },
     {
-      "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
-      "answer": "As a faculty member, you are required to complete at least one NPTEL Technical MOOC course during each academic year (July to June) [2][3].\n\nThe course must meet the following specific requirements:\n*   **Duration:** The course should be at least 8 weeks long, or you may complete two 4-week courses [2][3].\n*   **Relevance:** The course must have relevance to science or engineering and closely match the subjects you teach for UG/PG students [4][5].\n*   **Assessment:** You must write the NPTEL exam and earn a certificate [2][3].\n*   **Score:** You must score a minimum of 75% to secure a Silver certificate [4][5].\n*   **Approval:** You must obtain prior approval for the MOOC course from the DRC Head and HoD [2].\n*   **Data Sharing:** When filling out the examination form, you are mandatory to answer \"yes\" to sharing your scores with the college [2][3].\n\nIf you teach two subjects, you are required to obtain a related NPTEL Silver certificate for each of the two subjects within 2 years [4][5].",
-      "category": "normal",
+      "question": "how much does a 5 lakh uba proposal and a 20 lakh modrob proposal count for in the core load",
+      "answer": "A 5 lakh UBA proposal counts as Rs. 1.5 lakhs for core load calculations [2].\nA 20 lakh MODROB proposal counts as Rs. 2 lakhs for core load calculations [2].",
+      "category": "Policies and norms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
-      "answer_correctness": 0.6,
-      "context_precision": 0.6791666666666667,
+      "answer_correctness": 1.0,
+      "context_precision": 0.5,
       "context_recall": 1.0
     },
     {
-      "question": "How often am I expected to present something beyond the syllabus to my department?",
-      "answer": "You are expected to present a technical topic beyond the curriculum during the departmental half-day [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.4,
-      "context_precision": 1.0,
-      "context_recall": 0.5
-    },
-    {
-      "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
-      "answer": "You need to give three months' advance notice to resign from a teaching position [4].",
-      "category": "normal",
+      "question": "how much funding is needed to complete one consultancy load and how many research papers make one rp load",
+      "answer": "One consultancy load (sub-unit) is equivalent to Rs. 50,000 received by CMRIT [4].\nOne research paper load (sub-unit) is equivalent to one paper published [4].",
+      "category": "Policies and norms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
       "answer_correctness": 0.6,
@@ -188,229 +117,49 @@
       "context_recall": 0.6666666666666666
     },
     {
-      "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
-      "answer": "The department needs to track students who are failing exams by creating a list of probable ineligible students at the beginning of the semester [1][2]. Additionally, the policy mandates that failures in internal or external exams be restricted to the following thresholds:\n*   Failure in 1 subject: less than 5%\n*   Failure in 2 subjects: less than 3%\n*   Failure in 3 subjects: less than 2%\n*   Failure in 4 or more subjects: less than 1% [1][2]\n\nTeachers are required to mentor and closely track the performance of each student, seeking help from a counsellor as necessary [1][2].",
-      "category": "normal",
+      "question": "how many days will it take to get approval from the drc and the rc",
+      "answer": "The approval process involves two distinct stages with specific timelines:\n\n1.  The DRC is required to provide review comments within **five days** of receiving the submission [1].\n2.  After approval by the DRC, the submission is forwarded to two RC members, who are required to respond with comments within **two days** [1].\n\nTherefore, the total time for the review and comment phase from both bodies is **seven days** [1].",
+      "category": "Policies and norms",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
-      "answer_correctness": 0.8,
-      "context_precision": 0.9166666666666666,
-      "context_recall": 1.0
-    },
-    {
-      "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
-      "answer": "After you submit a complaint, the Principal may set up an inquiry committee to study and resolve the matter if required [1]. Additionally, complaints submitted via the suggestion/complaint boxes are opened regularly, and prompt redress is done [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.6,
+      "answer_correctness": 0.4,
       "context_precision": 1.0,
+      "context_recall": 0.3333333333333333
+    },
+    {
+      "question": "what font style and size should be used in the final year project review presentation and how long can the introduction be",
+      "answer": "The font style should be Times New Roman with a font size of 20 [4]. The introduction should not extend more than two slides [4].",
+      "category": "Presentation decks",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.7,
+      "context_precision": 0.25,
       "context_recall": 1.0
     },
     {
-      "question": "If the fire alarm goes off, where am I supposed to take the students?",
-      "answer": "You must escort the students to the CMRIT playground, which is identified as the Emergency Assembly Area [4].",
-      "category": "normal",
+      "question": "what is the approval process for a mega project mep",
+      "answer": "The approval process for a Mega Project (MEP) involves the following steps:\n\n1.  The project must be presented and approved only if it addresses an innovation/startup challenge, technology challenge, or deployment challenge as proposed in the MEP [1].\n2.  The IE/COE/DRC head and the Head of Department (HoD) must review the project and the two required forms [1].\n3.  If the reviewers are satisfied with the details, they must sign Form-1 (Pre-Screening Project Form) [1].\n4.  The signed Form-1 and the second form (Form-2, the IEP/STARTUP/MEA/MEP Project Proposal Form) are then sent to the Associate Director-Academics for further action [1][2].\n\n[1][2]",
+      "category": "Projects, doctoral and internship forms",
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.7142857142857143,
+      "answer_correctness": 0.9,
+      "context_precision": 1.0,
+      "context_recall": 0.6666666666666666
+    },
+    {
+      "question": "what affiliation should i use in research papers",
+      "answer": "You should use the uniform style \"CMR Institute of Technology, Bengaluru\" when mentioning your affiliation in research papers [4].",
+      "category": "Submission process and checklists",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
       "answer_correctness": 0.5,
       "context_precision": 0.25,
-      "context_recall": 1.0
+      "context_recall": 0.3333333333333333
     },
     {
-      "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
-      "answer": "Students can access 3D printers and laser cutters at the Makerspace [1]. This facility is located in the Workshop and Lab area, specifically in the basement of the First Year Block [4].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 0.9166666666666666,
-      "context_recall": 1.0
-    },
-    {
-      "question": "If I want help filing a patent, who at CMRIT can assist me?",
-      "answer": "The IPR Cell at CMRIT can assist you with filing a patent. This cell is established in collaboration with KSCST (Karnataka State Council for Science and Technology) and aims to guide inventors concerning patenting their inventions with the help of an authorized patent attorney [1][2][3].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.6,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what is the maximum number of OOD and OED leaves permitted per year",
-      "answer": "The maximum number of On-Official-Duty (OOD) leaves permitted per year is fourteen days [1][4][5].\n\nThe maximum number of On Exam-Duty (OED) leaves permitted per year is fourteen days [1][4][6].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.75,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what counts as half a casual leave for late coming",
-      "answer": "Late coming is considered as half a casual leave (CL) if it occurs after fifteen minutes from the start of the day [1][4][5].\n\nAdditionally, an employee will lose half a CL if they are late up to fifteen minutes from the start of the day for three days in a month [1][4][5].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 0.8875,
-      "context_recall": 1.0
-    },
-    {
-      "question": "how is loss-of-pay calculated if leave rules are not followed",
-      "answer": "If leave rules are not followed, the leave is treated as Loss-of-pay (LOP), which is calculated as 1.25 times one day's salary [1][4][5].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.7000000000000001,
-      "context_recall": 1.0
-    },
-    {
-      "question": "within how many days should an emergency leave be applied for",
-      "answer": "An emergency leave application must be submitted within two days of reporting to work [1][4][5].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.7000000000000001,
-      "context_recall": 1.0
-    },
-    {
-      "question": "how long must academic departments retain hard copies of leave approval letters and proof",
-      "answer": "Academic departments must retain hard copies of leave approval letters and proof for a period of at least one year [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.8,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what recommendations can a reporting manager make at the end of an employee's probation period",
-      "answer": "At the end of an employee's probation period, the Reporting Manager can select one of the following four recommendations [1][2]:\n\n*   Recommended for Confirmation\n*   Recommended for Confirmation with Areas of Improvement\n*   Probation Extension\n*   Not Recommended for Confirmation",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.4,
-      "context_precision": 1.0,
-      "context_recall": 0.0
-    },
-    {
-      "question": "what mandatory training must new faculty complete within one year of joining",
-      "answer": "New faculty at CMRIT must complete the following mandatory training within one year of joining:\n\n*   Customer Interaction Training [1][2]\n*   Product Development Training (Optional) [1][2]\n*   Digital Marketing Training (Optional) [1][2]\n\n[1][2]",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.5,
-      "answer_correctness": 0.2,
-      "context_precision": 1.0,
-      "context_recall": 0.0
-    },
-    {
-      "question": "does CMRIT provide salary advances or loans to staff",
-      "answer": "Yes, CMRIT provides salary advances and interest-free loans to staff [4].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 1.0,
-      "context_precision": 0.25,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what incentive does CMRIT give faculty for publishing in SCOPUS Q1 or Q2 journals",
-      "answer": "Faculty members at CMRIT can claim an incentive of Rs. 15,000/- for publishing papers in SCOPUS Q1 journals and Rs. 10,000/- for publishing in SCOPUS Q2 journals [1][2]. This incentive applies to publications that are either non-paid within the core load or paid/non-paid over and above the core load [1][2].\n\n[1][2]",
-      "category": "normal",
-      "faithfulness": 0.6666666666666666,
-      "answer_relevancy": 0.8,
-      "answer_correctness": 1.0,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what are the core responsibilities of a teaching assistant at CMRIT",
-      "answer": "The core responsibilities of a Teaching Assistant at CMRIT include:\n\n*   Assisting teachers to conduct laboratory sessions [1].\n*   Running experiments prior to regular sessions and demonstrating techniques for conducting experiments [1].\n*   Developing knowledge on the operation of all lab equipment and tools [1].\n*   Assisting teachers in the evaluation of lab experiments and records [1].\n*   Supporting classroom activities [1].\n*   Assisting students in learning difficult concepts and completing assignments and project activities [1].\n*   Assisting teachers in conducting tutorial sessions [1].\n*   Assisting teachers in the evaluation of assignments and answer scripts [1].\n*   Acquiring required knowledge in related subjects [1].\n*   Developing teaching skills as well as mentoring skills [1].",
-      "category": "normal",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.9,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "can you give me an overview of the leave policy at CMRIT",
-      "answer": "Based on the provided documents, here is an overview of the leave policy at CMRIT:\n\n**Types of Leave**\nThe recognized leave categories include:\n*   Casual Leave (CL)\n*   On-Official-Duty (OOD)\n*   On Exam-Duty (OED)\n*   Vacation Leave (VL)\n*   Compensatory Off (CO)\n*   Special Duty Leave (SDL) [4]\n\n**Annual Limits and Eligibility**\n*   **Casual Leave (CL):** Permanent staff are permitted a maximum of 12 CLs in a calendar year. Staff on probation receive one casual leave created at the end of each month [4].\n*   **On-Official-Duty (OOD):** The maximum permitted is 14 days per year [4].\n*   **On Exam-Duty (OED):** The maximum permitted is 14 days per year [4].\n*   **Ph.D. Faculty:** Faculty members pursuing a Ph.D. are entitled to one day of OOD per month to meet their external guide, provided they have successfully completed their coursework and submit a signed letter from the guide [5].\n\n**Application and Approval Process**\nTo apply for leave, staff must follow these steps:\n1.  Log in using the SSO option corresponding to their official email domain [2].\n2.  Navigate to \"Time Management - Leave\" [2].\n3.  Select the specific leave category (e.g., CL, VL, OOD) [2].\n4.  Attach necessary approval letters and document proofs, which are required for OOD, OED, and Special Duty Leave [2].\n5.  Submit the application [2].\n\n**Verification and Special Provisions**\n*   **Document Verification:** Approving authorities must thoroughly verify supporting documents for OOD, OED, Special Duty Leave, and any CL or VL exceeding 3 days [3].\n*   **Compensatory Off:** Staff called to work on a holiday receive a half-day compensatory off for working beyond three hours, or a full-day compensatory off for working beyond six hours [5].\n*   **Flexibility:** Teaching and non-teaching staff can utilize Vacation and Casual Leaves flexibly at any time during the academic or calendar year, subject to applicable policies [5].\n*   **Maternity Leave:** Women employees are entitled to maternity leave [5].",
-      "category": "topic",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.7,
-      "context_precision": 0.6791666666666667,
-      "context_recall": 0.6
-    },
-    {
-      "question": "tell me about the roles and responsibilities defined for teaching staff at CMRIT",
-      "answer": "The roles and responsibilities for teaching staff at CMRIT are defined hierarchically, with higher-level positions required to abide by the responsibilities of lower levels.\n\n**Associate Director**\nThe Associate Director is responsible for:\n*   Setting priorities that balance short-term and long-term organizational and departmental goals [1].\n*   Ensuring active staff involvement in departmental and organizational activities [1].\n*   Assigning and evaluating faculty workload [1].\n*   Assigning coordination roles for administrative, research, innovation, consulting, teaching, and other tracks [1].\n*   Mentoring staff regularly and tracking their development plans [1].\n*   Planning and executing academic processes, including CO/PO target setting, calendars, timetables, lesson plans, assessments, result analysis, and retrospectives [1].\n*   Monitoring the effectiveness of the teaching-learning process and sharing best practices [1].\n*   Monitoring the student mentoring process and its effectiveness [1][2].\n*   Monitoring student feedback about faculty and guiding faculty members to improve performance based on that feedback [2].\n*   Analyzing stakeholder feedback, taking actions, and closing the loop for improvement [2].\n*   Conducting advisory board meetings annually and weekly department meetings [2].\n*   Ensuring academic discipline within the department [2].\n*   Abiding by all Roles and Responsibilities at the Professor Level [2].\n\n**Professor**\nThe Professor is responsible for:\n*   Driving external activities for the growth of the department [3].\n*   Publishing research papers or patents, attending conferences, delivering expert talks, and networking in the professional field [3].\n*   Actively involving themselves in administration, admission, accreditation, recruitment, and other processes or events [3].\n*   Making an impact in their chosen field of technical expertise [3].\n*   Making a significant contribution to the development of the department or organization [3].\n*   Abiding by all Roles and Responsibilities at the Assistant Professor Level [3].\n\n**General Faculty Expectations**\nFaculty members are expected to participate in core Research, Consultancy, Projects, Innovation, and Entrepreneurship (RCPIE) activities alongside teaching [7]. These core activities include:\n*   Teaching and Lab conduction\n*   Research Paper publication\n*   Consultancy\n*   Funded Research Projects\n*   Innovation\n*   Entrepreneurship [8]\n\nAdditionally, the Head of Department (HoD) is expected to support and motivate faculty for full engagement, ensure they genuinely contribute to the department, and conduct separate meetings with faculty mentors to explain their specific roles [4][5].",
-      "category": "topic",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.4,
-      "context_precision": 0.961734693877551,
-      "context_recall": 0.5
-    },
-    {
-      "question": "what welfare measures does CMRIT provide for its staff",
-      "answer": "Based on the provided documents, CMRIT provides the following welfare measures for its teaching and non-teaching staff:\n\n*   **Compensatory Offs:** Staff called to work on a holiday receive a half-day compensatory off for working beyond three hours and a full-day compensatory off for working beyond six hours [1].\n*   **Flexible Leaves:** All staff members are entitled to flexible Vacation and Casual Leaves that can be utilized at any time during the academic or calendar year, subject to applicable policies [1].\n*   **Work from Home:** A work-from-home option is available during personal or family emergencies on medical grounds [1].\n*   **Ph.D. Support:** Faculty members pursuing a Ph.D. are provided with one day of Out of Door (OOD) leave per month to meet their external guide, available only after the successful completion of Ph.D. coursework and supported by a signed letter from the guide [1].\n*   **Fee Concessions:** Employees receive a concession on fees for their wards if they are enrolled at CMRIT [1].\n*   **Maternity Leave:** Women employees are entitled to avail of maternity leave [1].\n*   **Publication Incentives:**\n    *   Rs. 15,000/- for papers published in SCOPUS Q1 journals.\n    *   Rs. 10,000/- for papers published in SCOPUS Q2 journals.\n    *   These incentives apply to both non-paid papers within the core load and paid/non-paid papers over and above the core load [2].\n*   **Output Incentives:** An incentive of Rs. 5,000/- is awarded to faculty members for output over and above their assigned core activities [2].\n*   **Teaching Awards:** Awards are given to faculty for best practices in Teaching and Learning [2].\n*   **Professional Development:**\n    *   The institute sponsors faculty members to attend workshops, conferences, and seminars [2].\n    *   The institute organizes in-house programs for faculty development, administrative skills, personal development, value-based programs, and teaching-learning courses [2].\n    *   The institute motivates non-teaching staff to attend skill development and training programs [2].",
-      "category": "topic",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.4,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what does the probation period completion process at CMRIT involve",
-      "answer": "The probation period completion process at CMRIT involves the following steps:\n\n1.  **Trigger**: The process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date, which is one year from the date of joining [1].\n2.  **Notifications**: The system sends workflow notifications to the Reporting Manager and either the Deans (for Academic departments) or the Vice Principal (for Non-Academic departments) [1].\n3.  **Mentoring and Holistic Support**: The Reporting Manager documents the employee's major strengths, areas of improvement, and additional observations or recommendations [2].\n4.  **Recommendation**: The Reporting Manager selects one of four recommendations:\n    *   Recommended for Confirmation\n    *   Recommended for Confirmation with Areas of Improvement\n    *   Probation Extension\n    *   Not Recommended for Confirmation [2][3].\n5.  **Approval Workflow**: The recommendation is reviewed and approved by the Deans for Academic departments or the Vice Principal for non-academic departments [3].\n6.  **Final HR Action**: If approved for confirmation, HR changes the employee status from \u201cProbation\u201d to \u201cConfirmed,\u201d generates a confirmation letter, updates employee records, and notifies the employee [3].",
-      "category": "topic",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.8,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "what qualities and requirements does CMRIT expect from an effective teacher",
-      "answer": "Based on the provided documents, CMRIT expects the following qualities and requirements from an effective teacher:\n\n**General Qualities**\n*   Strong subject knowledge, good communication skills, and teaching skills [1].\n*   Professional discipline and a willingness to learn and grow [1].\n*   Approachability to students and comfort with technology [1].\n*   Active involvement in research [1].\n\n**Academic & Preparation Requirements**\n*   Possess strong subject knowledge aligned with the teaching subject [1].\n*   Review the syllabus, course outcomes (COs), and curriculum structure [1].\n*   Prepare detailed lesson plans aligned with Outcome-Based Education (OBE) principles [1].\n*   Prepare detailed notes for all modules [1].\n*   Map Course Outcomes to Program Outcomes/Program Specific Outcomes (CO\u2013PO/PSO) and understand Bloom\u2019s taxonomy [1].\n\n**Teaching Skills**\n*   Use clear, structured explanations for technical concepts [2].\n*   Demonstrate clear and confident communication [2].\n*   Explain complex technical concepts in simple, structured ways, including using short explanatory videos for difficult concepts [2].\n*   Integrate examples, case studies, live demos, simulations, virtual labs, and problem-solving in every class [2].\n*   Maintain a balance between chalk-and-talk, PowerPoint presentations, and digital tools [2].\n*   Use Google Drive or Learning Management System (LMS) tools (such as Google Classroom, MS Teams, or Moodle) for content sharing [2].\n*   Conduct flip classes and video sessions effectively [2].\n\n**Student-Centered Strategies & Mentoring**\n*   Adopt pedagogy that incorporates multiple modes and techniques to accommodate varying student learning abilities [3].\n*   Be approachable and supportive [3].\n*   Guide students in projects, internships, skill development, and career paths [3].\n*   Understand student and classroom challenges to develop confidence in teaching practices [3].",
-      "category": "topic",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.8,
-      "context_precision": 0.9266666666666665,
-      "context_recall": 1.0
-    },
-    {
-      "question": "I clocked in twenty minutes late three times this month, is that going to cost me any leave?",
-      "answer": "Yes, being late by twenty minutes three times in a month will cost you leave. Since arriving more than fifteen minutes after the start of the day is considered half a Casual Leave (CL) per instance, three instances of such lateness will result in a total deduction of 1.5 CLs [2][4].",
-      "category": "indirect",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.6,
-      "context_precision": 0.9166666666666666,
-      "context_recall": 1.0
-    },
-    {
-      "question": "I'm about to hit my one-year mark here, what happens with my job status around that time?",
-      "answer": "Around the one-year mark, which is the end of your probation period, a standardized evaluation process is initiated to determine your employment status [1]. This process automatically starts in the Darwinbox system 30 days before your probation end date [1].\n\nThe system sends workflow notifications to your Reporting Manager and either the Deans (if you are in an Academic Department) or the Vice Principal (if you are in a Non-Academic Department) [1]. Your Reporting Manager will then submit a recommendation, which can be for confirmation, confirmation with areas of improvement, or probation extension [3].\n\nThis recommendation is reviewed and approved by the Deans for Academic departments or the Vice Principal for non-academic departments [2]. If you are approved for confirmation, HR will change your status from \u201cProbation\u201d to \u201cConfirmed,\u201d generate a confirmation letter, update your employee records, and notify you [2].",
-      "category": "indirect",
-      "faithfulness": 1.0,
-      "answer_relevancy": 1.0,
-      "answer_correctness": 0.8,
-      "context_precision": 1.0,
-      "context_recall": 1.0
-    },
-    {
-      "question": "My kid could study at CMRIT, would that save us any money?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "category": "indirect",
+      "question": "what is the maximum plagiarism allowed in a paper for rc review",
+      "answer": "I could not find any information about this query in the indexed documents.",
+      "category": "Submission process and checklists",
       "faithfulness": 0.0,
       "answer_relevancy": 0.0,
       "answer_correctness": 0.0,
@@ -418,43 +167,63 @@
       "context_recall": 0.0
     },
     {
-      "question": "I'm a new Assistant Professor, what's expected of me day-to-day beyond just teaching classes?",
-      "answer": "Beyond teaching classes, you are expected to:\n\n*   Monitor, evaluate, and support students\u2019 academic progress [2].\n*   Guide students in their projects and other technical activities [2].\n*   Organize and monitor student-centric activities [2].\n*   Encourage students to participate in co-curricular and extra-curricular activities [2].\n*   Perform the role of mentor effectively by transforming mentees into competent professionals and imbibing in them the attributes of a holistic personality [2].\n*   Guide and support teaching assistants and lab instructors [2].",
-      "category": "indirect",
+      "question": "what is the last date to upload rcpie proofs in the drive",
+      "answer": "The last date to upload RCPIE proofs in the Drive is 30th June of every year [1][2].",
+      "category": "Submission process and checklists",
       "faithfulness": 1.0,
       "answer_relevancy": 1.0,
-      "answer_correctness": 0.6,
-      "context_precision": 0.5,
-      "context_recall": 0.5
-    },
-    {
-      "question": "If I publish a paper in a top-tier journal, does the college recognize that in any way?",
-      "answer": "Based on the provided documents, the college recognizes research papers based on their acceptance in a **Scopus indexed journal**, not specifically by whether the journal is \"top-tier.\"\n\nThe Faculty Evaluation Form for AY 2024-25 lists \"Research Paper (R)\" as a core activity with a target of **2 research papers accepted in a Scopus indexed journal** [1]. The required supporting document is a copy of the published paper with page numbers and volume details, signed by the Head of Department (HoD) [1]. The documents do not mention any additional weightage or specific recognition for \"top-tier\" journals beyond the Scopus indexing requirement [1][2][3].",
-      "category": "indirect",
-      "faithfulness": 1.0,
-      "answer_relevancy": 0.7142857142857143,
-      "answer_correctness": 0.2,
-      "context_precision": 0.0,
-      "context_recall": 0.0
-    },
-    {
-      "question": "What is the capital of France?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "category": "unanswerable",
-      "faithfulness": NaN,
-      "answer_relevancy": 0.0,
-      "answer_correctness": 1.0,
+      "answer_correctness": 0.5,
       "context_precision": 1.0,
       "context_recall": 1.0
     },
     {
-      "question": "What is the process to get a refund for a cancelled flight booking?",
-      "answer": "I could not find any information about this query in the college policy documents.",
-      "category": "unanswerable",
+      "question": "which affiliation should a faculty member use if they are pursuing a phd at the cmrit research center affiliated to vtu",
+      "answer": "I could not find any information about this query in the indexed documents.",
+      "category": "Submission process and checklists",
       "faithfulness": 0.0,
       "answer_relevancy": 0.0,
-      "answer_correctness": 1.0,
+      "answer_correctness": 0.0,
       "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "what proofs need to be uploaded for c load and e load verification",
+      "answer": "For C load and E load verification, only the CMRIT receipt is accepted as proof, and it must include the accountant's signature [1].",
+      "category": "Submission process and checklists",
+      "faithfulness": 0.5,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 0.75,
+      "context_recall": 0.3333333333333333
+    },
+    {
+      "question": "can i send only an abstract for rc review",
+      "answer": "Yes, you can send only an abstract for RC review if you are a faculty member with a minimum of three Q3/Q4 Scopus publications specified in the SCIMAGO Journal ranking as a first author [1]. Additionally, the published journals must be active in SCOPUS at the time of the abstract submission [1].",
+      "category": "Submission process and checklists",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.3,
+      "context_precision": 1.0,
+      "context_recall": 0.4
+    },
+    {
+      "question": "is wiley a recommended book publisher",
+      "answer": "Yes, Wiley Publishers is listed as a recommended book publisher [1].",
+      "category": "Writing guides",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.4,
+      "context_precision": 1.0,
+      "context_recall": 1.0
+    },
+    {
+      "question": "what is the principal's email address",
+      "answer": "I could not find any information about this query in the indexed documents.",
+      "category": "unanswerable",
+      "faithfulness": 0.0,
+      "answer_relevancy": 1.0,
+      "answer_correctness": 0.9,
+      "context_precision": 1.0,
       "context_recall": 1.0
     }
   ]

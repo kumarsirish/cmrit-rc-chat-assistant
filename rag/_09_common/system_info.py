@@ -1,9 +1,11 @@
 """System Info page: read-only overview of what's currently running.
 
-Shows the models in use, the configured RAGAS judge setup, the source
-PDFs the assistant was ingested from, and when the vector store was
-last (re)built — useful for confirming the deployed config matches
-what's expected without reading config.yaml directly.
+Shows the models in use, the configured RAGAS/retrieval evaluation
+setup, the current session, and when the vector store was last
+(re)built — useful for confirming the deployed config matches what's
+expected without reading config.yaml directly. The indexed document
+list itself lives on the Admin tab's "Existing Documents" tab instead
+(see rag._10_ui.admin_page), not duplicated here.
 """
 
 import json
@@ -15,7 +17,6 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 
 from rag._07_evaluation.baseline import load_baseline_mean_scores
-from rag._01_ingestion.document_loader import find_document_files
 
 CHROMA_SQLITE_FILENAME = "chroma.sqlite3"
 
@@ -39,27 +40,13 @@ def _format_timestamp_ist(unix_timestamp: float) -> str:
 
 # One-line, plain-English explanation of each RAGAS metric, shown next
 # to its score so the number means something without reading the
-# RAGAS docs. Kept short — the formula (METRIC_FORMULAS) carries the
-# precise definition on its own line underneath.
+# RAGAS docs.
 METRIC_DESCRIPTIONS = {
     "faithfulness": "Fraction of the answer's claims actually backed by the retrieved context (higher = less hallucination).",
     "answer_relevancy": "How directly the answer addresses the question that was actually asked.",
     "answer_correctness": "How closely the answer matches the reference (ground-truth) answer.",
     "context_precision": "How much of the retrieved context was actually relevant (little irrelevant noise retrieved).",
     "context_recall": "How much of the information needed to answer was present in the retrieved context at all.",
-}
-
-# LaTeX (rendered via KaTeX in st.markdown's `$...$`), one formula per
-# metric — the precise textbook definition, shown on its own line
-# under each one-liner above. `\lvert x \rvert` instead of literal
-# `|x|`: a bare `|` inside a markdown table cell is parsed as a column
-# delimiter and breaks the table.
-METRIC_FORMULAS = {
-    "faithfulness": r"$\text{Faithfulness} = \dfrac{\lvert\text{supported claims}\rvert}{\lvert\text{claims in answer}\rvert}$",
-    "answer_relevancy": r"$\text{Answer Relevancy} = \dfrac{1}{n}\sum_{i=1}^{n}\cos(E_{g_i}, E_o)$",
-    "answer_correctness": r"$\text{Answer Correctness} = w_1 F_1 + w_2\cos(a, r),\ F_1=\dfrac{TP}{TP+0.5(FP+FN)}$",
-    "context_precision": r"$\text{Context Precision@K} = \dfrac{\sum_{k=1}^{K}\text{Precision@k}\times rel_k}{\lvert\text{relevant in top }K\rvert}$",
-    "context_recall": r"$\text{Context Recall} = \dfrac{\lvert\text{GT statements attributable to context}\rvert}{\lvert\text{GT statements}\rvert}$",
 }
 
 # Same idea, for the classic IR metrics in tests/_07_evaluation/
@@ -77,12 +64,6 @@ RETRIEVAL_METRIC_DESCRIPTIONS = {
     "reciprocal_rank": "How close to the top the first relevant document was ranked, averaged over questions.",
     "ndcg": "Rewards relevant documents ranked higher, not just present.",
 }
-RETRIEVAL_METRIC_FORMULAS = {
-    "recall": r"$\text{Recall@k} = \dfrac{\lvert Rel \cap Ret_k\rvert}{\lvert Rel\rvert}$",
-    "precision": r"$\text{Precision@k} = \dfrac{\lvert Rel \cap Ret_k\rvert}{k}$",
-    "reciprocal_rank": r"$RR=\dfrac{1}{\text{rank}_{\text{first relevant}}},\ MRR=\dfrac{1}{\lvert Q\rvert}\sum_{q\in Q}RR_q$",
-    "ndcg": r"$NDCG@k=\dfrac{DCG@k}{IDCG@k},\ DCG@k=\sum_{i=1}^{k}\dfrac{rel_i}{\log_2(i+1)}$",
-}
 
 
 def _format_score(score) -> str:
@@ -97,20 +78,16 @@ def _format_score(score) -> str:
 def _metric_table_rows(
     metric_names: list,
     descriptions: dict,
-    formulas: dict,
     labels: dict,
     mean_scores: dict,
     baseline_scores: dict,
     min_score: float = None,
 ) -> list:
     """Builds the {Metric, What it means, Baseline, Last run} rows
-    shared by the RAGAS and retrieval-eval sections. "What it means"
-    is the one-liner plus its formula on a following line (`<br>` —
-    plain "\\n" doesn't break within a markdown table cell). labels
-    maps a raw metric key to its display name (e.g. "reciprocal_rank"
-    -> "MRR"); pass {} to use the raw key as-is. min_score, if given,
-    prefixes "Last run" with a pass/fail mark instead of just the
-    number.
+    shared by the RAGAS and retrieval-eval sections. labels maps a raw
+    metric key to its display name (e.g. "reciprocal_rank" -> "MRR");
+    pass {} to use the raw key as-is. min_score, if given, prefixes
+    "Last run" with a pass/fail mark instead of just the number.
     """
     rows = []
     for name in metric_names:
@@ -119,14 +96,10 @@ def _metric_table_rows(
         last_run_text = _format_score(score)
         if score is not None and not (isinstance(score, float) and math.isnan(score)) and min_score is not None:
             last_run_text = f"{'✅' if score >= min_score else '❌'} {last_run_text}"
-        what_it_means = descriptions.get(name, "")
-        formula = formulas.get(name, "")
-        if formula:
-            what_it_means = f"{what_it_means}<br>{formula}"
         rows.append(
             {
                 "Metric": labels.get(name, name),
-                "What it means": what_it_means,
+                "What it means": descriptions.get(name, ""),
                 "Baseline": _format_score(baseline),
                 "Last run": last_run_text,
             }
@@ -156,15 +129,6 @@ def _render_metric_table(rows: list) -> None:
             cells.append(value)
         lines.append(f"| {' | '.join(cells)} |")
     st.markdown("\n".join(lines), unsafe_allow_html=True)
-
-
-def _format_bytes(num_bytes: int) -> str:
-    size = float(num_bytes)
-    for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024:
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024
-    return f"{size:.1f} TB"
 
 
 def _render_models_section(config):
@@ -244,7 +208,6 @@ def _render_ragas_section(config):
         _metric_table_rows(
             config.evaluation.metrics,
             METRIC_DESCRIPTIONS,
-            METRIC_FORMULAS,
             {},
             results["mean_scores"] if results else None,
             baseline_scores,
@@ -303,7 +266,6 @@ def _render_retrieval_eval_section(config):
         _metric_table_rows(
             RETRIEVAL_METRIC_LABELS.keys(),
             RETRIEVAL_METRIC_DESCRIPTIONS,
-            RETRIEVAL_METRIC_FORMULAS,
             RETRIEVAL_METRIC_LABELS,
             results["mean_scores"] if results else None,
             baseline_scores,
@@ -314,32 +276,6 @@ def _render_retrieval_eval_section(config):
             "No baseline saved yet — run `make save-eval-baseline` to "
             "compare future runs against this one."
         )
-
-
-def _render_documents_section(config, vector_store):
-    st.subheader("Source documents")
-    try:
-        document_paths = find_document_files(
-            config.documents.source_directory, config.documents.archived_subfolder_name
-        )
-    except FileNotFoundError:
-        st.caption(f"Documents directory not found: {config.documents.source_directory}")
-        return
-
-    if not document_paths:
-        st.caption(f"No documents found in {config.documents.source_directory}")
-        return
-
-    for document_path in document_paths:
-        stat = document_path.stat()
-        modified = _format_timestamp_ist(stat.st_mtime)
-        st.markdown(f"- {document_path.name} — {_format_bytes(stat.st_size)}, modified {modified}")
-
-    st.caption(
-        f"{len(document_paths)} document(s) — "
-        f"{vector_store.count()} chunks currently in the "
-        f"`{config.chroma.collection_name}` vector store collection"
-    )
 
 
 def _render_session_section(config, user_email):
@@ -372,9 +308,8 @@ def _render_ingestion_section(config):
     )
 
 
-def render_system_info_page(config, vector_store, user_email):
-    st.title("System Info")
-    st.caption("Read-only overview of the models, evaluation setup, and documents in use.")
+def render_system_info_page(config, user_email):
+    st.caption("Read-only overview of the models, evaluation setup, and session in use.")
 
     _render_models_section(config)
     st.divider()
@@ -383,7 +318,5 @@ def render_system_info_page(config, vector_store, user_email):
     _render_ragas_section(config)
     st.divider()
     _render_session_section(config, user_email)
-    st.divider()
-    _render_documents_section(config, vector_store)
     st.divider()
     _render_ingestion_section(config)

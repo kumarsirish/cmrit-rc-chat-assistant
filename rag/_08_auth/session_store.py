@@ -27,6 +27,21 @@ class Message:
     retrieval_seconds: float = None
     llm_seconds: float = None
     total_seconds: float = None
+    # User-submitted 1-5 rating for an assistant message (see
+    # SessionStore.rate_message) — None until rated, always None for a
+    # user-role message.
+    rating: int = None
+
+
+@dataclass
+class RecentQuery:
+    """One answered question, for the "Recent Queries" page — shared
+    across every user's session (see SessionStore.get_recent_queries),
+    not scoped to the viewer's own session like get_messages is."""
+
+    question: str
+    answer: str
+    answered_at: datetime
 
 
 # Placeholder total_seconds backfilled onto assistant messages that
@@ -38,6 +53,10 @@ LEGACY_TIMING_SECONDS = 120.0
 # the most recent this-many assistant answers, so it reflects current
 # performance rather than being dragged down/up by the whole history.
 RECENT_TIMING_LIMIT = 50
+
+# Default cap for the "Recent Queries" page (see get_recent_queries) —
+# newest first, across every user's session.
+RECENT_QUERIES_LIMIT = 100
 
 
 class SessionStore:
@@ -100,6 +119,7 @@ class SessionStore:
         )
         connection.commit()
         self._add_timing_columns_if_missing(cursor)
+        self._add_rating_column_if_missing(cursor)
         self._backfill_legacy_timings(cursor)
         # Superseded by the timing columns on `messages` above — a
         # query's timing now lives on the assistant message it belongs
@@ -124,6 +144,13 @@ class SessionStore:
         for column in ("retrieval_seconds", "llm_seconds", "total_seconds"):
             if not self._column_exists(cursor, "messages", column):
                 cursor.execute(f"ALTER TABLE messages ADD COLUMN {column} FLOAT NULL")
+
+    def _add_rating_column_if_missing(self, cursor) -> None:
+        """Adds the rating column to a `messages` table created before
+        answer rating existed (same upgrade pattern as the timing
+        columns above)."""
+        if not self._column_exists(cursor, "messages", "rating"):
+            cursor.execute("ALTER TABLE messages ADD COLUMN rating TINYINT NULL")
 
     def _backfill_legacy_timings(self, cursor) -> None:
         """Assistant messages stored before timing was tracked have no
@@ -193,10 +220,13 @@ class SessionStore:
         retrieval_seconds: float = None,
         llm_seconds: float = None,
         total_seconds: float = None,
-    ) -> None:
-        """Stores one chat message. retrieval_seconds/llm_seconds/
-        total_seconds are only meaningful for role="assistant" (how
-        long that answer took to produce) and left as NULL otherwise.
+    ) -> int:
+        """Stores one chat message and returns its new row id —
+        callers (see dashboard.py) keep this id alongside the message
+        so a later rate_message() call knows which row to update.
+        retrieval_seconds/llm_seconds/total_seconds are only meaningful
+        for role="assistant" (how long that answer took to produce)
+        and left as NULL otherwise.
         """
         connection = self._connect()
         cursor = connection.cursor()
@@ -207,6 +237,23 @@ class SessionStore:
             (session_id, role, content, datetime.now(), retrieval_seconds, llm_seconds, total_seconds),
         )
         connection.commit()
+        message_id = cursor.lastrowid
+        cursor.close()
+        connection.close()
+        return message_id
+
+    def rate_message(self, message_id: int, rating: int) -> None:
+        """Records a 1-5 rating for the assistant message with this id
+        (see dashboard.py's star-rating widget under each answer).
+        Overwrites any existing rating for that message — a user can
+        re-rate, there's no "first rating wins" rule."""
+        connection = self._connect()
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE messages SET rating = %s WHERE id = %s AND role = 'assistant'",
+            (rating, message_id),
+        )
+        connection.commit()
         cursor.close()
         connection.close()
 
@@ -214,7 +261,7 @@ class SessionStore:
         connection = self._connect()
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT role, content, created_at, retrieval_seconds, llm_seconds, total_seconds "
+            "SELECT role, content, created_at, retrieval_seconds, llm_seconds, total_seconds, rating "
             "FROM messages WHERE session_id = %s ORDER BY id ASC",
             (session_id,),
         )
@@ -229,6 +276,7 @@ class SessionStore:
                 retrieval_seconds=row[3],
                 llm_seconds=row[4],
                 total_seconds=row[5],
+                rating=row[6],
             )
             for row in rows
         ]
@@ -238,6 +286,23 @@ class SessionStore:
         connection = self._connect()
         cursor = connection.cursor()
         cursor.execute("DELETE FROM sessions WHERE session_id = %s", (session_id,))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    def clear_all_history(self) -> None:
+        """Deletes EVERY session and message, for every user — used by
+        the Admin tab's "Clear all history" control. messages has a
+        FOREIGN KEY ... ON DELETE CASCADE on sessions, but that cascade
+        only fires for rows actually deleted via DELETE (not a bulk
+        TRUNCATE on sessions alone wouldn't need it either way) — this
+        deletes messages first regardless, so the intent is explicit
+        rather than relying on the cascade silently doing the work.
+        """
+        connection = self._connect()
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM messages")
+        cursor.execute("DELETE FROM sessions")
         connection.commit()
         cursor.close()
         connection.close()
@@ -261,3 +326,39 @@ class SessionStore:
         cursor.close()
         connection.close()
         return count, (float(average) if average is not None else None)
+
+    def get_recent_queries(self, limit: int = RECENT_QUERIES_LIMIT) -> list:
+        """Returns the most recent `limit` answered questions, newest
+        first, across every session/user — not scoped to the caller's
+        own session like get_messages is. Each assistant message is
+        paired with the user message immediately before it in the same
+        session (the question it answered), found via a correlated
+        subquery rather than a join, since a plain join on "same
+        session" would match every prior user message in that session,
+        not just the one directly preceding this particular answer.
+        An assistant message with no preceding user message in its
+        session (shouldn't normally happen) is skipped.
+        """
+        connection = self._connect()
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT "
+            "  (SELECT u.content FROM messages u "
+            "   WHERE u.session_id = a.session_id AND u.role = 'user' AND u.id < a.id "
+            "   ORDER BY u.id DESC LIMIT 1) AS question, "
+            "  a.content AS answer, "
+            "  a.created_at AS answered_at "
+            "FROM messages a "
+            "WHERE a.role = 'assistant' "
+            "ORDER BY a.id DESC "
+            "LIMIT %s",
+            (limit,),
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return [
+            RecentQuery(question=row[0], answer=row[1], answered_at=row[2])
+            for row in rows
+            if row[0] is not None
+        ]

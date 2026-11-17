@@ -111,6 +111,39 @@ def test_messages_are_stored_in_order(session_store):
 
 
 @requires_mysql
+def test_add_message_returns_the_new_row_id(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    first_id = session_store.add_message(session_id, "user", "What is the leave policy?")
+    second_id = session_store.add_message(session_id, "assistant", "Staff get 12 days of leave.")
+    assert second_id > first_id
+
+
+@requires_mysql
+def test_rate_message_stores_and_overwrites_a_rating(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    session_store.add_message(session_id, "user", "What is the leave policy?")
+    message_id = session_store.add_message(session_id, "assistant", "Staff get 12 days of leave.")
+
+    session_store.rate_message(message_id, 4)
+    messages = session_store.get_messages(session_id)
+    assert messages[1].rating == 4
+
+    session_store.rate_message(message_id, 5)
+    messages = session_store.get_messages(session_id)
+    assert messages[1].rating == 5
+
+
+@requires_mysql
+def test_rate_message_does_not_affect_a_user_message(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    user_message_id = session_store.add_message(session_id, "user", "What is the leave policy?")
+
+    session_store.rate_message(user_message_id, 3)
+    messages = session_store.get_messages(session_id)
+    assert messages[0].rating is None
+
+
+@requires_mysql
 def test_get_timing_summary_is_empty_before_any_timing_recorded(session_store):
     assert session_store.get_timing_summary() == (0, None)
 
@@ -150,6 +183,73 @@ def test_get_timing_summary_only_covers_the_most_recent_limit(session_store):
 
     count, _ = session_store.get_timing_summary()
     assert count == RECENT_TIMING_LIMIT
+
+
+@requires_mysql
+def test_get_recent_queries_pairs_each_answer_with_its_question(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    session_store.add_message(session_id, "user", "What is the leave policy?")
+    session_store.add_message(session_id, "assistant", "Staff get 12 days of leave.")
+    session_store.add_message(session_id, "user", "What about sick leave?")
+    session_store.add_message(session_id, "assistant", "Sick leave is separate.")
+
+    recent = session_store.get_recent_queries()
+
+    assert [(r.question, r.answer) for r in recent] == [
+        ("What about sick leave?", "Sick leave is separate."),
+        ("What is the leave policy?", "Staff get 12 days of leave."),
+    ]
+
+
+@requires_mysql
+def test_get_recent_queries_spans_multiple_sessions(session_store):
+    session_a = session_store.create_session("student-a@cmrit.ac.in")
+    session_store.add_message(session_a, "user", "Question from A")
+    session_store.add_message(session_a, "assistant", "Answer for A")
+
+    session_b = session_store.create_session("student-b@cmrit.ac.in")
+    session_store.add_message(session_b, "user", "Question from B")
+    session_store.add_message(session_b, "assistant", "Answer for B")
+
+    recent = session_store.get_recent_queries()
+    questions = {r.question for r in recent}
+    assert questions == {"Question from A", "Question from B"}
+
+
+@requires_mysql
+def test_get_recent_queries_respects_limit(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    for i in range(5):
+        session_store.add_message(session_id, "user", f"question {i}")
+        session_store.add_message(session_id, "assistant", f"answer {i}")
+
+    recent = session_store.get_recent_queries(limit=2)
+    assert len(recent) == 2
+    assert recent[0].answer == "answer 4"
+    assert recent[1].answer == "answer 3"
+
+
+@requires_mysql
+def test_get_recent_queries_is_empty_when_no_messages(session_store):
+    assert session_store.get_recent_queries() == []
+
+
+@requires_mysql
+def test_clear_all_history_removes_every_session_and_message(session_store):
+    session_a = session_store.create_session("student-a@cmrit.ac.in")
+    session_store.add_message(session_a, "user", "Question from A")
+    session_store.add_message(session_a, "assistant", "Answer for A")
+
+    session_b = session_store.create_session("student-b@cmrit.ac.in")
+    session_store.add_message(session_b, "user", "Question from B")
+    session_store.add_message(session_b, "assistant", "Answer for B")
+
+    session_store.clear_all_history()
+
+    assert session_store.get_recent_queries() == []
+    assert session_store.is_expired(session_a) is True
+    assert session_store.is_expired(session_b) is True
+    assert session_store.get_messages(session_a) == []
 
 
 @requires_mysql

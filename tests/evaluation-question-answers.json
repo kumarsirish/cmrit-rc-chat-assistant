@@ -1,326 +1,167 @@
 [
     {
-        "category": "normal",
-        "question": "how many casual leaves are permanent staff allowed per year",
-        "answer": "A maximum of twelve casual leaves (CL) are permitted in a calendar year for permanent staff. Staff on probation instead have one casual leave created at the end of each month.",
+        "category": "Approval and claim forms",
+        "question": "how much registration fee can be reimbursed for presenting a paper at an external conference and what are the conditions",
+        "answer": "A faculty member can request reimbursement of the registration fee for an external (non-CMRIT) Scopus indexed conference up to a maximum of Rs. 8,000, for one paper in an academic year. Pre-approval from the Principal must be taken before remitting the fee, and the reimbursement claim must be made within a month after attending the conference. No other incentive can be claimed for the paper whose registration fee is reimbursed.",
         "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE Targets.pdf",
+            "Pre-Approval Request Form for Conference.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
-        "answer": "Staff who have completed one year of service (till the last working day of the semester) are permitted a maximum of seven working days of vacation leave per semester. Those who have completed six months of service are permitted a maximum of three working days, and no vacation leave is permitted for those with less than six months of service.",
+        "category": "Approval and claim forms",
+        "question": "my conference paper has three cmrit authors who can claim the registration fee and what is required",
+        "answer": "If multiple authors of the paper are from CMRIT, only the faculty member who presents the paper can claim the amount, and all other CMRIT authors must give a no objection signature to the presenting author while taking pre-approval. The pre-approval form also needs the DRC Head to verify that the conference is Scopus indexed, and the faculty must have cleared the DRC and RC review process. The reimbursement is up to Rs. 8,000 for one paper in an academic year, and no other incentive can be claimed for that paper.",
         "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE Targets.pdf",
+            "Pre-Approval Request Form for Conference.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "how long is the probation period for new employees at CMRIT",
-        "answer": "The probation period at CMRIT is one year from the date of joining.",
+        "category": "Funding schemes",
+        "question": "how is the kapila grant released to the institute",
+        "answer": "The final decision on a KAPILA application is taken by the MoE's Innovation Cell (MIC), based on the expert committee's recommendations and the availability of funds for the scheme. After MIC's approval, the total sanctioned grant is sent to the institute on reimbursement mode.",
         "relevant_sources": [
-            "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
+            "KAPILA Scheme.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "when does the probation completion process start in Darwinbox",
-        "answer": "The probation completion process is automatically initiated in Darwinbox 30 days prior to the employee's probation end date, sending workflow notifications to the Reporting Manager and Deans (Academic Department) or the Reporting Manager and Vice Principal (Non-Academic Department).",
+        "category": "Policies and norms",
+        "question": "what incentive can i claim for a paper published in a scopus q1 or q2 journal",
+        "answer": "A faculty member can claim Rs. 15,000 for a paper in a Scopus Q1 journal and Rs. 10,000 for a paper in a Scopus Q2 journal, whether the journal is free or paid. The quartile is verified on the Scimago Journal Ranking website, and the paper's subject area should fall in Q1/Q2 under the journal's sub-category.",
         "relevant_sources": [
-            "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
+            "RCPIE Targets.pdf"
         ]
     },
     {
-        "category": "normal",
-        "question": "does CMRIT provide PF and ESI benefits to staff",
-        "answer": "Yes, all eligible employees, as per the statute, are entitled to PF and ESI facility.",
+        "category": "Policies and norms",
+        "question": "how much incentive is given for a patent grant and how is it shared",
+        "answer": "An incentive of Rs. 25,000 can be claimed for a patent grant (Indian or non-Indian utility patent) for AY 2026-27. The incentive is divided equally among all the CMRIT inventors of the patent.",
         "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
+            "RCPIE Targets.pdf"
         ]
     },
     {
-        "category": "normal",
-        "question": "what compensatory off is given for working on a holiday",
-        "answer": "Staff called for work on a holiday by the head of department/Vice Principal are provided compensatory-off of half a day for working four hours, and compensatory-off of one day for working eight hours.",
+        "category": "Policies and norms",
+        "question": "how many days does the rc review process take",
+        "answer": "The RC review process takes 5 working days, made up of 3 days for department review and 2 days for cross department review. Faculty may send reminders to the RC or DRC if there is a delay.",
         "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE FAQ.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "what is CMRIT's quality policy",
-        "answer": "CMRIT's Quality Policy is to deliver quality technical education to inculcate scientific temperament and social commitment in students, preparing them as inspired engineers partnering collective progress.",
+        "category": "Policies and norms",
+        "question": "how much other incentive can a faculty member claim if they worked at cmrit for 7 months in an academic year",
+        "answer": "Faculty working at CMRIT for more than nine months in an academic year can claim Rs. 3,000. For shorter durations the claim is Rs. 750, Rs. 1,500 and Rs. 2,250 for less than 3 months, 6 months and 9 months of experience respectively, so a faculty member with 7 months of service falls in the less than 9 months bracket and can claim Rs. 2,250.",
         "relevant_sources": [
-            "CMRIT Quality Policy.docx.pdf"
+            "RCPIE Targets.pdf"
         ]
     },
     {
-        "category": "normal",
-        "question": "what mandatory training must new faculty complete within six months of joining",
-        "answer": "Within six months, new faculty must complete CO-PO Computation Training, Paper & Proposal Writing Training, and Mentoring Process Guidelines during Orientation.",
+        "category": "Policies and norms",
+        "question": "how much does a 5 lakh uba proposal and a 20 lakh modrob proposal count for in the core load",
+        "answer": "UBA, MSME and GI proposals have a weightage of 0.3, so a Rs. 5 lakh UBA proposal counts as Rs. 1.5 lakhs. STTP, FDP and MODROB proposals have a weightage of 0.1, so a Rs. 20 lakh MODROB proposal counts as Rs. 2 lakhs for core load calculations.",
         "relevant_sources": [
-            "Mandatory Training for New Faculty - Sheet1.pdf"
+            "RCPIE Targets.pdf"
         ]
     },
     {
-        "category": "normal",
-        "question": "how often is the faculty semester evaluation done",
-        "answer": "The Faculty Semester Evaluation is done two times a year: in January for the July-December period, and in July for the January-June period.",
+        "category": "Policies and norms",
+        "question": "how much funding is needed to complete one consultancy load and how many research papers make one rp load",
+        "answer": "The RCPIE FAQ only points to the 2020-2021 targets, so the current figures come from the RCPIE Targets for 2026-27. One consultancy sub-unit is equivalent to Rs. 50K received by CMRIT, and the target is 3 consultancy sub-units per year for one core unit. For research papers, one sub-unit is equivalent to one published paper and the target is 2 research papers per year for one core unit.",
         "relevant_sources": [
-            "CMRIT_Faculty_Evaluation_Form_AY_2024-25.docx.pdf"
+            "RCPIE Targets.pdf",
+            "RCPIE FAQ.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "what is the official CMRIT website address",
-        "answer": "The official CMRIT website is http://www.cmrit.ac.in.",
-        "relevant_sources": []
-    },
-    {
-        "category": "normal",
-        "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
-        "answer": "Every faculty member is required to complete at least one 8-week MOOC per year, unless exempted by the Principal, CMRIT. Only MOOCs offered by NPTEL are considered, and from academic year 2021-22 onward each faculty must score a minimum of 75% (a Silver Certificate) in a course that closely matches the subject they teach. Exemptions apply to faculty undertaking 3 or more Ph.D. coursework subjects in one attempt, engineering faculty who cleared GATE with a 90 percentile or better, and Basic Sciences faculty who cleared NET (CSIR-UGC) or SET before 1st June 2002.",
+        "category": "Policies and norms",
+        "question": "how many days will it take to get approval from the drc and the rc",
+        "answer": "The FAQ gives two different timings. One answer says DRC approval takes a minimum of 5 days and RC approval a minimum of 2 days. Another says the RC review process takes 5 working days in total, with 3 days for department review and 2 days for cross department review. If no comments or approval arrive within the specified time, the faculty member should write an email to the RC Convenor immediately.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE FAQ.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "How often am I expected to present something beyond the syllabus to my department?",
-        "answer": "Every faculty member must present a technical topic beyond the curriculum during the departmental half-day, with the topic reviewed by the DRC beforehand. This is called a Tech Talk, given for one hour per week by faculty members in rotation, and the Tech Talk material must be uploaded to the library portal.",
+        "category": "Presentation decks",
+        "question": "what font style and size should be used in the final year project review presentation and how long can the introduction be",
+        "answer": "The final year project review template specifies Times New Roman with font size 20. The introduction should not extend more than two slides and the objective should not extend more than one slide.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "Final Year Student Projects.pptx"
         ]
     },
     {
-        "category": "normal",
-        "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
-        "answer": "Teaching staff, including teaching assistants, must submit a resignation with three months' notice period. Technical and non-teaching staff must give two months' notice. Otherwise, staff should follow the institution's norms.",
+        "category": "Projects, doctoral and internship forms",
+        "question": "what is the approval process for a mega project mep",
+        "answer": "A Mega Project (MEP) is presented at the RC meeting. The I&E/CoE/DRC head (Verifier-1) and the Head of Department (Verifier-2) review the project and the two forms, and if they are satisfied they sign Form-1 and send both forms (Form-1 pre-screening and Form-2 project proposal) to the Associate Director-Academics for further action. An MEP is meant for existing technology or deployment, moving towards consultancy or a startup.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "MEPMEAI&E Project Proposal Form.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
-        "answer": "The institution restricts failure rates as follows: failure in 1 subject should be under 5%, failure in 2 subjects under 3%, failure in 3 subjects under 2%, and failure in 4 or more subjects under 1%. A list of probable ineligible students is created at the beginning of the semester, and Intensive Coaching Program (ICP) sessions are held after the 2nd internal test for such students.",
+        "category": "Submission process and checklists",
+        "question": "what affiliation should i use in research papers",
+        "answer": "The affiliation to be used in research papers and proposals is \"CMR Institute of Technology, Bengaluru\". Faculty who are not pursuing a Ph.D. should write \"Designation, Department, CMR Institute of Technology, Bengaluru\". If a journal does not accept the prescribed formats, the faculty member should inform the Research Committee before proceeding, but the affiliation \"CMR Institute of Technology, Bengaluru\" must still be present.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE FAQ.docx",
+            "Checklist for RC Submission.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
-        "answer": "Complaints can be submitted through a link on the CMRIT website, which are addressed by the Grievance Redressal Committee. The committee decides the nature of the grievance and submits a report to the Principal/Vice Principal, who takes action accordingly; if required, the Principal sets up an inquiry committee to study and resolve the matter. Suggestion/complaint boxes are also placed at prominent locations on campus and opened regularly.",
+        "category": "Submission process and checklists",
+        "question": "what is the maximum plagiarism allowed in a paper for rc review",
+        "answer": "Plagiarism of the paper should not exceed 20 percent, including the reference section. It is checked during the DRC and RC review.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "Checklist for RC Submission.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "If the fire alarm goes off, where am I supposed to take the students?",
-        "answer": "The CMRIT playground is identified as the emergency assembly area. The evacuation plan is triggered by an alarm of 4 consecutive sirens of 5 seconds each with a 5 second pause; upon hearing it, faculty and staff must escort students to assemble at the playground, and wardens and the EMRT ensure full evacuation of the hostel building.",
+        "category": "Submission process and checklists",
+        "question": "what is the last date to upload rcpie proofs in the drive",
+        "answer": "The last date to upload proofs in the Drive is 30th June of every year. The DRC Head verification deadline is 5th July, the RC verification deadline is 15th July, and the RCPIE verification details are submitted to the Principal/HoD by the RC on 18th July.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE Verification Checklist.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
-        "answer": "These are available at the Makerspace, located in the Workshop and Lab area in the basement of the First Year Block. It is equipped with hand tools, power tools, a laser cutter, a CNC router, 3D printers, the Maker Store, a workshop/ideation zone, and a junk store.",
+        "category": "Submission process and checklists",
+        "question": "which affiliation should a faculty member use if they are pursuing a phd at the cmrit research center affiliated to vtu",
+        "answer": "CMRIT faculty members pursuing research in the CMRIT research center affiliated to VTU should use \"Research Scholar, Department (VTU RC), CMR Institute of Technology, Bengaluru\".",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "Checklist for RC Submission.docx",
+            "RCPIE FAQ.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "If I want help filing a patent, who at CMRIT can assist me?",
-        "answer": "CMRIT has an IPR Cell established in collaboration with KSCST (Karnataka State Council for Science and Technology), which creates awareness about IPRs through workshops and training, enables patent searches, guides inventors on patenting with an authorized patent attorney, and arranges periodic meetings with officers of the Patent Information Centre to identify patentable inventions.",
+        "category": "Submission process and checklists",
+        "question": "what proofs need to be uploaded for c load and e load verification",
+        "answer": "For C load the proofs are the pre-approval letter, receipt, participants list, expenses and load sharing details if required. For E load the same documents are needed, plus the MCA registered start-up proof. For C and E loads only a CMRIT receipt with the accountant's signature is accepted as proof.",
         "relevant_sources": [
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "RCPIE Verification Checklist.docx"
         ]
     },
     {
-        "category": "normal",
-        "question": "what is the maximum number of OOD and OED leaves permitted per year",
-        "answer": "The maximum OOD (On-Official-Duty) leaves permitted per year is fourteen days, and the maximum OED (On-Exam-Duty) leaves permitted per year is also fourteen days.",
+        "category": "Submission process and checklists",
+        "question": "can i send only an abstract for rc review",
+        "answer": "The documents give different eligibility criteria. For a paper, the Checklist for RC Submission requires two Scopus indexed Q1 or Q2 papers as first author, the FAQ requires that any one of the first three authors has a publication in a Scopus Q1 or Q2 journal, and the RCPIE Targets require a minimum of three Scopus Q3/Q4 publications as first author. For a proposal, the Checklist requires a sanctioned proposal of at least Rs. 5 lakhs as PI or Co-PI, and the FAQ requires that the PI has received a grant of at least Rs. 5 lakhs. In every case the journals must be active in Scopus at the time of submission.",
         "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
+            "Checklist for RC Submission.docx",
+            "RCPIE FAQ.docx",
+            "RCPIE Targets.pdf"
         ]
     },
     {
-        "category": "normal",
-        "question": "what counts as half a casual leave for late coming",
-        "answer": "Late coming, after fifteen minutes of the day start, is considered as half a CL. An employee will also lose half a CL if they are late up to fifteen minutes at the day start for three days in a month. Missing one of the biometric punch-in/punch-out is also considered as half a CL.",
+        "category": "Writing guides",
+        "question": "is wiley a recommended book publisher",
+        "answer": "Yes. Wiley Publishers is one of the twelve recommended book publishers, along with McGraw Hill, Pearson, Emerald Group Publishing, Macmillan Learning, Routledge Taylor and Francis Group, Oxford University Press, Sage Publications, CRC Press, Springer Nature, Cambridge University Press and Thomson Reuters.",
         "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "how is loss-of-pay calculated if leave rules are not followed",
-        "answer": "Leaves will be treated as Loss-of-pay (LOP) if the leave rules are not followed, and an LOP is equivalent to 1.25 times one day's salary.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "within how many days should an emergency leave be applied for",
-        "answer": "For any emergency leave taken, the leave should be applied within two days of reporting to work.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "how long must academic departments retain hard copies of leave approval letters and proof",
-        "answer": "For Academics Departments, all hard copies of the approval letters and proof should be maintained by the DOE for a period of at least one year.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what recommendations can a reporting manager make at the end of an employee's probation period",
-        "answer": "The Reporting Manager selects one of four recommendations: that the employee has successfully completed probation and the appointment be confirmed, that the employee's probation be extended, that the employee has not successfully completed probation and a performance improvement plan is recommended, or that the separation process be initiated.",
-        "relevant_sources": [
-            "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what mandatory training must new faculty complete within one year of joining",
-        "answer": "Within one year, new faculty must complete Customer Interaction Training, Patent Drafting and Filing Procedures, Start-up Training for new Faculty, and the Mentor Development Program, along with the optional Product Development Training and Digital Marketing Training.",
-        "relevant_sources": [
-            "Mandatory Training for New Faculty - Sheet1.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "does CMRIT provide salary advances or loans to staff",
-        "answer": "Yes, the institute provides salary advances and interest-free loans to staff.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what incentive does CMRIT give faculty for publishing in SCOPUS Q1 or Q2 journals",
-        "answer": "Faculty who publish papers in SCOPUS Q1 or Q2 journals can claim incentives of Rs. 15,000 for Q1 and Rs. 10,000 for Q2, whether the publication is non-paid within core load or paid/non-paid over and above core load.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
-        ]
-    },
-    {
-        "category": "normal",
-        "question": "what are the core responsibilities of a teaching assistant at CMRIT",
-        "answer": "A Teaching Assistant assists teachers in conducting laboratory and tutorial sessions, runs experiments prior to regular sessions to demonstrate techniques, develops knowledge of lab equipment, assists in evaluating lab experiments, records, assignments and answer scripts, supports classroom activities, helps students with difficult concepts and project work, and is expected to maintain professional ethics and organizational discipline while developing teaching and mentoring skills.",
-        "relevant_sources": [
-            "Roles and Responsibilities.docx.pdf"
-        ]
-    },
-    {
-        "category": "topic",
-        "question": "can you give me an overview of the leave policy at CMRIT",
-        "answer": "CMRIT's leave types are Casual Leave (CL), On-Official-Duty (OOD), On-Exam-Duty (OED), Vacation Leave (VL), Compensatory-off (CO), and Special Duty Leave (SDL), each with its own yearly or semester-wise caps and crediting/lapse rules. Leave is applied for through Darwinbox by logging in with SSO, selecting the leave type under Time Management, and attaching any required approval letters or proof; requests are then routed to the appropriate approving authority based on the employee's designation (e.g. HOD for faculty, Vice Principal or Dean for senior roles) and must be approved or rejected within two days. Supporting documents are required for OOD, OED and Special Duty Leave, and leave taken without following the rules is treated as Loss-of-Pay.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "topic",
-        "question": "tell me about the roles and responsibilities defined for teaching staff at CMRIT",
-        "answer": "CMRIT defines a career ladder of teaching roles, each building on the one below it: Assistant Professor, Associate Professor, Professor, and Head of Department, with the Director and Associate Director setting institution-wide strategy above them. Assistant Professors focus on effective teaching, mentoring and monitoring student progress; Associate and full Professors take on guiding junior faculty, curriculum development, external funding and research impact; and the HOD is responsible for department vision, budgeting, faculty workload, academic processes like CO/PO target setting, and monitoring teaching and mentoring effectiveness. Teaching Assistants and Lab Supervisors/Technicians support these roles by running labs and assisting with evaluation and equipment.",
-        "relevant_sources": [
-            "Roles and Responsibilities.docx.pdf"
-        ]
-    },
-    {
-        "category": "topic",
-        "question": "what welfare measures does CMRIT provide for its staff",
-        "answer": "CMRIT offers a broad range of welfare measures: statutory PF and ESI for eligible employees, subsidized transport and mess facilities, gym and sports access, salary advances/interest-free loans, flexible working hours with an early-leave option, advance leave for emergencies, work-from-home during personal/family medical emergencies, fee concessions for employees' wards enrolled at CMRIT, maternity leave, free health check-up camps, hostel accommodation, and financial literacy sessions. It also supports faculty growth through research/consultancy/publication incentives, sponsorship for conferences and workshops, in-house faculty and staff development programs, and skill-upgrade training for non-teaching staff.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
-        ]
-    },
-    {
-        "category": "topic",
-        "question": "what does the probation period completion process at CMRIT involve",
-        "answer": "CMRIT's probation period is one year from the date of joining. The completion process is automatically triggered in Darwinbox 30 days before the probation end date, notifying the Reporting Manager and, depending on department, the Deans or Vice Principal. The Reporting Manager then assesses the employee across ten criteria (job knowledge, performance, attendance, punctuality, etc.), submits one of four recommendations (confirm, extend, performance improvement plan, or separation), and that recommendation is reviewed and approved by the Deans or Vice Principal. HR then takes final action: confirming the employee and generating a confirmation letter, extending probation with a revised end date, or initiating separation.",
-        "relevant_sources": [
-            "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
-        ]
-    },
-    {
-        "category": "topic",
-        "question": "what qualities and requirements does CMRIT expect from an effective teacher",
-        "answer": "CMRIT expects teachers to combine strong subject knowledge and OBE-aligned preparation with clear, structured teaching skills and a mix of chalk-and-talk, digital tools and LMS platforms. Effective classroom management means starting on time, engaging students, and supporting both slow and fast learners, while student-centered strategies call for approachability, varied pedagogy, and mentoring on projects, internships and career paths. Teachers are also expected to design fair and well-covered assessments, follow professional conduct and institutional procedures, contribute to research and student guidance, and pursue continuous improvement through feedback and staying current with technology and industry trends.",
-        "relevant_sources": [
-            "Essential Requirements and Key Qualities for an Effective Teaching - Learning Process.pdf"
-        ]
-    },
-    {
-        "category": "indirect",
-        "question": "I clocked in twenty minutes late three times this month, is that going to cost me any leave?",
-        "answer": "Yes. Coming in more than fifteen minutes after the day start counts as half a casual leave (CL) on that day. Separately, being up to fifteen minutes late at the day start for three days in a month also causes you to lose an additional half CL.",
-        "relevant_sources": [
-            "CMRIT - Leave Information, Application and Approval Process - 29.09.2026.pdf",
-            "Faculty Handbook-CMRIT Sep 2026.pdf"
-        ]
-    },
-    {
-        "category": "indirect",
-        "question": "I'm about to hit my one-year mark here, what happens with my job status around that time?",
-        "answer": "Around your one-year mark, Darwinbox automatically starts the probation completion process 30 days before your probation end date, notifying your Reporting Manager and the Deans or Vice Principal. Your Reporting Manager assesses your performance and recommends confirmation, an extension, a performance improvement plan, or separation, which is then approved by the Deans or Vice Principal. If confirmed, HR updates your status to \"Confirmed\" and issues a confirmation letter.",
-        "relevant_sources": [
-            "CMRIT – Probation Period Completion Process - 29.09.2026.pdf"
-        ]
-    },
-    {
-        "category": "indirect",
-        "question": "My kid could study at CMRIT, would that save us any money?",
-        "answer": "Yes, employees get a concession on fees for their ward if enrolled at CMRIT.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
-        ]
-    },
-    {
-        "category": "indirect",
-        "question": "I'm a new Assistant Professor, what's expected of me day-to-day beyond just teaching classes?",
-        "answer": "Beyond teaching, an Assistant Professor is expected to monitor, evaluate and support students' academic progress, guide students in projects and technical activities, and act as an effective mentor. They should also focus on research and innovation, guide and support teaching assistants and lab instructors, lead department-level teams or projects, maintain professional ethics and discipline, and actively participate in committee, departmental and organizational meetings.",
-        "relevant_sources": [
-            "Roles and Responsibilities.docx.pdf"
-        ]
-    },
-    {
-        "category": "indirect",
-        "question": "If I publish a paper in a top-tier journal, does the college recognize that in any way?",
-        "answer": "Yes, faculty who publish in SCOPUS Q1 or Q2 journals can claim incentives of Rs. 15,000 for Q1 and Rs. 10,000 for Q2. There is also an incentive of Rs. 5,000 for faculty output over and above their assigned core activities.",
-        "relevant_sources": [
-            "CMRIT Staff -Welfare Measures.docx.pdf"
+            "Recommended Book Publishers.pdf"
         ]
     },
     {
         "category": "unanswerable",
-        "question": "What is the capital of France?",
-        "answer": "I could not find any information about this query in the college policy documents.",
-        "relevant_sources": []
-    },
-    {
-        "category": "unanswerable",
-        "question": "What is the process to get a refund for a cancelled flight booking?",
-        "answer": "I could not find any information about this query in the college policy documents.",
+        "question": "what is the principal's email address",
+        "answer": "The provided documents do not contain the Principal's email address.",
         "relevant_sources": []
     }
 ]

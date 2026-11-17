@@ -8,6 +8,7 @@ running under Streamlit and calls this module's main() directly
 instead of going through its own CLI.
 """
 
+import json
 import logging
 import os
 from dataclasses import replace
@@ -19,8 +20,8 @@ import streamlit as st
 from rag._08_auth.session_store import SessionStore
 from rag._08_auth.user_identity import normalize_email
 from rag._09_common.config import PROJECT_ROOT, load_config
-from rag._09_common.system_info import render_system_info_page
 from rag._10_ui.admin_page import render_admin_page
+from rag._10_ui.page_header import APP_ICON_PATH, render_centered_text, render_page_title
 from rag._05_generation.llm_client import LlmClient
 from rag._05_generation.rag_pipeline import RagPipeline
 from rag._02_indexing.vector_store import VectorStore
@@ -29,64 +30,11 @@ from rag._04_retrieval import faq_cache
 from rag._04_retrieval.bm25_retriever import BM25Index
 from rag._04_retrieval.dense_retriever import DenseRetriever
 from rag._04_retrieval.reranker import Reranker
-from rag._04_retrieval.retrieval_service import TRACE_LOGGER_NAME, RetrievalService
+from rag._04_retrieval.retrieval_service import ALL_CATEGORIES, TRACE_LOGGER_NAME, RetrievalService
+from rag._01_ingestion.document_loader import list_categories
 from rag._01_ingestion.glossary_extractor import load_glossary
+from rag._03_routing.category_matcher import EmbeddingCategoryMatcher
 from rag._03_routing.docs_metadata import load_doc_topics
-
-APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icon.png"
-
-# st.set_page_config must run before any other Streamlit call, which
-# is before get_config() (an @st.cache_resource function) is normally
-# reachable — so this one read uses an uncached, module-load-time
-# load_config() call purely to source the page title from config.app.name.
-st.set_page_config(
-    page_title=load_config().app.name,
-    page_icon=str(APP_ICON_PATH),
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# Streamlit's default centered layout leaves large blank margins on
-# either side of the chat, plus a tall gap above the title. Constrain
-# the content to a comfortable reading width and pull it up/left
-# closer to the edge of the viewport instead.
-#
-# Streamlit's own header toolbar (hamburger menu / "Deploy" button) is
-# position:fixed at the top of the viewport, normally cleared by
-# block-container's large default padding-top. Shrinking that padding
-# without also shrinking the header leaves the header's fixed height
-# taller than the new clearance, so content (the page-title icon in
-# particular, being an <img> rather than text) renders partly behind
-# it and looks clipped at the top. Shrinking the header to match keeps
-# the compact layout without that overlap.
-st.markdown(
-    """
-    <style>
-    header[data-testid="stHeader"] {
-        height: 2.5rem;
-        min-height: 2.5rem;
-    }
-    .block-container {
-        max-width: 1200px;
-        padding-top: 2.5rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-        margin: 0;
-    }
-    [data-testid="stSidebar"] .block-container {
-        padding-top: 1.25rem;
-    }
-    div[data-testid="stChatMessage"] {
-        border-radius: 0.75rem;
-        padding: 0.5rem 0.25rem;
-    }
-    hr {
-        margin: 0.75rem 0;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 # Enabled by `make run-debug` (sets RAG_DEBUG=true). Shows the raw
 # query, every retrieved chunk's source document/page, and its
@@ -94,15 +42,6 @@ st.markdown(
 DEBUG_ENABLED = os.environ.get("RAG_DEBUG", "false").lower() == "true"
 
 RETRIEVAL_DEBUG_LOG_PATH = PROJECT_ROOT / "logs" / "retrieval_debug.log"
-
-
-def render_page_title(title):
-    """Shows the app icon beside a page title, instead of plain st.title."""
-    icon_column, title_column = st.columns([1, 12], vertical_alignment="center")
-    with icon_column:
-        st.image(str(APP_ICON_PATH))
-    with title_column:
-        st.title(title)
 
 
 @st.cache_resource
@@ -168,6 +107,63 @@ def get_doc_topics():
 
 
 @st.cache_resource
+def get_categories():
+    config = get_config()
+    return list_categories(config.documents.source_directory)
+
+
+@st.cache_resource
+def get_example_queries():
+    """Returns up to EXAMPLE_QUERY_COUNT {"question", "category"} dicts
+    for the sidebar's "Try one of these" buttons — one per distinct
+    category (in file order), pulled from
+    config.evaluation.test_data_path (tests/evaluation-question-
+    answers.json) so the examples are always real, already-indexed
+    questions rather than hand-maintained copies that can drift out of
+    sync with the actual document set. The "unanswerable" category
+    (see test_judge.py) is excluded — it's deliberately a refusal
+    case, not a good "try this" example.
+
+    Falls back to config.app.example_queries (plain strings, no
+    category — clicking one leaves the category picker untouched) if
+    the eval file is missing, empty, or has no categorized questions,
+    so a deployment with no evaluation data configured still gets
+    something in the sidebar.
+    """
+    config = get_config()
+    try:
+        with open(config.evaluation.test_data_path, "r", encoding="utf-8") as test_data_file:
+            test_cases = json.load(test_data_file)
+    except (OSError, json.JSONDecodeError):
+        test_cases = []
+
+    examples = []
+    seen_categories = set()
+    for case in test_cases:
+        category = case.get("category")
+        question = case.get("question")
+        if not question or not category or category == "unanswerable" or category in seen_categories:
+            continue
+        seen_categories.add(category)
+        examples.append({"question": question, "category": category})
+        if len(examples) >= EXAMPLE_QUERY_COUNT:
+            break
+
+    if examples:
+        return examples
+    return [{"question": question, "category": None} for question in config.app.example_queries]
+
+
+@st.cache_resource
+def get_category_matcher():
+    config = get_config()
+    embedding_generator = EmbeddingGenerator(config.embedding.model_name)
+    return EmbeddingCategoryMatcher(
+        get_categories(), embedding_generator, similarity_threshold=config.retrieval.category_match_threshold
+    )
+
+
+@st.cache_resource
 def get_retrieval_service():
     config = get_config()
     embedding_generator = EmbeddingGenerator(config.embedding.model_name)
@@ -189,6 +185,7 @@ def get_retrieval_service():
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
+        category_matcher=get_category_matcher(),
     )
     return faq_cache.maybe_wrap(retrieval_service, config.redis)
 
@@ -231,6 +228,7 @@ def start_new_session(session_store, user_email):
     st.session_state.chat_history = []
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = 0
+    st.session_state.follow_up_count = 0
 
 
 def touch_session(session_store):
@@ -253,6 +251,7 @@ def reset_expired_session(session_store, user_email):
     st.session_state.session_id = session_id
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = len(st.session_state.chat_history)
+    st.session_state.follow_up_count = 0
 
 
 def ensure_active_session(session_store, timeout_minutes):
@@ -326,6 +325,35 @@ def _default_llm_temperature(config):
 
 TOP_SOURCES_SHOWN = 2
 
+# Chat page category picker's one special option (see render_chat_page)
+# — maps to RetrievalService.retrieve()'s category_override semantics:
+# "All categories" -> ALL_CATEGORIES; any other selection is a literal
+# category name passed straight through (and, if that specific category
+# comes back empty, retried as ALL_CATEGORIES — see render_chat_page).
+ALL_CATEGORIES_LABEL = "All categories"
+
+# Max consecutive questions within the same follow-up thread (see
+# render_chat_page) — a question only counts toward this if
+# RagAnswer.used_conversation_context says it actually depended on the
+# preceding exchange; a self-contained/unrelated question doesn't
+# count and resets the count to 0, starting a new thread. Once the
+# limit is hit, conversation_history is silently dropped for the next
+# question (not blocked, just answered as if it were a fresh one),
+# which — since condensation then has nothing to depend on — makes
+# that same question register as a fresh thread, naturally resetting
+# the count.
+FOLLOW_UP_LIMIT = 2
+
+# Explicit key for the Chat page's category st.selectbox, so a sidebar
+# example-question click (see render_example_queries) can set its
+# value in code before the widget is (re)created on the next rerun —
+# Streamlit reads st.session_state[key] to seed a widget's displayed
+# value when that key is written before the widget runs.
+CATEGORY_PICKER_KEY = "category_picker"
+
+# How many example questions render_example_queries shows.
+EXAMPLE_QUERY_COUNT = 4
+
 
 def _citation_label(rank, source):
     """Formats a source as a numbered, research-paper-style citation,
@@ -340,7 +368,7 @@ def _citation_label(rank, source):
     return f"[{rank}] {title}, {page_label}"
 
 
-def render_sources(sources, config, key_suffix, cited_indices=None):
+def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
     """Shows links to the source PDFs below the answer.
 
     When the answer text carries inline "[N]" citations (see
@@ -350,9 +378,13 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
     wrote — so the numbers always line up and nothing is fabricated.
     Falls back to the top TOP_SOURCES_SHOWN retrieved sources when
     nothing was cited (e.g. a short, non-committal reply).
+
+    Returns the set of source_link values actually shown, so a caller
+    (see render_chat_page) can skip render_topic_link's "Related:"
+    line when it would just repeat a link already shown here.
     """
     if not sources:
-        return
+        return set()
     if cited_indices:
         shown = [(index, sources[index - 1]) for index in cited_indices]
     else:
@@ -390,6 +422,7 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
         shown.append((entry["rank"], merged_source))
 
     st.caption("Sources:")
+    shown_source_links = set()
     for rank, source in shown:
         pdf_path = Path(config.documents.source_directory) / source.source_file
         citation = _citation_label(rank, source)
@@ -411,7 +444,14 @@ def render_sources(sources, config, key_suffix, cited_indices=None):
 
         with link_column:
             if source.source_link:
-                st.caption(f"link: <{source.source_link}>")
+                # Same "name: link" presentation as render_topic_link's
+                # "Related:" line (document title as the hyperlink text,
+                # not the bare URL) — kept consistent between the two.
+                title = Path(source.source_file).stem
+                st.caption(f"[{title}]({source.source_link})")
+                shown_source_links.add(source.source_link)
+
+    return shown_source_links
 
 
 def render_low_confidence_warning(low_confidence: bool) -> None:
@@ -427,8 +467,7 @@ def render_low_confidence_warning(low_confidence: bool) -> None:
     if not low_confidence:
         return
     st.caption(
-        "_(This match was low-confidence — please verify against the "
-        "source document directly.)_"
+        "_(This answer is of low-confidence — please verify against the source document directly.)_"
     )
 
 
@@ -499,22 +538,68 @@ def render_answer_time(total_seconds):
     st.caption(f"⏱️ Answered in {total_seconds:.1f}s")
 
 
+def render_rating(session_store, message_id, current_rating, widget_key):
+    """Shows a 1-5 star rating widget under an answer and persists a
+    change to the database (see SessionStore.rate_message).
+
+    message_id is the assistant message's row id in MySQL (see
+    SessionStore.add_message's return value) — None for a message that
+    predates this feature (nothing to rate_message() against), in
+    which case this renders nothing.
+
+    widget_key must be derived from message_id alone (not a "new-"/
+    "history-" prefix the way render_sources's key_suffix is) — same
+    reasoning as render_rephrase_suggestion's key: clicking a star
+    triggers a rerun on which this message has already moved from the
+    "new answer" render path to the "history replay" one, and
+    Streamlit only keeps a widget's interaction if a widget with the
+    exact same key is recreated on that next rerun.
+
+    st.feedback's own widget state (keyed by widget_key) already
+    survives reruns, so current_rating/default only matters for
+    restoring the right selection on a fresh page load (e.g. after
+    switching tabs and back) — rate_message() is still only called
+    when the selection actually changes, not on every rerun.
+    """
+    if message_id is None:
+        return
+    selected = st.feedback(
+        "stars",
+        key=widget_key,
+        default=(current_rating - 1) if current_rating else None,
+    )
+    if selected is not None and selected + 1 != current_rating:
+        session_store.rate_message(message_id, selected + 1)
+
+
 def render_example_queries(example_queries):
-    """Shows example_queries (config.app.example_queries — a handful of
-    representative, already-indexed questions, deployment-specific) as
-    clickable buttons in the sidebar, in place of typing. Rendered in
-    the sidebar rather than the main chat page so it doesn't compete
-    for space with the answer/citations, and kept visible for the whole
-    session (not just before the first question) so it stays available
-    as a quick shortcut throughout the conversation.
+    """Shows example_queries (see get_example_queries — a handful of
+    representative, already-indexed questions, each tagged with the
+    category it belongs to) as clickable buttons in the sidebar, in
+    place of typing. Rendered in the sidebar rather than the main chat
+    page so it doesn't compete for space with the answer/citations,
+    and kept visible for the whole session (not just before the first
+    question) so it stays available as a quick shortcut throughout the
+    conversation.
+
+    Clicking one sets both the question AND the category picker
+    (st.session_state[CATEGORY_PICKER_KEY]) to that question's own
+    category — read the next rerun before the selectbox is (re)created,
+    so the question is asked exactly as scoped as it was written for,
+    not whatever category happened to be selected before. A fallback
+    example with no category (category is None — see
+    get_example_queries) leaves the picker untouched instead.
     """
     if not example_queries:
         return
     with st.sidebar:
         st.caption("Try one of these:")
-        for example_query in example_queries:
-            if st.button(example_query, key=f"example-{example_query}", use_container_width=True):
-                st.session_state.pending_question = example_query
+        for example in example_queries:
+            question = example["question"]
+            if st.button(question, key=f"example-{question}", use_container_width=True):
+                st.session_state.pending_question = question
+                if example["category"] is not None:
+                    st.session_state[CATEGORY_PICKER_KEY] = example["category"]
                 st.rerun()
 
 
@@ -564,26 +649,45 @@ def render_chat_page():
     ensure_active_session(session_store, config.session.timeout_minutes)
 
     render_page_title(config.app.name)
-    st.write(config.app.description)
+    render_centered_text(config.app.description)
     render_session_countdown(session_store, config)
     render_estimated_response_time(session_store)
-    render_example_queries(config.app.example_queries)
+    render_example_queries(get_example_queries())
 
     for message_index, message in enumerate(st.session_state.chat_history):
         with st.chat_message(message["role"]):
             st.write(message["content"])
             if message["role"] == "assistant":
                 render_low_confidence_warning(message.get("low_confidence", False))
-                render_sources(
+                shown_source_links = render_sources(
                     message.get("sources", []),
                     config,
                     f"history-{message_index}",
                     cited_indices=message.get("cited_indices"),
                 )
-                render_topic_link(message.get("topic_name"), message.get("topic_link"))
+                if message.get("topic_link") not in shown_source_links:
+                    render_topic_link(message.get("topic_name"), message.get("topic_link"))
                 render_rephrase_suggestion(message.get("rephrase_suggestion"), message_index)
                 render_answer_time(message.get("total_seconds"))
+                render_rating(
+                    session_store,
+                    message.get("message_id"),
+                    message.get("rating"),
+                    widget_key=f"rating-{message.get('message_id')}",
+                )
                 render_debug_panel(message.get("question", ""), message.get("sources", []))
+
+    category_option = st.selectbox(
+        "Category",
+        [ALL_CATEGORIES_LABEL] + get_categories(),
+        key=CATEGORY_PICKER_KEY,
+        help=(
+            "Pick a specific category to search only it first — if nothing "
+            "is found there, every other category is searched automatically. "
+            "'All categories' always searches everything directly."
+        ),
+    )
+    category_override = ALL_CATEGORIES if category_option == ALL_CATEGORIES_LABEL else category_option
 
     question = st.chat_input("Ask a question about the indexed documents...")
     is_new_question = question is not None
@@ -634,14 +738,49 @@ def render_chat_page():
                 st.session_state.history_reset_at_index,
             )
 
+        # Once FOLLOW_UP_LIMIT consecutive context-dependent follow-ups
+        # have been asked, silently drop conversation_history for this
+        # turn — the question is still answered, just without the
+        # preceding exchange to depend on. Since query_condenser then
+        # has nothing to condense against, this turn's
+        # used_conversation_context will come back False, which is
+        # exactly what resets follow_up_count to 0 below — a new
+        # follow-up thread can then build back up from scratch.
+        effective_conversation_history = (
+            None if st.session_state.get("follow_up_count", 0) >= FOLLOW_UP_LIMIT else conversation_history
+        )
+
         with st.chat_message("assistant"):
-            with st.spinner("Checking the indexed documents..."):
-                rag_pipeline = get_rag_pipeline()
+            rag_pipeline = get_rag_pipeline()
+            spinner_label = (
+                "Checking the indexed documents..."
+                if category_override == ALL_CATEGORIES
+                else f"Checking '{category_override}'..."
+            )
+            with st.spinner(spinner_label):
                 result = rag_pipeline.answer(
                     question,
-                    conversation_history=conversation_history,
+                    conversation_history=effective_conversation_history,
                     suggest_rephrase=not is_rephrase_retry,
+                    category_override=category_override,
                 )
+            # A specific category (not ALL_CATEGORIES) came back empty —
+            # widen the search to every other category rather than
+            # stopping at "not found in this one category", discarding
+            # this first (unanswered) attempt entirely in favor of
+            # whatever the broader search finds.
+            if category_override != ALL_CATEGORIES and not result.grounded:
+                st.info(f"No answer found in '{category_override}'. Checking other categories...")
+                with st.spinner("Checking other categories..."):
+                    result = rag_pipeline.answer(
+                        question,
+                        conversation_history=effective_conversation_history,
+                        suggest_rephrase=not is_rephrase_retry,
+                        category_override=ALL_CATEGORIES,
+                    )
+            st.session_state.follow_up_count = (
+                st.session_state.get("follow_up_count", 0) + 1 if result.used_conversation_context else 0
+            )
             # Idle countdown restarts from when the answer is delivered,
             # not from when the question was submitted, so a slow
             # generation doesn't eat into (or get cut short by) the
@@ -649,25 +788,29 @@ def render_chat_page():
             touch_session(session_store)
             st.write(result.answer_text)
             render_low_confidence_warning(result.low_confidence)
-            render_sources(
+            shown_source_links = render_sources(
                 result.sources,
                 config,
                 f"new-{len(st.session_state.chat_history)}",
                 cited_indices=result.cited_indices,
             )
-            render_topic_link(result.topic_name, result.topic_link)
+            if result.topic_link not in shown_source_links:
+                render_topic_link(result.topic_name, result.topic_link)
             render_rephrase_suggestion(result.rephrase_suggestion, len(st.session_state.chat_history))
             render_answer_time(result.total_seconds)
+            message_id = session_store.add_message(
+                st.session_state.session_id,
+                "assistant",
+                result.answer_text,
+                retrieval_seconds=result.retrieval_seconds,
+                llm_seconds=result.llm_seconds,
+                total_seconds=result.total_seconds,
+            )
+            render_rating(
+                session_store, message_id, current_rating=None, widget_key=f"rating-{message_id}"
+            )
             render_debug_panel(question, result.sources)
 
-        session_store.add_message(
-            st.session_state.session_id,
-            "assistant",
-            result.answer_text,
-            retrieval_seconds=result.retrieval_seconds,
-            llm_seconds=result.llm_seconds,
-            total_seconds=result.total_seconds,
-        )
         st.session_state.chat_history.append(
             {
                 "role": "assistant",
@@ -680,21 +823,80 @@ def render_chat_page():
                 "total_seconds": result.total_seconds,
                 "low_confidence": result.low_confidence,
                 "rephrase_suggestion": result.rephrase_suggestion,
+                "message_id": message_id,
+                "rating": None,
             }
         )
 
 
-def render_system_info():
-    config = get_config()
-    render_system_info_page(config, get_vector_store(), st.session_state.user_email)
-
-
 def render_admin():
-    render_admin_page(get_config())
+    # System Info and Recent Queries moved here as tabs (see
+    # admin_page.render_admin_page) instead of their own top-level
+    # pages, so the sidebar nav only lists Chat and Admin.
+    render_admin_page(get_config(), st.session_state.user_email)
 
 
 def main():
     config = get_config()
+
+    # st.set_page_config must run before any other Streamlit call in
+    # this script run, and must run here (inside main(), executed on
+    # every session) rather than at module import time: a module's
+    # top-level code only runs once per server process (Python caches
+    # the import), so a module-level call here would only ever reach
+    # the first browser session that process serves — every later
+    # session would fall through to Streamlit's literal default tab
+    # title "Streamlit" instead of config.app.name.
+    st.set_page_config(
+        page_title=config.app.name,
+        page_icon=str(APP_ICON_PATH),
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+
+    # Streamlit's default centered layout leaves large blank margins on
+    # either side of the chat, plus a tall gap above the title. Constrain
+    # the content to a comfortable reading width and pull it up/left
+    # closer to the edge of the viewport instead.
+    #
+    # Streamlit's own header toolbar (hamburger menu / "Deploy" button) is
+    # position:fixed at the top of the viewport, normally cleared by
+    # block-container's large default padding-top. Shrinking that padding
+    # without also shrinking the header leaves the header's fixed height
+    # taller than the new clearance, so content (the page-title icon in
+    # particular, being an <img> rather than text) renders partly behind
+    # it and looks clipped at the top. Shrinking the header to match keeps
+    # the compact layout without that overlap.
+    st.markdown(
+        """
+        <style>
+        header[data-testid="stHeader"] {
+            height: 2.5rem;
+            min-height: 2.5rem;
+        }
+        .block-container,
+        [data-testid="stMainBlockContainer"] {
+            max-width: 100% !important;
+            padding-top: 2.5rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+            margin: 0 !important;
+        }
+        [data-testid="stSidebar"] .block-container,
+        [data-testid="stSidebar"] [data-testid="stMainBlockContainer"] {
+            padding-top: 1.25rem !important;
+        }
+        div[data-testid="stChatMessage"] {
+            border-radius: 0.75rem;
+            padding: 0.5rem 0.25rem;
+        }
+        hr {
+            margin: 0.75rem 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if "user_email" not in st.session_state:
         st.session_state.user_email = normalize_email(config.app.default_user_email)
@@ -704,7 +906,6 @@ def main():
     pages = st.navigation(
         [
             st.Page(render_chat_page, title="Chat", icon="💬", default=True),
-            st.Page(render_system_info, title="System Info", icon="ℹ️"),
             st.Page(render_admin, title="Admin", icon="🔧"),
         ]
     )

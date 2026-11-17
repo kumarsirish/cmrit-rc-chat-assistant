@@ -104,16 +104,26 @@ class CachedRetrievalService:
     def match_topic(self, query, query_embedding=None):
         return self._retrieval_service.match_topic(query, query_embedding=query_embedding)
 
-    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None):
+    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None, category_override=None):
         # top_k/min_reranker_score overrides are only used by
         # evaluation/experiment scripts to try non-default settings —
         # caching those would either serve a default-settings result
         # under an override, or pollute the cache with results that
-        # don't match the app's actual defaults. Bypass the cache
-        # entirely for that case.
-        if top_k is not None or min_reranker_score is not None:
+        # don't match the app's actual defaults. category_override (see
+        # dashboard.py's Chat page category picker) changes which
+        # chunks the SAME question text would retrieve, so caching by
+        # normalized question text alone would risk serving a
+        # category-scoped (or unscoped) result under the wrong
+        # override. Bypass the cache entirely whenever any of these
+        # are given — auto-detect (category_override=None) is the
+        # overwhelmingly common case and the only one cached.
+        if top_k is not None or min_reranker_score is not None or category_override is not None:
             return self._retrieval_service.retrieve(
-                query, metadata_filter=metadata_filter, top_k=top_k, min_reranker_score=min_reranker_score
+                query,
+                metadata_filter=metadata_filter,
+                top_k=top_k,
+                min_reranker_score=min_reranker_score,
+                category_override=category_override,
             )
 
         normalized = _normalize(query)

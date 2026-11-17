@@ -1,7 +1,7 @@
 # RAG Assistant
 
 A generic Retrieval-Augmented Generation app: answers questions grounded
-strictly in whatever documents (PDF, Word, plain text, Excel) are indexed
+strictly in whatever documents (PDF, Word, plain text, Excel, PowerPoint) are indexed
 from `knowledge_documents/`. It refuses to answer questions the documents
 don't cover, and links to the source document/page for every answer.
 Document content, category structure, and UI copy are all config-driven
@@ -15,7 +15,7 @@ policies, but nothing in the code assumes that.
 Admin UI's "Rebuild index" button):
 
 ```
-knowledge_documents/*.{pdf,docx,txt,xlsx}
+knowledge_documents/*.{pdf,docx,txt,xlsx,pptx}
     -> document_loader.py   (extract text, one entry per page/sheet/whole file)
     -> chunker.py            (recursive, URL-safe splitting into overlapping chunks)
     -> embeddings.py         (sentence-transformers -> one vector per chunk)

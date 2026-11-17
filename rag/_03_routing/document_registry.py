@@ -91,7 +91,16 @@ def register_upload(
     registry still saying "active" rather than claiming an archive that
     didn't happen.
 
-    Returns the new record for the just-registered upload.
+    If no supersedes is given but an active record with this exact
+    filename+category already exists, its upload_date is refreshed in
+    place instead of appending a duplicate entry — this is the
+    "overwrite" case (re-uploading the same filename, or a zip archive
+    extracting over an existing file via extract_zip_archive): the
+    file's content on disk was already overwritten by the caller
+    before this runs, so this just reflects that it's a new version of
+    the same document rather than a brand new one.
+
+    Returns the (new, or refreshed existing) record for the upload.
     """
     records = load_registry(registry_path)
 
@@ -112,6 +121,17 @@ def register_upload(
                 shutil.move(str(old_path), str(new_path))
             old_record.status = "archived"
             old_record.superseded_by = filename
+    elif existing_record := next(
+        (
+            record
+            for record in records
+            if record.filename == filename and record.category == category and record.status == "active"
+        ),
+        None,
+    ):
+        existing_record.upload_date = datetime.now(timezone.utc).isoformat()
+        _save_registry(registry_path, records)
+        return existing_record
 
     new_record = DocumentRecord(
         filename=filename,

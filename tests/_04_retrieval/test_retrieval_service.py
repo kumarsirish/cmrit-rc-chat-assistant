@@ -2,8 +2,28 @@ import operator
 from dataclasses import dataclass, field
 
 from rag._04_retrieval.bm25_retriever import BM25Document, BM25Index
-from rag._04_retrieval.retrieval_service import GLOBAL_MODE, MAPPED_DOCUMENT_MODE, RetrievalService, RetrievedChunk
+from rag._04_retrieval.retrieval_service import (
+    ALL_CATEGORIES,
+    GLOBAL_MODE,
+    MAPPED_DOCUMENT_MODE,
+    RetrievalService,
+    RetrievedChunk,
+)
 from rag._03_routing.docs_metadata import DocTopic
+
+
+class FakeCategoryMatcher:
+    """Returns a fixed list of matched categories regardless of query,
+    so tests can control exactly what retrieve()'s category routing
+    sees without a real embedding model."""
+
+    def __init__(self, matches):
+        self._matches = matches
+        self.match_call_count = 0
+
+    def match(self, query, query_embedding=None):
+        self.match_call_count += 1
+        return self._matches
 
 
 def _matches(actual, expected):
@@ -623,6 +643,121 @@ def test_retrieve_min_reranker_score_override_replaces_the_configured_default():
         min_reranker_score=0.9,  # would normally drop a 0.5 match
     )
     results, _ = service.retrieve("some question", min_reranker_score=0.3)
+    assert len(results) == 1
+
+
+# --- category routing (see dashboard.py's Chat page category picker) -----
+
+
+def test_category_override_hard_scopes_search_and_skips_topic_matching():
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.1],
+        metadatas=[{"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
+    )
+    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+    )
+    results, matched_topic = service.retrieve("what is the leave policy", category_override="Funding schemes")
+    assert matched_topic is None
+    assert dense_retriever.last_filter == {"category": "Funding schemes"}
+    assert len(results) == 1
+
+
+def test_all_categories_override_skips_classifier_but_keeps_topic_matching():
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.1], metadatas=[{"source_file": "leave.pdf", "page_number": 1, "chunk_index": 0}]
+    )
+    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
+    category_matcher = FakeCategoryMatcher(["Funding schemes"])
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+        category_matcher=category_matcher,
+    )
+    _, matched_topic = service.retrieve("what is the leave policy", category_override=ALL_CATEGORIES)
+    assert matched_topic.topic == "Leave Policy"
+    assert category_matcher.match_call_count == 0
+
+
+def test_global_mode_scopes_search_to_a_single_matched_category():
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.1],
+        metadatas=[{"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
+    )
+    category_matcher = FakeCategoryMatcher(["Funding schemes"])
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        category_matcher=category_matcher,
+    )
+    results, matched_topic = service.retrieve("tell me about grants")
+    assert matched_topic is None
+    assert dense_retriever.last_filter == {"category": "Funding schemes"}
+    assert len(results) == 1
+
+
+def test_global_mode_scopes_search_to_multiple_matched_categories():
+    dense_retriever = FakeDenseRetriever(distances=[0.1])
+    category_matcher = FakeCategoryMatcher(["Funding schemes", "Approval and claim forms"])
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        category_matcher=category_matcher,
+    )
+    service.retrieve("tell me about grants and approvals")
+    assert dense_retriever.last_filter == {"category": {"$in": ["Funding schemes", "Approval and claim forms"]}}
+
+
+def test_global_mode_stays_unscoped_when_classifier_finds_no_match():
+    dense_retriever = FakeDenseRetriever(distances=[0.1])
+    category_matcher = FakeCategoryMatcher([])
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        category_matcher=category_matcher,
+    )
+    service.retrieve("some unrelated question")
+    assert dense_retriever.last_filter is None
+    assert category_matcher.match_call_count == 1
+
+
+def test_global_fallback_from_empty_primary_also_consults_category_matcher():
+    # The single candidate's source_file ("other.pdf") doesn't match
+    # the mapped document ("leave.pdf"), so PRIMARY comes back empty
+    # and retrieve() falls through to a GLOBAL search — which should
+    # still consult the category matcher, same as a query with no
+    # topic match at all.
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.1],
+        metadatas=[{"source_file": "other.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
+    )
+    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
+    category_matcher = FakeCategoryMatcher(["Funding schemes"])
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+        category_matcher=category_matcher,
+    )
+    results, matched_topic = service.retrieve("what is the leave policy")
+    assert matched_topic.topic == "Leave Policy"
+    assert dense_retriever.last_filter == {"category": "Funding schemes"}
     assert len(results) == 1
 
 

@@ -8,9 +8,16 @@ sentence-transformers
 pypdf
 
 # Multi-format document ingestion (rag/_01_ingestion/document_loader.py):
-# .docx and .xlsx support. .txt and .pdf need no extra library.
+# .docx, .xlsx, and .pptx support. .txt and .pdf need no extra library.
 python-docx
 openpyxl
+python-pptx
+
+# helper_scripts/download_rc_documents.py: scrapes a public Google
+# Sites downloads page and exports its linked Google Docs/Sheets/
+# Slides/Drive files.
+requests
+beautifulsoup4
 mysql-connector-python
 PyYAML
 pytest

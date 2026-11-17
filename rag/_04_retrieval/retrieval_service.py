@@ -61,6 +61,15 @@ MAPPED_DOCUMENT_PRIMARY_TOP_K = 2
 MAPPED_DOCUMENT_MODE = "MAPPED_DOCUMENT"
 GLOBAL_MODE = "GLOBAL"
 
+# Sentinel for retrieve()'s category_override: forces an unscoped
+# global search even when a category_matcher is configured, distinct
+# from None (which means "auto-detect" — consult the category matcher
+# as a GLOBAL-mode fallback) and from a concrete category name (which
+# hard-scopes the search to it, skipping topic-matching entirely). See
+# dashboard.py's Chat page category picker, the only current caller
+# that passes a non-None value here.
+ALL_CATEGORIES = "__all_categories__"
+
 
 @dataclass
 class RetrievedChunk:
@@ -147,6 +156,7 @@ class RetrievalService:
         topic_match_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
         low_confidence_min_score: float = 0.05,
         institution_name: str = None,
+        category_matcher=None,
     ):
         self._dense_retriever = dense_retriever
         self._embedding_generator = embedding_generator
@@ -176,6 +186,10 @@ class RetrievalService:
         self._topic_matcher = EmbeddingTopicMatcher(
             doc_topics or [], embedding_generator, similarity_threshold=topic_match_threshold
         )
+        # None when no categories exist yet (e.g. nothing uploaded)
+        # or the deployment doesn't use category-aware retrieval —
+        # _global_filter then leaves every GLOBAL-mode search unscoped.
+        self._category_matcher = category_matcher
 
     def match_topic(self, query: str, query_embedding: list = None):
         """Returns the DocTopic query is about, or None if none clears
@@ -201,6 +215,7 @@ class RetrievalService:
         metadata_filter: dict = None,
         top_k: int = None,
         min_reranker_score: float = None,
+        category_override: str = None,
     ) -> tuple:
         """Returns (chunks, matched_topic) for query, chunks most
         relevant first.
@@ -215,17 +230,35 @@ class RetrievalService:
         Retrieval always runs on query alone — no conversation history
         is ever considered here.
 
+        category_override (see dashboard.py's Chat page category
+        picker) controls category scoping:
+        - None (default, "auto-detect"): topic-matching runs as usual;
+          whenever that would otherwise fall through to an unscoped
+          GLOBAL search, the category matcher (if configured) is
+          consulted first — see _global_filter.
+        - ALL_CATEGORIES ("all categories" in the UI): topic-matching
+          still runs, but the category matcher is never consulted —
+          a GLOBAL fallback stays genuinely unscoped.
+        - a concrete category name (the user picked one explicitly):
+          topic-matching is skipped entirely and the search is
+          hard-scoped to just that category.
+
         Flow:
         1. Match the query to a topic. If it maps to a document
            (MAPPED_DOCUMENT mode), search that document alone for up
            to `primary_keep` PRIMARY chunks.
         2. If PRIMARY comes back empty, the topic match isn't trusted
            for this query — fall back to a GLOBAL search over the
-           whole collection instead.
+           whole collection (or a category-scoped subset of it, see
+           category_override above) instead.
         3. Otherwise, fill whatever's left of `top_k` with a second,
            GLOBAL-ish search that excludes the mapped document
            (SECONDARY), so PRIMARY + SECONDARY together total top_k.
-        4. No topic match at all skips straight to GLOBAL.
+           SECONDARY is not subject to category scoping — it's a
+           cross-document fill still anchored to the matched topic,
+           not a plain GLOBAL search.
+        4. No topic match at all skips straight to GLOBAL (also
+           category-scoping-eligible).
         """
         top_k = self._top_k if top_k is None else top_k
         min_reranker_score = self._min_reranker_score if min_reranker_score is None else min_reranker_score
@@ -233,53 +266,99 @@ class RetrievalService:
         overall_start = time.perf_counter()
 
         query_embedding = self._embedding_generator.embed_query(query)
-        matched_topic = self.match_topic(query, query_embedding=query_embedding)
         primary_results = None
         secondary_results = None
+        matched_categories = []
 
-        if metadata_filter is None and matched_topic and matched_topic.docs_filename:
-            mode = MAPPED_DOCUMENT_MODE
-            mapped_documents = matched_topic.docs_filename
-            scoped_filter = {"source_file": {"$in": mapped_documents}}
-            primary_keep = min(self._mapped_document_primary_top_k, top_k)
-            primary_candidates, primary_results = self._search(
-                query, query_embedding, scoped_filter, MAPPED_DOCUMENT_CANDIDATES,
-                keep=primary_keep, min_reranker_score=min_reranker_score, trusted_pool=True,
-            )
-            if not primary_results:
-                # Mapped document had nothing usable — fall back
-                # rather than trusting a possibly-wrong topic match.
-                mode = GLOBAL_MODE
-                primary_results = None
-                candidates, results = self._search(
-                    query, query_embedding, metadata_filter, self._hybrid_candidates,
-                    keep=top_k, min_reranker_score=min_reranker_score,
-                )
-            else:
-                secondary_keep = top_k - len(primary_results)
-                if secondary_keep > 0:
-                    secondary_candidates, secondary_results = self._search(
-                        query, query_embedding, metadata_filter, self._hybrid_candidates,
-                        keep=secondary_keep, min_reranker_score=min_reranker_score,
-                        exclude_source_files=mapped_documents,
-                    )
-                else:
-                    secondary_candidates, secondary_results = [], []
-                candidates = primary_candidates + secondary_candidates
-                results = primary_results + secondary_results
-        else:
+        if category_override and category_override != ALL_CATEGORIES:
+            # Manual hard scope: the user told us where to look, so
+            # skip topic-matching/the classifier entirely.
             mode = GLOBAL_MODE
+            matched_topic = None
+            matched_categories = [category_override]
+            scoped_filter = {**(metadata_filter or {}), "category": category_override}
             candidates, results = self._search(
-                query, query_embedding, metadata_filter, self._hybrid_candidates,
+                query, query_embedding, scoped_filter, self._hybrid_candidates,
                 keep=top_k, min_reranker_score=min_reranker_score,
             )
+        else:
+            matched_topic = self.match_topic(query, query_embedding=query_embedding)
+
+            if metadata_filter is None and matched_topic and matched_topic.docs_filename:
+                mode = MAPPED_DOCUMENT_MODE
+                mapped_documents = matched_topic.docs_filename
+                scoped_filter = {"source_file": {"$in": mapped_documents}}
+                primary_keep = min(self._mapped_document_primary_top_k, top_k)
+                primary_candidates, primary_results = self._search(
+                    query, query_embedding, scoped_filter, MAPPED_DOCUMENT_CANDIDATES,
+                    keep=primary_keep, min_reranker_score=min_reranker_score, trusted_pool=True,
+                )
+                if not primary_results:
+                    # Mapped document had nothing usable — fall back
+                    # rather than trusting a possibly-wrong topic match.
+                    mode = GLOBAL_MODE
+                    primary_results = None
+                    global_filter, matched_categories = self._global_filter(
+                        query, query_embedding, metadata_filter, category_override
+                    )
+                    candidates, results = self._search(
+                        query, query_embedding, global_filter, self._hybrid_candidates,
+                        keep=top_k, min_reranker_score=min_reranker_score,
+                    )
+                else:
+                    secondary_keep = top_k - len(primary_results)
+                    if secondary_keep > 0:
+                        secondary_candidates, secondary_results = self._search(
+                            query, query_embedding, metadata_filter, self._hybrid_candidates,
+                            keep=secondary_keep, min_reranker_score=min_reranker_score,
+                            exclude_source_files=mapped_documents,
+                        )
+                    else:
+                        secondary_candidates, secondary_results = [], []
+                    candidates = primary_candidates + secondary_candidates
+                    results = primary_results + secondary_results
+            else:
+                mode = GLOBAL_MODE
+                global_filter, matched_categories = self._global_filter(
+                    query, query_embedding, metadata_filter, category_override
+                )
+                candidates, results = self._search(
+                    query, query_embedding, global_filter, self._hybrid_candidates,
+                    keep=top_k, min_reranker_score=min_reranker_score,
+                )
 
         total_seconds = time.perf_counter() - overall_start
         self._log_summary(
             query, matched_topic, mode, candidates, results, total_seconds,
             primary_results=primary_results, secondary_results=secondary_results,
+            matched_categories=matched_categories,
         )
         return results, matched_topic
+
+    def _global_filter(
+        self, query: str, query_embedding: list, metadata_filter: dict, category_override: str
+    ) -> tuple:
+        """Returns (filter, matched_categories) for a GLOBAL-mode
+        search. No category scoping (matched_categories == []) when
+        category_override is ALL_CATEGORIES or no category_matcher is
+        configured; otherwise consults self._category_matcher and
+        scopes the search to whatever it returns — a single exact-match
+        filter for one matched category, an "$in" filter for several,
+        or no filter at all if none cleared the threshold (low
+        confidence -> genuinely global)."""
+        if category_override == ALL_CATEGORIES or not self._category_matcher:
+            return metadata_filter, []
+
+        matched_categories = self._category_matcher.match(query, query_embedding=query_embedding)
+        if not matched_categories:
+            return metadata_filter, []
+
+        category_filter = (
+            {"category": matched_categories[0]}
+            if len(matched_categories) == 1
+            else {"category": {"$in": matched_categories}}
+        )
+        return {**(metadata_filter or {}), **category_filter}, matched_categories
 
     def _search(
         self,
@@ -409,18 +488,19 @@ class RetrievalService:
 
     def _log_summary(
         self, query, matched_topic, mode, candidates, results, total_seconds,
-        primary_results=None, secondary_results=None,
+        primary_results=None, secondary_results=None, matched_categories=None,
     ) -> None:
         """Always-on, one-line-per-query summary: query, detected
         topic, mapped document, retrieval mode, candidate/result
         counts, and final source documents."""
         sources = sorted({chunk.source_file for chunk in results})
         logger.info(
-            "query=%r topic=%r mapped_document=%r mode=%s candidates=%d final_chunks=%d "
-            "sources=%s seconds=%.3f",
+            "query=%r topic=%r mapped_document=%r categories=%s mode=%s candidates=%d "
+            "final_chunks=%d sources=%s seconds=%.3f",
             query,
             matched_topic.topic if matched_topic else None,
             matched_topic.docs_filename if matched_topic else None,
+            matched_categories or [],
             mode,
             len(candidates),
             len(results),
@@ -435,15 +515,16 @@ class RetrievalService:
                 [chunk.source_file for chunk in (secondary_results or [])],
             )
         if _trace_logger.isEnabledFor(logging.DEBUG):
-            self._log_debug_trace(query, matched_topic, mode, candidates, results)
+            self._log_debug_trace(query, matched_topic, mode, candidates, results, matched_categories)
 
-    def _log_debug_trace(self, query, matched_topic, mode, candidates, final_chunks) -> None:
+    def _log_debug_trace(self, query, matched_topic, mode, candidates, final_chunks, matched_categories=None) -> None:
         """Writes a fuller per-query retrieval trace, only when a
         DEBUG handler is attached (RAG_DEBUG=true)."""
         lines = [f"QUERY: {query!r}"]
         lines.append(f"1. DETECTED TOPIC: {matched_topic.topic if matched_topic else None}")
         docs_filename = matched_topic.docs_filename if matched_topic else None
         lines.append(f"2. TOPIC -> DOCUMENT MAPPING: {docs_filename!r}")
+        lines.append(f"2b. MATCHED CATEGORIES: {matched_categories or []}")
         lines.append(f"3. RETRIEVAL MODE: {mode}")
 
         lines.append("4. FUSED CANDIDATES (dense_rank/lexical_rank, pre-relevance-filter):")

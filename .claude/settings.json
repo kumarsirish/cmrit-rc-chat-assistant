@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python -m pytest tests/_01_ingestion/test_document_loader.py tests/_10_ui/test_admin_page.py -q)"
+    ]
+  }
+}

@@ -37,7 +37,7 @@ class FakeRetrievalService:
         self._matched_topic = matched_topic
         self.call_count = 0
 
-    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None):
+    def retrieve(self, query, metadata_filter=None, top_k=None, min_reranker_score=None, category_override=None):
         self.call_count += 1
         return self._chunks, self._matched_topic
 
@@ -105,6 +105,19 @@ def test_top_k_override_bypasses_the_cache_entirely():
 
     cached.retrieve("What is the CMRIT quality policy?", top_k=5)
     cached.retrieve("What is the CMRIT quality policy?", top_k=5)
+
+    assert inner.call_count == 2
+    assert redis_client.hashes == {}
+    assert redis_client.strings == {}
+
+
+def test_category_override_bypasses_the_cache_entirely():
+    inner = FakeRetrievalService(chunks=[_chunk()])
+    redis_client = FakeRedis()
+    cached = faq_cache.CachedRetrievalService(inner, redis_client, FakeRedisConfig(faq_cache_min_hits=1))
+
+    cached.retrieve("What is the CMRIT quality policy?", category_override="Policies and norms")
+    cached.retrieve("What is the CMRIT quality policy?", category_override="Policies and norms")
 
     assert inner.call_count == 2
     assert redis_client.hashes == {}

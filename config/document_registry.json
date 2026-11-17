@@ -1,0 +1,244 @@
+{
+  "documents": [
+    {
+      "filename": "RC Norms.docx",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:55:25.370199+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "RCPIE Targets.pdf",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:55:26.894385+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Checklist for RC Submission.docx",
+      "category": "Submission process and checklists",
+      "upload_date": "2026-11-17T04:55:28.092402+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "CMRIT common PPT theme.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:31.118556+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Department Mega Project.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:33.736245+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "COE Mega Applications.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:36.130619+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Faculty Publication Presentation.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:40.383639+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "MEPMEAI&E Project Proposal Form.docx",
+      "category": "Projects, doctoral and internship forms",
+      "upload_date": "2026-11-17T04:55:41.899270+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Final Year Student Projects.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:45.233615+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Student Mini Projects.pptx",
+      "category": "Presentation decks",
+      "upload_date": "2026-11-17T04:55:48.380150+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "External Event Form.docx",
+      "category": "Approval and claim forms",
+      "upload_date": "2026-11-17T04:55:49.671673+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Format for Communication to RC Convenor.docx",
+      "category": "Submission process and checklists",
+      "upload_date": "2026-11-17T04:55:50.724252+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Incentive Request Form.docx",
+      "category": "Approval and claim forms",
+      "upload_date": "2026-11-17T04:55:51.790864+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Pre-Approval Request Form for Conference.docx",
+      "category": "Approval and claim forms",
+      "upload_date": "2026-11-17T04:55:52.713972+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Travel Cost for Proposal Presentation.pdf",
+      "category": "Approval and claim forms",
+      "upload_date": "2026-11-17T04:55:54.222911+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Ph.D Internal NOC form.docx",
+      "category": "Projects, doctoral and internship forms",
+      "upload_date": "2026-11-17T04:55:55.757772+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "CMRIT Guidelines for patent abstract.docx",
+      "category": "Writing guides",
+      "upload_date": "2026-11-17T04:55:56.958244+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "CMRIT guidelines for effective scientific proposalpaper writing.docx",
+      "category": "Writing guides",
+      "upload_date": "2026-11-17T04:55:59.153343+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "CMRIT IPR Policy.docx",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:56:00.602571+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "CMRIT Faculty Internship policy.docx",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:56:02.035193+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "RCPIE FAQ.docx",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:56:03.120735+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Innovation and Entrepreneurship policy.docx",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:56:04.247647+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "KAPILA Scheme.docx",
+      "category": "Funding schemes",
+      "upload_date": "2026-11-17T04:56:05.943609+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Pre-Approval Request Form for Patent Grant Support.pdf",
+      "category": "Approval and claim forms",
+      "upload_date": "2026-11-17T04:56:07.375439+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Recommended Book Publishers.pdf",
+      "category": "Writing guides",
+      "upload_date": "2026-11-17T04:56:09.190433+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "RCPIE Verification Checklist.docx",
+      "category": "Submission process and checklists",
+      "upload_date": "2026-11-17T04:56:10.468711+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Seed Fund For Research Projects.docx",
+      "category": "Funding schemes",
+      "upload_date": "2026-11-17T04:56:13.797053+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Interns Admit Approval Form.pdf",
+      "category": "Projects, doctoral and internship forms",
+      "upload_date": "2026-11-17T04:56:15.591096+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Institutional Policy for Claiming Reimbursement of Field-Work Expenses for ResearchNon-Research Externally Funded Projects.pdf",
+      "category": "Policies and norms",
+      "upload_date": "2026-11-17T04:56:17.325710+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    },
+    {
+      "filename": "Top MSME Funding.docx",
+      "category": "Funding schemes",
+      "upload_date": "2026-11-17T13:27:25.492511+00:00",
+      "status": "active",
+      "supersedes": null,
+      "superseded_by": null
+    }
+  ]
+}

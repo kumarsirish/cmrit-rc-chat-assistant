@@ -1,173 +1,209 @@
 {
   "k": 8,
   "mean_scores": {
-    "recall": 0.85,
-    "precision": 0.49041666666666667,
-    "reciprocal_rank": 0.6791666666666667,
-    "ndcg": 0.7065464876785729
+    "recall": 0.6666666666666666,
+    "precision": 0.4533333333333333,
+    "reciprocal_rank": 0.4666666666666667,
+    "ndcg": 0.5198816554174563
   },
   "mean_by_category": {
-    "normal": {
-      "recall": 0.8333333333333334,
-      "precision": 0.48935185185185187,
-      "reciprocal_rank": 0.6990740740740741,
-      "ndcg": 0.7294960974206365
+    "Approval and claim forms": {
+      "recall": 0.75,
+      "precision": 0.575,
+      "reciprocal_rank": 0.6666666666666666,
+      "ndcg": 0.6934264036172708
+    },
+    "Funding schemes": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    "Policies and norms": {
+      "recall": 0.6428571428571429,
+      "precision": 0.32142857142857145,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.4157959745029102
+    },
+    "Presentation decks": {
+      "recall": 1.0,
+      "precision": 0.25,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.6309297535714575
+    },
+    "Projects, doctoral and internship forms": {
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    "Submission process and checklists": {
+      "recall": 0.3888888888888889,
+      "precision": 0.4583333333333333,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.41154645433712606
+    },
+    "Writing guides": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
     },
     "unanswerable": {
       "recall": 1.0,
-      "precision": 0.5,
-      "reciprocal_rank": 0.5,
-      "ndcg": 0.5
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
     }
   },
   "rows": [
     {
-      "category": "normal",
-      "question": "how many casual leaves are permanent staff allowed per year",
-      "recall": 1.0,
-      "precision": 0.5,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "category": "Approval and claim forms",
+      "question": "how much registration fee can be reimbursed for presenting a paper at an external conference and what are the conditions",
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.38685280723454163
     },
     {
-      "category": "normal",
-      "question": "what is the maximum vacation leave per semester for staff who completed one year of service",
-      "recall": 1.0,
-      "precision": 0.6,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
-    },
-    {
-      "category": "normal",
-      "question": "how long is the probation period for new employees at CMRIT",
+      "category": "Approval and claim forms",
+      "question": "my conference paper has three cmrit authors who can claim the registration fee and what is required",
       "recall": 1.0,
       "precision": 0.75,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
     {
-      "category": "normal",
-      "question": "when does the probation completion process start in Darwinbox",
+      "category": "Funding schemes",
+      "question": "how is the kapila grant released to the institute",
       "recall": 1.0,
       "precision": 1.0,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
     {
-      "category": "normal",
-      "question": "does CMRIT provide PF and ESI benefits to staff",
-      "recall": 1.0,
-      "precision": 0.75,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
-    },
-    {
-      "category": "normal",
-      "question": "what compensatory off is given for working on a holiday",
-      "recall": 1.0,
-      "precision": 0.375,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
-    },
-    {
-      "category": "normal",
-      "question": "what is CMRIT's quality policy",
+      "category": "Policies and norms",
+      "question": "what incentive can i claim for a paper published in a scopus q1 or q2 journal",
       "recall": 1.0,
       "precision": 0.5,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.6309297535714575
     },
     {
-      "category": "normal",
-      "question": "what mandatory training must new faculty complete within six months of joining",
+      "category": "Policies and norms",
+      "question": "how much incentive is given for a patent grant and how is it shared",
       "recall": 1.0,
-      "precision": 0.3333333333333333,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
     },
     {
-      "category": "normal",
-      "question": "how often is the faculty semester evaluation done",
-      "recall": 1.0,
-      "precision": 0.6,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
-    },
-    {
-      "category": "normal",
-      "question": "what is the official CMRIT website address",
-      "recall": 1.0,
+      "category": "Policies and norms",
+      "question": "how many days does the rc review process take",
+      "recall": 0.0,
       "precision": 0.0,
       "reciprocal_rank": 0.0,
       "ndcg": 0.0
     },
     {
-      "category": "normal",
-      "question": "I've never done an NPTEL course before, what am I required to complete as faculty each year?",
+      "category": "Policies and norms",
+      "question": "how much other incentive can a faculty member claim if they worked at cmrit for 7 months in an academic year",
       "recall": 1.0,
-      "precision": 0.4,
-      "reciprocal_rank": 0.3333333333333333,
-      "ndcg": 0.5
+      "precision": 0.5,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.6309297535714575
     },
     {
-      "category": "normal",
-      "question": "How often am I expected to present something beyond the syllabus to my department?",
+      "category": "Policies and norms",
+      "question": "how much does a 5 lakh uba proposal and a 20 lakh modrob proposal count for in the core load",
       "recall": 1.0,
-      "precision": 1.0,
-      "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575
     },
     {
-      "category": "normal",
-      "question": "If I want to resign from my teaching position, how much advance notice do I need to give?",
+      "category": "Policies and norms",
+      "question": "how much funding is needed to complete one consultancy load and how many research papers make one rp load",
+      "recall": 0.5,
+      "precision": 0.25,
+      "reciprocal_rank": 0.25,
+      "ndcg": 0.38685280723454163
+    },
+    {
+      "category": "Policies and norms",
+      "question": "how many days will it take to get approval from the drc and the rc",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "Presentation decks",
+      "question": "what font style and size should be used in the final year project review presentation and how long can the introduction be",
       "recall": 1.0,
       "precision": 0.25,
       "reciprocal_rank": 0.25,
       "ndcg": 0.6309297535714575
     },
     {
-      "category": "normal",
-      "question": "My section has several students failing exams, at what point does that become a concern the department needs to track?",
+      "category": "Projects, doctoral and internship forms",
+      "question": "what is the approval process for a mega project mep",
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "Submission process and checklists",
+      "question": "what affiliation should i use in research papers",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "Submission process and checklists",
+      "question": "what is the maximum plagiarism allowed in a paper for rc review",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "Submission process and checklists",
+      "question": "what is the last date to upload rcpie proofs in the drive",
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "category": "Submission process and checklists",
+      "question": "which affiliation should a faculty member use if they are pursuing a phd at the cmrit research center affiliated to vtu",
+      "recall": 0.0,
+      "precision": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg": 0.0
+    },
+    {
+      "category": "Submission process and checklists",
+      "question": "what proofs need to be uploaded for c load and e load verification",
       "recall": 1.0,
       "precision": 0.75,
       "reciprocal_rank": 1.0,
       "ndcg": 1.0
     },
     {
-      "category": "normal",
-      "question": "If I want to raise a complaint, what actually happens to it after I submit it?",
-      "recall": 1.0,
+      "category": "Submission process and checklists",
+      "question": "can i send only an abstract for rc review",
+      "recall": 0.3333333333333333,
       "precision": 1.0,
       "reciprocal_rank": 1.0,
-      "ndcg": 1.0
+      "ndcg": 0.46927872602275644
     },
     {
-      "category": "normal",
-      "question": "If the fire alarm goes off, where am I supposed to take the students?",
-      "recall": 0.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
-    },
-    {
-      "category": "normal",
-      "question": "Where on campus can students go to get access to 3D printers and laser cutters?",
-      "recall": 0.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
-    },
-    {
-      "category": "normal",
-      "question": "If I want help filing a patent, who at CMRIT can assist me?",
-      "recall": 0.0,
-      "precision": 0.0,
-      "reciprocal_rank": 0.0,
-      "ndcg": 0.0
-    },
-    {
-      "category": "unanswerable",
-      "question": "What is the capital of France?",
+      "category": "Writing guides",
+      "question": "is wiley a recommended book publisher",
       "recall": 1.0,
       "precision": 1.0,
       "reciprocal_rank": 1.0,
@@ -175,33 +211,12 @@
     },
     {
       "category": "unanswerable",
-      "question": "What is the process to get a refund for a cancelled flight booking?",
+      "question": "what is the principal's email address",
       "recall": 1.0,
       "precision": 0.0,
       "reciprocal_rank": 0.0,
       "ndcg": 0.0
     }
   ],
-  "baseline_comparison": {
-    "recall": {
-      "current": 0.85,
-      "baseline": 0.85,
-      "delta": 0.0
-    },
-    "precision": {
-      "current": 0.49041666666666667,
-      "baseline": 0.49041666666666667,
-      "delta": 0.0
-    },
-    "reciprocal_rank": {
-      "current": 0.6791666666666667,
-      "baseline": 0.6791666666666667,
-      "delta": 0.0
-    },
-    "ndcg": {
-      "current": 0.7065464876785729,
-      "baseline": 0.7065464876785729,
-      "delta": 0.0
-    }
-  }
+  "baseline_comparison": null
 }

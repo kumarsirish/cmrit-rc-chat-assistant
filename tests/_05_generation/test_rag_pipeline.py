@@ -14,7 +14,7 @@ class FakeRetrievalService:
         self._matched_topic = matched_topic
         self.last_query = None
 
-    def retrieve(self, question, top_k=None, min_reranker_score=None):
+    def retrieve(self, question, top_k=None, min_reranker_score=None, category_override=None):
         self.last_query = question
         return self._chunks, self._matched_topic
 
@@ -181,10 +181,11 @@ def test_answer_condenses_retrieval_query_when_question_depends_on_prior_exchang
     ]
 
     pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
-    pipeline.answer("What about sick leave?", conversation_history=history)
+    result = pipeline.answer("What about sick leave?", conversation_history=history)
 
     # Retrieval sees the condensed, standalone form ...
     assert retriever.last_query == "How many days of sick leave are employees allowed?"
+    assert result.used_conversation_context is True
     # ... but the condenser call itself only saw the single most recent
     # exchange, not any earlier turns (there aren't any here, but the
     # call is still made with conversation_history=None on the
@@ -219,9 +220,10 @@ def test_answer_leaves_retrieval_query_unchanged_for_a_self_contained_question()
     ]
 
     pipeline = RagPipeline(retrieval_service=retriever, llm_client=llm_client)
-    pipeline.answer("What is the probation period completion process?", conversation_history=history)
+    result = pipeline.answer("What is the probation period completion process?", conversation_history=history)
 
     assert retriever.last_query == "What is the probation period completion process?"
+    assert result.used_conversation_context is False
 
 
 def test_answer_falls_back_to_original_question_when_condensation_fails():

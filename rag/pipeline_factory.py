@@ -7,9 +7,11 @@ helper_scripts/run_experiment.py so there is exactly one place that
 assembles this wiring instead of three drifting copies.
 """
 
+from rag._01_ingestion.document_loader import list_categories
 from rag._01_ingestion.embeddings import EmbeddingGenerator
 from rag._01_ingestion.glossary_extractor import load_glossary
 from rag._02_indexing.vector_store import VectorStore
+from rag._03_routing.category_matcher import EmbeddingCategoryMatcher
 from rag._03_routing.docs_metadata import load_doc_topics
 from rag._04_retrieval import faq_cache
 from rag._04_retrieval.bm25_retriever import BM25Index
@@ -33,6 +35,10 @@ def build_retrieval_service(config) -> tuple:
         config.embedding.model_name, batch_size=config.embedding.batch_size
     )
     doc_topics = load_doc_topics(config.documents.metadata_file)
+    categories = list_categories(config.documents.source_directory)
+    category_matcher = EmbeddingCategoryMatcher(
+        categories, embedding_generator, similarity_threshold=config.retrieval.category_match_threshold
+    )
     retrieval_service = RetrievalService(
         dense_retriever=DenseRetriever(vector_store),
         embedding_generator=embedding_generator,
@@ -49,6 +55,7 @@ def build_retrieval_service(config) -> tuple:
         mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
+        category_matcher=category_matcher,
     )
     retrieval_service = faq_cache.maybe_wrap(retrieval_service, config.redis)
     return retrieval_service, vector_store

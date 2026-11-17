@@ -1,4 +1,4 @@
-.PHONY: help install download-models ingest run run-debug test test-eval-failures eval save-eval-baseline experiment experiments-all mlflow-ui llm-test clean
+.PHONY: help install download-models ingest run run-debug test test-eval-failures eval save-eval-baseline experiment experiments-all mlflow-ui llm-test clean clean-eval-results
 
 .DEFAULT_GOAL := help
 
@@ -122,3 +122,13 @@ clean: ## Remove caches/build artifacts (not chroma-db-store/ or logs/)
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
+
+# Removes every make eval/save-eval-baseline output (results AND
+# baselines) so the next `make eval` starts from a clean slate instead
+# of comparing against a baseline computed against a since-changed
+# test set (see tests/evaluation-question-answers.json) or pipeline.
+# Does not touch tests/evaluation-question-answers.json itself, or the
+# low-faithfulness scratch file `make test-eval-failures` only reads,
+# never writes outside of tests/test-results/.
+clean-eval-results: ## Remove tests/test-results/*.json (eval results + baselines)
+	rm -f tests/test-results/*.json
