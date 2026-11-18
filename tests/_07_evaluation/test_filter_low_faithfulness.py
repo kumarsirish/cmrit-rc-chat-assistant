@@ -10,7 +10,7 @@ def test_select_low_faithfulness_questions_excludes_perfect_scores():
 
 
 def test_select_low_faithfulness_questions_includes_nan_scores():
-    # RAGAS writes NaN when a judge call times out/errors rather than
+    # DeepEval writes NaN when a judge call times out/errors rather than
     # raising, which is just as unverified as a low score.
     rows = [{"question": "q1", "faithfulness": float("nan")}]
     assert select_low_faithfulness_questions(rows) == ["q1"]

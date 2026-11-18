@@ -21,20 +21,15 @@ from rag._08_auth.session_store import SessionStore
 from rag._08_auth.user_identity import normalize_email
 from rag._09_common.config import PROJECT_ROOT, load_config
 from rag._10_ui.admin_page import render_admin_page
-from rag._10_ui.page_header import APP_ICON_PATH, render_centered_text, render_page_title
-from rag._05_generation.llm_client import LlmClient
-from rag._05_generation.rag_pipeline import RagPipeline
-from rag._02_indexing.vector_store import VectorStore
-from rag._01_ingestion.embeddings import EmbeddingGenerator
-from rag._04_retrieval import faq_cache
-from rag._04_retrieval.bm25_retriever import BM25Index
-from rag._04_retrieval.dense_retriever import DenseRetriever
-from rag._04_retrieval.reranker import Reranker
-from rag._04_retrieval.retrieval_service import ALL_CATEGORIES, TRACE_LOGGER_NAME, RetrievalService
+from rag._10_ui.page_header import (
+    APP_ICON_PATH,
+    render_centered_text,
+    render_page_title,
+    render_status_pill,
+)
+from rag._04_retrieval.retrieval_service import ALL_CATEGORIES, TRACE_LOGGER_NAME
 from rag._01_ingestion.document_loader import list_categories
-from rag._01_ingestion.glossary_extractor import load_glossary
-from rag._03_routing.category_matcher import EmbeddingCategoryMatcher
-from rag._03_routing.docs_metadata import load_doc_topics
+from rag.main_pipeline import build_rag_pipeline
 
 # Enabled by `make run-debug` (sets RAG_DEBUG=true). Shows the raw
 # query, every retrieved chunk's source document/page, and its
@@ -77,33 +72,6 @@ _configure_retrieval_debug_logging()
 @st.cache_resource
 def get_config():
     return load_config()
-
-
-@st.cache_resource
-def get_vector_store():
-    config = get_config()
-    return VectorStore(
-        persist_directory=config.chroma.persist_directory,
-        collection_name=config.chroma.collection_name,
-    )
-
-
-@st.cache_resource
-def get_reranker():
-    config = get_config()
-    return Reranker(config.retrieval.rerank.model)
-
-
-@st.cache_resource
-def get_bm25_index():
-    config = get_config()
-    return BM25Index.from_vector_store(get_vector_store()) if config.retrieval.hybrid.enabled else None
-
-
-@st.cache_resource
-def get_doc_topics():
-    config = get_config()
-    return load_doc_topics(config.documents.metadata_file)
 
 
 @st.cache_resource
@@ -155,61 +123,13 @@ def get_example_queries():
 
 
 @st.cache_resource
-def get_category_matcher():
-    config = get_config()
-    embedding_generator = EmbeddingGenerator(config.embedding.model_name)
-    return EmbeddingCategoryMatcher(
-        get_categories(), embedding_generator, similarity_threshold=config.retrieval.category_match_threshold
-    )
-
-
-@st.cache_resource
-def get_retrieval_service():
-    config = get_config()
-    embedding_generator = EmbeddingGenerator(config.embedding.model_name)
-    dense_retriever = DenseRetriever(get_vector_store())
-    doc_topics = get_doc_topics()
-    retrieval_service = RetrievalService(
-        dense_retriever=dense_retriever,
-        embedding_generator=embedding_generator,
-        top_k=config.retrieval.top_k,
-        min_reranker_score=config.retrieval.min_reranker_score,
-        min_relevance_score=config.retrieval.min_relevance_score,
-        bm25_index=get_bm25_index(),
-        hybrid_candidates=config.retrieval.hybrid.candidates,
-        dense_weight=config.retrieval.hybrid.dense_weight,
-        lexical_weight=config.retrieval.hybrid.lexical_weight,
-        reranker=get_reranker() if config.retrieval.rerank.enabled else None,
-        rerank_candidates=config.retrieval.rerank.candidates,
-        doc_topics=doc_topics,
-        mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
-        topic_match_threshold=config.retrieval.topic_match_threshold,
-        low_confidence_min_score=config.retrieval.low_confidence_min_score,
-        category_matcher=get_category_matcher(),
-    )
-    return faq_cache.maybe_wrap(retrieval_service, config.redis)
-
-
-@st.cache_resource
-def get_llm_client():
-    config = get_config()
-    return LlmClient.from_config(config.llm, temperature=_default_llm_temperature(config))
-
-
-@st.cache_resource
-def get_glossary():
-    config = get_config()
-    return load_glossary(config.documents.glossary_file)
-
-
 def get_rag_pipeline():
-    config = get_config()
-    return RagPipeline(
-        retrieval_service=get_retrieval_service(),
-        llm_client=get_llm_client(),
-        glossary=get_glossary(),
-        no_match_message=config.app.no_match_message,
-    )
+    """Built once per process (not just once per call — see the
+    @st.cache_resource decorator): build_rag_pipeline() itself does the
+    expensive assembly (embedding/reranker model loads, BM25 index
+    build), so without this decorator every chat question would rebuild
+    the whole retrieval stack from scratch instead of reusing it."""
+    return build_rag_pipeline(get_config())
 
 
 @st.cache_resource
@@ -316,13 +236,6 @@ def render_sidebar(config, session_store):
             st.rerun()
 
 
-def _default_llm_temperature(config):
-    provider_config = getattr(config.llm, config.llm.provider)
-    # config.yaml can write this as a plain "0", which YAML parses as
-    # an int rather than a float.
-    return float(provider_config.temperature)
-
-
 TOP_SOURCES_SHOWN = 2
 
 # Chat page category picker's one special option (see render_chat_page)
@@ -421,35 +334,35 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
         )
         shown.append((entry["rank"], merged_source))
 
-    st.caption("Sources:")
     shown_source_links = set()
-    for rank, source in shown:
-        pdf_path = Path(config.documents.source_directory) / source.source_file
-        citation = _citation_label(rank, source)
-        download_column, link_column = st.columns([2, 3])
+    with st.expander(f"📎 {len(shown)} source document{'s' if len(shown) != 1 else ''}"):
+        for rank, source in shown:
+            pdf_path = Path(config.documents.source_directory) / source.source_file
+            citation = _citation_label(rank, source)
+            download_column, link_column = st.columns([2, 3])
 
-        with download_column:
-            if pdf_path.exists():
-                with open(pdf_path, "rb") as pdf_file:
-                    pdf_bytes = pdf_file.read()
-                st.download_button(
-                    label=f"📄 {citation}",
-                    data=pdf_bytes,
-                    file_name=source.source_file,
-                    mime="application/pdf",
-                    key=f"source-{key_suffix}-{rank}",
-                )
-            else:
-                st.caption(citation)
+            with download_column:
+                if pdf_path.exists():
+                    with open(pdf_path, "rb") as pdf_file:
+                        pdf_bytes = pdf_file.read()
+                    st.download_button(
+                        label=f"📄 {citation}",
+                        data=pdf_bytes,
+                        file_name=source.source_file,
+                        mime="application/pdf",
+                        key=f"source-{key_suffix}-{rank}",
+                    )
+                else:
+                    st.caption(citation)
 
-        with link_column:
-            if source.source_link:
-                # Same "name: link" presentation as render_topic_link's
-                # "Related:" line (document title as the hyperlink text,
-                # not the bare URL) — kept consistent between the two.
-                title = Path(source.source_file).stem
-                st.caption(f"[{title}]({source.source_link})")
-                shown_source_links.add(source.source_link)
+            with link_column:
+                if source.source_link:
+                    # Same "name: link" presentation as render_topic_link's
+                    # "Related:" line (document title as the hyperlink text,
+                    # not the bare URL) — kept consistent between the two.
+                    title = Path(source.source_file).stem
+                    st.caption(f"[{title}]({source.source_link})")
+                    shown_source_links.add(source.source_link)
 
     return shown_source_links
 
@@ -461,7 +374,7 @@ def render_low_confidence_warning(low_confidence: bool) -> None:
     match was used anyway. This is the only place the caveat is
     shown — rag_pipeline.SYSTEM_PROMPT explicitly tells the LLM not
     to add its own, so it isn't duplicated in the answer text (and
-    doesn't show up as an ungrounded claim when RAGAS scores
+    doesn't show up as an ungrounded claim when DeepEval scores
     faithfulness on the answer).
     """
     if not low_confidence:
@@ -527,7 +440,7 @@ def render_estimated_response_time(session_store):
     count, average_seconds = session_store.get_timing_summary()
     if average_seconds is None:
         return
-    st.caption(f"⏱️ Estimated answer time (avg of last {count} questions): {average_seconds:.1f}s")
+    render_status_pill(f"⏱️ Avg answer time (last {count}): {average_seconds:.1f}s")
 
 
 def render_answer_time(total_seconds):
@@ -593,14 +506,29 @@ def render_example_queries(example_queries):
     if not example_queries:
         return
     with st.sidebar:
-        st.caption("Try one of these:")
+        st.markdown('<div class="prompt-cards">', unsafe_allow_html=True)
+        st.caption("✨ Try one of these")
         for example in example_queries:
             question = example["question"]
-            if st.button(question, key=f"example-{question}", use_container_width=True):
+            label = _format_example_label(question)
+            if st.button(label, key=f"example-{question}", use_container_width=True):
                 st.session_state.pending_question = question
                 if example["category"] is not None:
                     st.session_state[CATEGORY_PICKER_KEY] = example["category"]
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _format_example_label(question: str) -> str:
+    """Sentence-cases a raw example question and makes sure it ends
+    with proper punctuation, for a tidier sidebar prompt card — the
+    underlying question text (used for the actual query) is untouched."""
+    label = question.strip()
+    if label:
+        label = label[0].upper() + label[1:]
+    if label and label[-1] not in ".?!":
+        label += "?"
+    return label
 
 
 def render_debug_panel(question, sources):
@@ -655,7 +583,8 @@ def render_chat_page():
     render_example_queries(get_example_queries())
 
     for message_index, message in enumerate(st.session_state.chat_history):
-        with st.chat_message(message["role"]):
+        avatar = str(APP_ICON_PATH) if message["role"] == "assistant" else None
+        with st.chat_message(message["role"], avatar=avatar):
             st.write(message["content"])
             if message["role"] == "assistant":
                 render_low_confidence_warning(message.get("low_confidence", False))
@@ -677,16 +606,18 @@ def render_chat_page():
                 )
                 render_debug_panel(message.get("question", ""), message.get("sources", []))
 
-    category_option = st.selectbox(
-        "Category",
-        [ALL_CATEGORIES_LABEL] + get_categories(),
-        key=CATEGORY_PICKER_KEY,
-        help=(
-            "Pick a specific category to search only it first — if nothing "
-            "is found there, every other category is searched automatically. "
-            "'All categories' always searches everything directly."
-        ),
-    )
+    category_column, _ = st.columns([1, 2])
+    with category_column:
+        category_option = st.selectbox(
+            "Category",
+            [ALL_CATEGORIES_LABEL] + get_categories(),
+            key=CATEGORY_PICKER_KEY,
+            help=(
+                "Pick a specific category to search only it first — if nothing "
+                "is found there, every other category is searched automatically. "
+                "'All categories' always searches everything directly."
+            ),
+        )
     category_override = ALL_CATEGORIES if category_option == ALL_CATEGORIES_LABEL else category_option
 
     question = st.chat_input("Ask a question about the indexed documents...")
@@ -750,7 +681,7 @@ def render_chat_page():
             None if st.session_state.get("follow_up_count", 0) >= FOLLOW_UP_LIMIT else conversation_history
         )
 
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar=str(APP_ICON_PATH)):
             rag_pipeline = get_rag_pipeline()
             spinner_label = (
                 "Checking the indexed documents..."
@@ -870,9 +801,30 @@ def main():
     st.markdown(
         """
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Scoped to html/body (not a [class*="st-"] wildcard): that
+        wildcard also matched Streamlit's icon elements, which rely on
+        the "Material Symbols Rounded" font to render as glyphs rather
+        than literal ligature text (e.g. the sidebar's collapse arrow
+        showed as the text "keyboard_double_arrow_right") — forcing
+        Inter onto them broke that rendering. html/body's lower
+        specificity lets Streamlit's own icon-font rule still win. */
+        html, body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Developer clutter — client.toolbarMode="minimal" in
+        config.toml already hides most of this; these rules are a
+        CSS-level fallback in case that setting isn't honored. */
+        #MainMenu, footer, [data-testid="stToolbarActions"] {
+            visibility: hidden;
+        }
+
         header[data-testid="stHeader"] {
             height: 2.5rem;
             min-height: 2.5rem;
+            background: transparent;
         }
         .block-container,
         [data-testid="stMainBlockContainer"] {
@@ -882,14 +834,56 @@ def main():
             padding-right: 2rem !important;
             margin: 0 !important;
         }
+
+        /* Sidebar */
+        [data-testid="stSidebar"] {
+            background: #EFF4FF;
+            border-right: 1px solid #E2E8F0;
+        }
         [data-testid="stSidebar"] .block-container,
         [data-testid="stSidebar"] [data-testid="stMainBlockContainer"] {
             padding-top: 1.25rem !important;
         }
+        /* Sidebar "Try one of these" prompt cards */
+        [data-testid="stSidebar"] .stButton > button {
+            text-align: left;
+            justify-content: flex-start;
+            white-space: normal;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.4rem;
+            color: #1E293B;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: all 0.15s ease-in-out;
+        }
+        [data-testid="stSidebar"] .stButton > button:hover {
+            border-color: #2563EB;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.15);
+            transform: translateY(-1px);
+            color: #2563EB;
+        }
+
+        /* Quick-start empty-state cards */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            border-radius: 0.9rem !important;
+            transition: box-shadow 0.15s ease-in-out;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"]:hover {
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        }
+
+        /* Chat */
         div[data-testid="stChatMessage"] {
             border-radius: 0.75rem;
             padding: 0.5rem 0.25rem;
         }
+        [data-testid="stChatInput"] {
+            border-radius: 1rem;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+        }
+
         hr {
             margin: 0.75rem 0;
         }

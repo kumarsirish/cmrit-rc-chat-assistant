@@ -158,7 +158,7 @@ session:
   max_history_messages: 2
 
 evaluation:
-  # RAGAS judge: scores live pipeline answers against test_data_path using
+  # DeepEval judge: scores live pipeline answers against test_data_path using
   # a separate judge model (not the answer LLM, so it doesn't grade itself).
   # judge_provider: "ollama" (local), "groq" (needs llm.groq.api_key_env),
   # or "gemini" (needs GOOGLE_API_KEY).
@@ -170,7 +170,7 @@ evaluation:
   # Generous timeout to absorb free-tier API queuing/backoff instead of
   # failing the row (a timeout becomes NaN and poisons the mean).
   judge_timeout_seconds: 300
-  # Keep low for a free-tier key; RAGAS's default concurrency hits rate limits.
+  # Keep low for a free-tier key; DeepEval's default concurrency hits rate limits.
   judge_max_workers: 1
   test_data_path: "./tests/evaluation-question-answers.json"
   metrics:
@@ -179,7 +179,7 @@ evaluation:
     - answer_correctness
     - context_precision
     - context_recall
-  # Minimum mean score per metric (RAGAS metrics are [0, 1]) to pass.
+  # Minimum mean score per metric (DeepEval metrics are [0, 1]) to pass.
   min_score: 0.5
   # Written by tests/_07_evaluation/test_judge.py after each `make eval`
   # run, so the UI can show latest scores without re-running evaluation.

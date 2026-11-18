@@ -42,6 +42,7 @@ class RecentQuery:
     question: str
     answer: str
     answered_at: datetime
+    rating: int = None
 
 
 # Placeholder total_seconds backfilled onto assistant messages that
@@ -347,7 +348,8 @@ class SessionStore:
             "   WHERE u.session_id = a.session_id AND u.role = 'user' AND u.id < a.id "
             "   ORDER BY u.id DESC LIMIT 1) AS question, "
             "  a.content AS answer, "
-            "  a.created_at AS answered_at "
+            "  a.created_at AS answered_at, "
+            "  a.rating AS rating "
             "FROM messages a "
             "WHERE a.role = 'assistant' "
             "ORDER BY a.id DESC "
@@ -358,7 +360,7 @@ class SessionStore:
         cursor.close()
         connection.close()
         return [
-            RecentQuery(question=row[0], answer=row[1], answered_at=row[2])
+            RecentQuery(question=row[0], answer=row[1], answered_at=row[2], rating=row[3])
             for row in rows
             if row[0] is not None
         ]

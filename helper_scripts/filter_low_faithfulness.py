@@ -1,7 +1,7 @@
 """Filters tests/evaluation-question-answers.json down to just the
 questions that scored faithfulness < 1 (or NaN, e.g. a timed-out judge
 call) in the last `make eval` run, so that run's fixes can be
-re-checked with `make test-ragas-failures` without re-running the
+re-checked with `make test-eval-failures` without re-running the
 whole (slow) suite.
 
 Requires tests/test-results/judge_results.json (config.evaluation.results_path) to
@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rag._09_common.config import load_config
 
 # Where the filtered question set is written; RAG_EVAL_TEST_DATA_PATH
-# points test-ragas at this file (see `make test-ragas-failures`).
+# points the DeepEval judge at this file (see `make test-eval-failures`).
 FILTERED_TEST_DATA_PATH = "tests/evaluation-question-answers.low-faithfulness.json"
 
 
@@ -69,7 +69,7 @@ def main():
     questions = select_low_faithfulness_questions(results["rows"])
     if not questions:
         # Remove any filtered file left over from a previous run, so
-        # `make test-ragas-failures` (which treats output_path's
+        # `make test-eval-failures` (which treats output_path's
         # existence as "there's something to re-run") doesn't re-run
         # pytest against a stale question set.
         output_path.unlink(missing_ok=True)

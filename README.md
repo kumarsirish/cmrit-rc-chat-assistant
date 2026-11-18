@@ -209,7 +209,7 @@ entirely rather than trying to out-tune it.
 | Sessions identified by email, not anonymous UUID only | Ties conversation history in MySQL back to a real person (`rag/user_identity.py` validates the address) rather than being fully anonymous. |
 | 5-minute inactivity timeout | Chosen per requirement; implemented as "no query in the last 5 minutes" (`sessions.last_active_at`), not a hard session lifetime — an actively-chatting user is never cut off. |
 | Two separate evaluation suites, not one | `test_retrieval_eval.py` scores the retriever alone (classic IR metrics — Recall/Precision/MRR/NDCG@k) with no LLM call, so retrieval regressions are cheap and fast to catch. `test_judge.py` scores the full pipeline's generated answers with an external judge model (faithfulness/relevancy/correctness), which conflates retrieval and generation quality but is what actually matters to a user. Keeping them separate makes it possible to tell "retrieval is fine, generation is the problem" apart from the reverse. |
-| RAGAS judge is Gemini (`gemini-2.5-flash`), not the same Ollama model that answers | A judge grading its own generations is a biased signal (it tends to rate its own phrasing/reasoning favorably). Gemini also runs faster/more capably than the local CPU-bound Ollama model would for a judge role. |
+| DeepEval judge is Gemini (`gemini-2.5-flash`), not the same Ollama model that answers | A judge grading its own generations is a biased signal (it tends to rate its own phrasing/reasoning favorably). Gemini also runs faster/more capably than the local CPU-bound Ollama model would for a judge role. |
 | No lambdas; plain functions/classes everywhere | Readability requirement — every transformation has a name and can be stepped through or unit-tested directly. |
 | Configuration centralized in `config/config.yaml` | Every tunable (model names, chunk size/overlap, retrieval/rerank/hybrid settings, evaluation thresholds, timeouts, DB connection) lives in one file, loaded by `rag/config.py` into typed dataclasses — no magic numbers scattered through the code. |
 | Citations from the same source document are merged, not just deduplicated | Chunking can split one document into overlapping/adjacent pieces (e.g. p. 40 and p. 40-41), which otherwise showed up as two separate numbered citations for the same file. `dashboard.py`'s `render_sources()` merges all cited chunks that share a `source_file` into one citation, using the first citation number and a page range spanning every merged chunk. |
@@ -493,7 +493,7 @@ default (`pytest.ini`); run them via `make eval`. `rag_pipeline` and
 The judge half of `make eval` runs `pytest -s` so its progress is visible live
 instead of only appearing after the run finishes: a `[i/N] answering:
 ...` / `[i/N] answered (... chars)` line per test case while the real
-pipeline generates each answer, then RAGAS's own progress bar while
+pipeline generates each answer, then DeepEval's own progress bar while
 the judge model scores them.
 
 ## Current metrics — what they say, and what's still weak
@@ -593,18 +593,18 @@ showing up here as low context_precision.
    item 2 above (GLOBAL fallback diversification) is currently
    unvalidated by `test-retrieval-eval`; re-adding cases for it would
    close that gap.
-4. **RAGAS's Faithfulness metric can't verify a claim that names its
+4. **DeepEval's Faithfulness metric can't verify a claim that names its
    source document, even when the claim is correct** — reproduced
    directly against the live judge (Gemini 2.5 Flash) while debugging a
    low-scoring leave-policy question: `retrieved_contexts` handed to
-   RAGAS is plain chunk text with no source metadata attached, so a
+   DeepEval is plain chunk text with no source metadata attached, so a
    sentence like "According to the Faculty Handbook, unutilized
    vacation leaves lapse at the end of the vacation period" gets marked
    unfaithful — not because the fact is wrong, but because the judge's
    NLI check can't find "Faculty Handbook" anywhere in the unlabeled
    context it's checking against. This is a harness limitation, not a
    pipeline defect; fixing it would mean prefixing each context string
-   passed to RAGAS with its source document name (e.g. `[Source:
+   passed to DeepEval with its source document name (e.g. `[Source:
    Faculty Handbook-CMRIT.docx.pdf]`) so attribution claims become
    verifiable.
 5. **Some of the underlying policy documents genuinely disagree with

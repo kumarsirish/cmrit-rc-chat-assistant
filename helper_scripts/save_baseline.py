@@ -2,7 +2,7 @@
 are compared against.
 
 Usage:
-    python helper_scripts/save_baseline.py ragas
+    python helper_scripts/save_baseline.py deepeval
     python helper_scripts/save_baseline.py retrieval
 
 Copies tests/test-results/judge_results.json -> tests/test-results/judge_baseline.json (or the
@@ -24,12 +24,12 @@ from rag._09_common.config import load_config
 
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("ragas", "retrieval"):
-        print("Usage: python helper_scripts/save_baseline.py [ragas|retrieval]")
+    if len(sys.argv) != 2 or sys.argv[1] not in ("deepeval", "retrieval"):
+        print("Usage: python helper_scripts/save_baseline.py [deepeval|retrieval]")
         sys.exit(1)
 
     config = load_config()
-    if sys.argv[1] == "ragas":
+    if sys.argv[1] == "deepeval":
         results_path = Path(config.evaluation.results_path)
         baseline_path = Path(config.evaluation.baseline_path)
     else:

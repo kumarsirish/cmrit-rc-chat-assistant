@@ -1,6 +1,6 @@
-"""Time a single bare Gemini call, to isolate whether RAGAS judge
+"""Time a single bare Gemini call, to isolate whether DeepEval judge
 slowness (test_judge.py, judge_provider: gemini) is the Gemini
-API itself or something in RAGAS's own timeout/retry path.
+API itself or something in DeepEval's own timeout/retry path.
 
 Run from the repo root:
     python3 helper_scripts/llm_diagnostics/check_gemini_latency.py

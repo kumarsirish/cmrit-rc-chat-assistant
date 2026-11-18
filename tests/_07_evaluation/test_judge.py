@@ -58,7 +58,7 @@ from rag._04_retrieval.reranker import Reranker
 from rag._04_retrieval.retrieval_service import RetrievalService
 from rag._03_routing.docs_metadata import load_doc_topics
 
-pytestmark = pytest.mark.ragas
+pytestmark = pytest.mark.deepeval
 
 
 def _extract_text(content) -> str:

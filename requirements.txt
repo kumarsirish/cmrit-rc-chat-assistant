@@ -39,11 +39,11 @@ langchain-groq
 
 # DeepEval: LLM-judged evaluation of the RAG pipeline's answers against
 # the reference Q&A pairs in tests/evaluation-question-answers.json (see
-# tests/evaluation/test_ragas_judge.py, `make test-ragas`).
+# tests/_07_evaluation/test_judge.py, `make eval`).
 deepeval
 #ragas  # previous judge framework; kept as fallback reference
 
-# Gemini judge client for tests/test_ragas_judge.py when
+# Gemini judge client for tests/_07_evaluation/test_judge.py when
 # evaluation.judge_provider is "gemini" (needs GOOGLE_API_KEY).
 langchain-google-genai
 

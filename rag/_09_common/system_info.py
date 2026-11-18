@@ -1,6 +1,6 @@
 """System Info page: read-only overview of what's currently running.
 
-Shows the models in use, the configured RAGAS/retrieval evaluation
+Shows the models in use, the configured DeepEval/retrieval evaluation
 setup, the current session, and when the vector store was last
 (re)built — useful for confirming the deployed config matches what's
 expected without reading config.yaml directly. The indexed document
@@ -38,9 +38,9 @@ def _format_ist(dt: datetime) -> str:
 def _format_timestamp_ist(unix_timestamp: float) -> str:
     return _format_ist(datetime.fromtimestamp(unix_timestamp, tz=timezone.utc))
 
-# One-line, plain-English explanation of each RAGAS metric, shown next
+# One-line, plain-English explanation of each DeepEval metric, shown next
 # to its score so the number means something without reading the
-# RAGAS docs.
+# DeepEval docs.
 METRIC_DESCRIPTIONS = {
     "faithfulness": "Fraction of the answer's claims actually backed by the retrieved context (higher = less hallucination).",
     "answer_relevancy": "How directly the answer addresses the question that was actually asked.",
@@ -84,7 +84,7 @@ def _metric_table_rows(
     min_score: float = None,
 ) -> list:
     """Builds the {Metric, What it means, Baseline, Last run} rows
-    shared by the RAGAS and retrieval-eval sections. labels maps a raw
+    shared by the DeepEval and retrieval-eval sections. labels maps a raw
     metric key to its display name (e.g. "reciprocal_rank" -> "MRR");
     pass {} to use the raw key as-is. min_score, if given, prefixes
     "Last run" with a pass/fail mark instead of just the number.
@@ -150,7 +150,7 @@ def _render_models_section(config):
     st.markdown(
         answer_llm_line
         + f"- **Embedding model:** `{config.embedding.model_name}`\n"
-        f"- **RAGAS judge model:** `{config.evaluation.judge_model}` "
+        f"- **DeepEval judge model:** `{config.evaluation.judge_model}` "
         f"(temperature={config.evaluation.judge_temperature}) — deliberately "
         f"a different model than the answer LLM, so it isn't grading its "
         f"own generations\n"
@@ -173,8 +173,8 @@ def _render_models_section(config):
     )
 
 
-def _render_ragas_section(config):
-    st.subheader("RAGAS evaluation")
+def _render_deepeval_section(config):
+    st.subheader("DeepEval evaluation")
     st.markdown(
         f"- **Metrics:** {', '.join(config.evaluation.metrics)}\n"
         f"- **Pass threshold:** mean score ≥ {config.evaluation.min_score} "
@@ -315,7 +315,7 @@ def render_system_info_page(config, user_email):
     st.divider()
     _render_retrieval_eval_section(config)
     st.divider()
-    _render_ragas_section(config)
+    _render_deepeval_section(config)
     st.divider()
     _render_session_section(config, user_email)
     st.divider()

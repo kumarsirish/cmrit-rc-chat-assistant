@@ -31,7 +31,7 @@ run: ## Start the Streamlit app
 run-debug: ## Start the Streamlit app with debug logging and in-app debug panel
 	RAG_DEBUG=true streamlit run main.py --logger.level=debug
 
-test: ## Run the default test suite (excludes ragas/retrieval_eval)
+test: ## Run the default test suite (excludes deepeval/retrieval_eval)
 	pytest tests/
 
 # Re-runs the DeepEval judge only for questions that scored
@@ -47,7 +47,7 @@ test-eval-failures: ## Re-run the judge only for questions with faithfulness < 1
 	@if [ -f tests/evaluation-question-answers.low-faithfulness.json ]; then \
 		RAG_EVAL_TEST_DATA_PATH=tests/evaluation-question-answers.low-faithfulness.json \
 		RAG_EVAL_RESULTS_PATH=tests/test-results/judge_results.low-faithfulness.json \
-			pytest tests/_07_evaluation/test_judge.py -m ragas -v -s; \
+			pytest tests/_07_evaluation/test_judge.py -m deepeval -v -s; \
 	fi
 
 # Runs both evaluation suites back to back:
@@ -65,7 +65,7 @@ test-eval-failures: ## Re-run the judge only for questions with faithfulness < 1
 # Both are excluded from the default `make test`.
 eval: ## Run retrieval IR metrics + the live DeepEval judge evaluation
 	pytest tests/_07_evaluation/test_retrieval_eval.py -m retrieval_eval -v
-	pytest tests/_07_evaluation/test_judge.py -m ragas -v -s
+	pytest tests/_07_evaluation/test_judge.py -m deepeval -v -s
 
 # Snapshots the latest tests/test-results/retrieval_results.json and
 # tests/test-results/judge_results.json as the baselines that every later `make
@@ -74,7 +74,7 @@ eval: ## Run retrieval IR metrics + the live DeepEval judge evaluation
 # reference point.
 save-eval-baseline: ## Save the latest eval results as the baseline for future comparisons
 	python helper_scripts/save_baseline.py retrieval
-	python helper_scripts/save_baseline.py ragas
+	python helper_scripts/save_baseline.py deepeval
 
 # Runs one retrieval evaluation and logs it as an MLflow run (params,
 # metrics, resolved config) to ./mlflow.db, for comparing model/

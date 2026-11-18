@@ -13,7 +13,7 @@ a script directly unless you need its flags.
 | `run_experiment.py` | `make experiment` / `make experiments-all` | Runs one retrieval evaluation with optional config overrides and logs it as an MLflow run under `mlops/`. See `config/experiments.yaml` for named hyperparameter sets. |
 | `filter_low_faithfulness.py` | `make test-eval-failures` | Filters the evaluation question set down to whatever scored faithfulness < 1 in the last judge run, so those can be re-checked without re-running the whole suite. |
 | `save_baseline.py` | `make save-eval-baseline` | Snapshots the latest retrieval/judge eval results as the baseline future runs are compared against. |
-| `llm_diagnostics/check_gemini_latency.py` | `make llm-test` | Times a single bare Gemini call, to isolate provider latency from RAGAS's own retry/timeout behavior. |
+| `llm_diagnostics/check_gemini_latency.py` | `make llm-test` | Times a single bare Gemini call, to isolate provider latency from DeepEval's own retry/timeout behavior. |
 | `llm_diagnostics/check_groq_limits.py` | `make llm-test` | Makes a cheap Groq call and prints the rate-limit headers, to check quota headroom without waiting to get rate-limited. |
 
 All scripts read configuration via `rag._09_common.config.load_config()`

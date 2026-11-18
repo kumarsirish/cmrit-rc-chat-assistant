@@ -17,7 +17,7 @@ typing --set flags:
     python helper_scripts/run_experiment.py --overrides-file config/experiments.yaml --experiment low_threshold
 
 Only classic IR metrics (Recall/Precision/MRR/NDCG@k, via
-rag/_07_evaluation/evaluate_retrieval.py) are logged here -- RAGAS is never
+rag/_07_evaluation/evaluate_retrieval.py) are logged here -- DeepEval is never
 invoked by this script, so a run never costs a judge-model call and
 never touches tests/test-results/judge_results.json.
 
@@ -55,7 +55,7 @@ import yaml
 from rag._09_common.config import load_config
 from rag._07_evaluation.config_overrides import apply_overrides, config_to_dict
 from rag._07_evaluation.evaluate_retrieval import evaluate_retrieval
-from rag.pipeline_factory import build_retrieval_service
+from rag.main_pipeline import build_retrieval_service
 from helper_scripts.ingest import run_ingestion
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

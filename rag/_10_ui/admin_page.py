@@ -378,8 +378,20 @@ def _render_recent_queries_tab(config) -> None:
     for recent_query in recent_queries:
         st.markdown(f"**Q:** {recent_query.question}")
         st.write(recent_query.answer)
-        st.caption(recent_query.answered_at.strftime("%Y-%m-%d %H:%M:%S"))
+        timestamp_column, rating_column = st.columns([3, 1])
+        with timestamp_column:
+            st.caption(recent_query.answered_at.strftime("%Y-%m-%d %H:%M:%S"))
+        with rating_column:
+            st.caption(_format_rating(recent_query.rating))
         st.divider()
+
+
+def _format_rating(rating) -> str:
+    """"Not rated" when no user has rated this answer yet, otherwise a
+    star/empty-star readout, e.g. "★★★☆☆ (3/5)"."""
+    if rating is None:
+        return "Not rated"
+    return f"{'★' * rating}{'☆' * (5 - rating)} ({rating}/5)"
 
 
 def render_admin_page(config, user_email: str) -> None:

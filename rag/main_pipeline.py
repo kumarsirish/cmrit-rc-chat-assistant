@@ -2,9 +2,10 @@
 together into a runnable RetrievalService/RagPipeline from an
 AppConfig.
 
-Shared by main.py, helper_scripts/log_pipeline_answers.py, and
+Shared by rag/_10_ui/dashboard.py (the live Streamlit app),
+helper_scripts/log_pipeline_answers.py, and
 helper_scripts/run_experiment.py so there is exactly one place that
-assembles this wiring instead of three drifting copies.
+assembles this wiring instead of several drifting copies.
 """
 
 from rag._01_ingestion.document_loader import list_categories

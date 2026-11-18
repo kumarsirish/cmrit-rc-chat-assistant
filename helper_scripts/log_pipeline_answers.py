@@ -1,9 +1,9 @@
-"""Runs the real RAG pipeline (retrieval + LLM generation, no RAGAS
+"""Runs the real RAG pipeline (retrieval + LLM generation, no DeepEval
 judging) for every question in config.evaluation.test_data_path and
 writes a plain question/expected/actual log.
 
 Useful for eyeballing what the assistant actually says today without
-paying for a RAGAS judge pass:
+paying for a DeepEval judge pass:
 
     python helper_scripts/log_pipeline_answers.py
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rag._09_common.config import load_config
-from rag.pipeline_factory import build_rag_pipeline
+from rag.main_pipeline import build_rag_pipeline
 
 OUTPUT_PATH = Path(__file__).resolve().parent.parent / "logs" / "pipeline_answers.json"
 
