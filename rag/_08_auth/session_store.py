@@ -131,12 +131,14 @@ class SessionStore:
         connection.close()
 
     def _column_exists(self, cursor, table: str, column: str) -> bool:
-        cursor.execute(
-            "SELECT COUNT(*) FROM information_schema.columns "
-            "WHERE table_schema = %s AND table_name = %s AND column_name = %s",
-            (self._config.database, table, column),
-        )
-        return cursor.fetchone()[0] > 0
+        # SHOW COLUMNS stays scoped to the current database connection and
+        # only requires privileges on `table` itself — unlike querying
+        # information_schema.columns, which some restricted MySQL accounts
+        # (e.g. managed hosting, locked-down deployment users) cannot read,
+        # causing startup to fail on machines where the DB user only has
+        # grants on this one application database.
+        cursor.execute(f"SHOW COLUMNS FROM {table} LIKE %s", (column,))
+        return cursor.fetchone() is not None
 
     def _add_timing_columns_if_missing(self, cursor) -> None:
         """Adds the timing columns to a `messages` table created before

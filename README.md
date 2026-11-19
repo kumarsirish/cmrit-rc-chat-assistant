@@ -283,6 +283,25 @@ are created automatically the first time the app actually runs (a
 plain HTTP health check does not trigger this — it needs a live
 Streamlit session, i.e. someone opening the app in a browser).
 
+The app only ever touches the single database named `<app.name slugified>_sessions`
+(e.g. `rc_assistant_sessions` for the default `app.name: "RC Assistant"`) —
+it never reads or writes any other database on the server, including
+`information_schema`/`performance_schema`/`mysql`. The DB user in
+`config/config.yaml` therefore only needs privileges scoped to that one
+database, not server-wide access. If the user account doesn't already
+exist, create it and grant it access to just that database, e.g.:
+
+```sql
+CREATE USER 'rag_app'@'%' IDENTIFIED BY 'your-password';
+-- underscores escaped with `\_` so MySQL treats the name literally, not as a wildcard
+GRANT ALL PRIVILEGES ON `rc\_assistant\_sessions`.* TO 'rag_app'@'%';
+FLUSH PRIVILEGES;
+```
+
+If the account can't be granted `CREATE DATABASE` (e.g. a shared/managed
+MySQL instance), create `rc_assistant_sessions` yourself first and grant
+privileges on it instead of using the statement above.
+
 Each user is asked for their email address before they can ask a
 question; it identifies their session and chat history in MySQL
 (`sessions.user_email`).
