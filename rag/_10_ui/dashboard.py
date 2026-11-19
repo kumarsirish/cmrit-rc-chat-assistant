@@ -9,7 +9,6 @@ instead of going through its own CLI.
 """
 
 import json
-import logging
 import os
 from dataclasses import replace
 from datetime import datetime
@@ -19,7 +18,7 @@ import streamlit as st
 
 from rag._08_auth.session_store import SessionStore
 from rag._08_auth.user_identity import normalize_email
-from rag._09_common.config import PROJECT_ROOT, load_config
+from rag._09_common.config import load_config
 from rag._10_ui.admin_page import render_admin_page
 from rag._10_ui.page_header import (
     APP_ICON_PATH,
@@ -27,46 +26,17 @@ from rag._10_ui.page_header import (
     render_page_title,
     render_status_pill,
 )
-from rag._04_retrieval.retrieval_service import ALL_CATEGORIES, TRACE_LOGGER_NAME
+from rag._04_retrieval.retrieval_service import ALL_CATEGORIES
 from rag._01_ingestion.document_loader import list_categories
 from rag.main_pipeline import build_rag_pipeline
 
 # Enabled by `make run-debug` (sets RAG_DEBUG=true). Shows the raw
 # query, every retrieved chunk's source document/page, and its
 # similarity score, so retrieval behaviour can be inspected live.
+# Independent of the per-query JSON file log (see
+# rag._09_common.query_logger, wired in by main_pipeline.build_rag_pipeline),
+# which always runs regardless of this flag.
 DEBUG_ENABLED = os.environ.get("RAG_DEBUG", "false").lower() == "true"
-
-RETRIEVAL_DEBUG_LOG_PATH = PROJECT_ROOT / "logs" / "retrieval_debug.log"
-
-
-@st.cache_resource
-def _configure_retrieval_debug_logging():
-    """Attaches a file handler to Retriever's trace logger (see
-    retriever.py's _log_debug_trace) so every query's retrieval trace —
-    detected topic, mapped document, retrieval mode
-    (MAPPED_DOCUMENT/GLOBAL), candidates, final chunks and their source
-    metadata — is written to logs/retrieval_debug.log on every run,
-    debug or not. RAG_DEBUG=true additionally surfaces the same trace
-    in the in-app debug panel (see render_debug_panel).
-
-    @st.cache_resource makes this run its body only once per process:
-    Streamlit re-executes this module on every rerun (i.e. after every
-    question), and without caching that would attach a duplicate
-    handler — and duplicate log lines — each time.
-    """
-    trace_logger = logging.getLogger(TRACE_LOGGER_NAME)
-    RETRIEVAL_DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler(RETRIEVAL_DEBUG_LOG_PATH, encoding="utf-8")
-    handler.setFormatter(logging.Formatter("\n[%(asctime)s]\n%(message)s"))
-    trace_logger.addHandler(handler)
-    trace_logger.setLevel(logging.DEBUG)
-    # Keep this out of the console/root logger — it's a lot of detail
-    # per query, meant for the dedicated log file only.
-    trace_logger.propagate = False
-    return trace_logger
-
-
-_configure_retrieval_debug_logging()
 
 
 @st.cache_resource
@@ -148,7 +118,6 @@ def start_new_session(session_store, user_email):
     st.session_state.chat_history = []
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = 0
-    st.session_state.follow_up_count = 0
 
 
 def touch_session(session_store):
@@ -171,7 +140,6 @@ def reset_expired_session(session_store, user_email):
     st.session_state.session_id = session_id
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = len(st.session_state.chat_history)
-    st.session_state.follow_up_count = 0
 
 
 def ensure_active_session(session_store, timeout_minutes):
@@ -244,18 +212,6 @@ TOP_SOURCES_SHOWN = 2
 # category name passed straight through (and, if that specific category
 # comes back empty, retried as ALL_CATEGORIES — see render_chat_page).
 ALL_CATEGORIES_LABEL = "All categories"
-
-# Max consecutive questions within the same follow-up thread (see
-# render_chat_page) — a question only counts toward this if
-# RagAnswer.used_conversation_context says it actually depended on the
-# preceding exchange; a self-contained/unrelated question doesn't
-# count and resets the count to 0, starting a new thread. Once the
-# limit is hit, conversation_history is silently dropped for the next
-# question (not blocked, just answered as if it were a fresh one),
-# which — since condensation then has nothing to depend on — makes
-# that same question register as a fresh thread, naturally resetting
-# the count.
-FOLLOW_UP_LIMIT = 2
 
 # Explicit key for the Chat page's category st.selectbox, so a sidebar
 # example-question click (see render_example_queries) can set its
@@ -669,18 +625,6 @@ def render_chat_page():
                 st.session_state.history_reset_at_index,
             )
 
-        # Once FOLLOW_UP_LIMIT consecutive context-dependent follow-ups
-        # have been asked, silently drop conversation_history for this
-        # turn — the question is still answered, just without the
-        # preceding exchange to depend on. Since query_condenser then
-        # has nothing to condense against, this turn's
-        # used_conversation_context will come back False, which is
-        # exactly what resets follow_up_count to 0 below — a new
-        # follow-up thread can then build back up from scratch.
-        effective_conversation_history = (
-            None if st.session_state.get("follow_up_count", 0) >= FOLLOW_UP_LIMIT else conversation_history
-        )
-
         with st.chat_message("assistant", avatar=str(APP_ICON_PATH)):
             rag_pipeline = get_rag_pipeline()
             spinner_label = (
@@ -691,7 +635,7 @@ def render_chat_page():
             with st.spinner(spinner_label):
                 result = rag_pipeline.answer(
                     question,
-                    conversation_history=effective_conversation_history,
+                    conversation_history=conversation_history,
                     suggest_rephrase=not is_rephrase_retry,
                     category_override=category_override,
                 )
@@ -705,13 +649,10 @@ def render_chat_page():
                 with st.spinner("Checking other categories..."):
                     result = rag_pipeline.answer(
                         question,
-                        conversation_history=effective_conversation_history,
+                        conversation_history=conversation_history,
                         suggest_rephrase=not is_rephrase_retry,
                         category_override=ALL_CATEGORIES,
                     )
-            st.session_state.follow_up_count = (
-                st.session_state.get("follow_up_count", 0) + 1 if result.used_conversation_context else 0
-            )
             # Idle countdown restarts from when the answer is delivered,
             # not from when the question was submitted, so a slow
             # generation doesn't eat into (or get cut short by) the

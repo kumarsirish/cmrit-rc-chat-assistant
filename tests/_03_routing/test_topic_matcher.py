@@ -1,4 +1,4 @@
-from rag._03_routing.docs_metadata import DocTopic
+from rag._03_routing.document_metadata import DocTopic
 from rag._03_routing.topic_matcher import EmbeddingTopicMatcher
 
 
@@ -46,42 +46,54 @@ def _sample_topics():
     ]
 
 
-def test_match_picks_the_most_semantically_similar_topic():
+def test_match_all_picks_the_most_semantically_similar_topic_first():
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.3)
-    matched = matcher.match("vacation leave application")
-    assert matched.topic == "leave application process approval"
+    matched = matcher.match_all("vacation leave application")
+    assert matched[0].topic == "leave application process approval"
 
 
-def test_match_returns_none_when_nothing_clears_the_threshold():
+def test_match_all_returns_every_topic_clearing_zero_overlap_threshold():
+    # A threshold low enough that multiple sample topics clear it for
+    # a query overlapping both "leave"/"application" and "student" —
+    # proving match_all returns every match, not just the best one.
+    matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.2)
+    matched = matcher.match_all("leave application student handbook")
+    assert {topic.topic for topic in matched} == {
+        "leave application process approval",
+        "student handbook",
+    }
+
+
+def test_match_all_returns_empty_when_nothing_clears_the_threshold():
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.3)
-    assert matcher.match("what is the weather today") is None
+    assert matcher.match_all("what is the weather today") == []
 
 
-def test_match_respects_a_higher_similarity_threshold():
+def test_match_all_respects_a_higher_similarity_threshold():
     # "leave" overlaps only one of four words in the topic name — a
     # weak match that a low threshold accepts but a strict one rejects.
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.9)
-    assert matcher.match("leave") is None
+    assert matcher.match_all("leave") == []
 
 
-def test_match_finds_link_only_entry():
+def test_match_all_finds_link_only_entry():
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.3)
-    matched = matcher.match("website access")
-    assert matched.topic == "website access portal"
-    assert matched.docs_filename == []
+    matched = matcher.match_all("website access")
+    assert matched[0].topic == "website access portal"
+    assert matched[0].docs_filename == []
 
 
-def test_match_returns_none_with_no_topics():
+def test_match_all_returns_empty_with_no_topics():
     matcher = EmbeddingTopicMatcher([], FakeEmbeddingGenerator(), similarity_threshold=0.3)
-    assert matcher.match("anything at all") is None
+    assert matcher.match_all("anything at all") == []
 
 
-def test_match_uses_precomputed_query_embedding_when_given():
+def test_match_all_uses_precomputed_query_embedding_when_given():
     matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.3)
     # A query embedding identical to the "student handbook" topic
     # vector, passed in directly — the query text itself ("irrelevant
     # text") would not match anything on its own, proving the given
     # embedding (not a re-embedding of the text) drove the match.
     query_embedding = FakeEmbeddingGenerator()._vector("student handbook")
-    matched = matcher.match("irrelevant text", query_embedding=query_embedding)
-    assert matched.topic == "student handbook"
+    matched = matcher.match_all("irrelevant text", query_embedding=query_embedding)
+    assert matched[0].topic == "student handbook"

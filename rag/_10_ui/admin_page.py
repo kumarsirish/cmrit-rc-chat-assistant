@@ -1,7 +1,7 @@
 """Admin tab: upload documents, mark one as superseding another,
 trigger a full index rebuild, and clear chat history — the
 Streamlit-facing counterpart to the backend primitives in
-document_loader.py/docs_metadata.py/document_registry.py/session_store.py,
+document_loader.py/document_metadata.py/session_store.py,
 most of which existed before this module but were never wired to a UI.
 
 Gated by a shared password (config.admin.password) remembered for the
@@ -25,7 +25,7 @@ from rag._01_ingestion.document_loader import (
     sanitize_topic_folder_name,
     save_uploaded_document,
 )
-from rag._03_routing import docs_metadata, document_registry
+from rag._03_routing import document_metadata
 from rag._08_auth.session_store import SessionStore
 from rag._09_common.system_info import render_system_info_page
 from rag._10_ui.page_header import render_page_title
@@ -66,17 +66,14 @@ def _render_password_gate(config) -> bool:
 
 
 def _register_single_upload(config, source_directory, category, filename, supersedes):
-    docs_metadata.add_document_to_topic(config.documents.metadata_file, category, filename)
-    document_registry.register_upload(
-        config.documents.registry_file,
+    document_metadata.register_upload(
+        config.documents.documents_file,
         source_directory,
         filename,
         category,
         archived_subfolder_name=config.documents.archived_subfolder_name,
         supersedes=supersedes,
     )
-    if supersedes:
-        docs_metadata.remove_document_from_topic(config.documents.metadata_file, category, supersedes)
 
 
 def _render_upload_section(config):
@@ -100,10 +97,10 @@ def _render_upload_section(config):
 
     supersedes = None
     if category and not is_zip:
-        registry = document_registry.load_registry(config.documents.registry_file)
+        records = document_metadata.load_documents(config.documents.documents_file)
         active_in_category = [
             record.filename
-            for record in registry
+            for record in records
             if record.category == category and record.status == "active"
         ]
         if active_in_category:
@@ -208,6 +205,14 @@ def _start_rebuild(config, estimated_total_seconds: float) -> None:
     def worker():
         try:
             run_ingestion(config, progress_callback=on_progress)
+            # Drops every @st.cache_resource-cached object (the
+            # assembled RetrievalService/topic matchers, the category
+            # list, ...) so the next chat interaction — in any session,
+            # since this cache is process-wide — rebuilds them from
+            # what's on disk now. Without this, a category/document
+            # added, renamed, or removed by this rebuild wouldn't take
+            # effect until the process restarts.
+            st.cache_resource.clear()
             state["status"] = "done"
             state["fraction"] = 1.0
         except Exception as exc:
@@ -306,16 +311,17 @@ def _render_documents_section(config):
     except FileNotFoundError:
         document_paths = []
 
+    records = document_metadata.load_documents(config.documents.documents_file)
+
     if not document_paths:
         st.caption("No documents found.")
     else:
-        # filename -> canonical link, from docs-metadata.json (same
-        # source as the per-source "link:" caption shown under a
-        # chat answer's citations) — a document with no matching topic
-        # entry, or whose topic has no link (e.g. one uploaded via this
-        # Admin tab without a link collected), just shows plain text.
-        doc_topics = docs_metadata.load_doc_topics(config.documents.metadata_file)
-        filename_topic_map = docs_metadata.build_filename_topic_map(doc_topics)
+        # filename -> canonical link (same source as the per-source
+        # "link:" caption shown under a chat answer's citations) — a
+        # document with no matching record, or whose record has no
+        # link (e.g. one uploaded via this Admin tab without a link
+        # collected), just shows plain text.
+        filename_topic_map = document_metadata.active_filename_topic_map(records)
 
         source_root = Path(source_directory)
         by_category = {}
@@ -335,8 +341,7 @@ def _render_documents_section(config):
                 else:
                     st.markdown(f"- {path.name} — {timestamp}")
 
-    registry = document_registry.load_registry(config.documents.registry_file)
-    archived_records = [record for record in registry if record.status == "archived"]
+    archived_records = [record for record in records if record.status == "archived"]
     if archived_records:
         st.markdown("**Archived (superseded)**")
         for record in archived_records:

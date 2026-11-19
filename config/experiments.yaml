@@ -30,7 +30,7 @@ low_threshold:
 
 wide_top_k:
   retrieval.top_k: 8
-  retrieval.mapped_document_primary_top_k: 3
+  retrieval.primary_top_k: 3
 
 lexical_heavy:
   retrieval.hybrid.dense_weight: 0.3

@@ -17,26 +17,21 @@ rephrase_suggester and RagAnswer.rephrase_suggestion.
 RagPipeline itself only orchestrates: it delegates context formatting
 to context_builder and citation/response assembly to
 response_processor, so each of those concerns can be read, tested, and
-changed independently of the others. Retrieval runs on the current
-question alone by default — conversation history is passed to the LLM
-(see answer() below) so it can resolve references like "it" in its
-reply, but never touches the retrieval query itself, UNLESS
-query_condenser decides this question depends on the immediately
-preceding exchange, in which case only that one exchange (never the
-rest of the session's history) can rewrite the retrieval query — the
-question sent to the LLM/UI/citations is untouched either way. See
-query_condenser's docstring for the invariants this enforces. This
-keeps retrieval deterministic and easy to evaluate/debug independent
-of session state, while still letting a genuine follow-up ("how many
-days is that?") retrieve something.
+changed independently of the others. Retrieval always runs on the
+question alone — conversation history is passed to the LLM (see
+answer() below) so it can resolve references like "it" in its reply,
+but never rewrites the retrieval query itself. (A follow-up-aware
+retrieval query rewrite previously lived here; removed pending a
+redesign — a question like "how many days is that?" currently
+retrieves on that literal text, same as any other question.)
 """
 
 import dataclasses
 import logging
 import time
+from datetime import datetime
 
 from rag._05_generation import context_builder
-from rag._05_generation import query_condenser
 from rag._05_generation import rephrase_suggester
 from rag._05_generation.llm_client import LlmClient
 from rag._06_response import response_processor
@@ -130,6 +125,50 @@ def _build_system_prompt(no_match_message: str) -> str:
 logger = logging.getLogger(__name__)
 
 
+def _build_query_log_record(
+    question: str,
+    category_override: str,
+    retrieval_trace: dict,
+    raw_answer_text: str,
+    result: RagAnswer,
+    retrieval_seconds: float,
+    llm_seconds: float,
+    total_seconds: float,
+) -> dict:
+    """Assembles one query_logger.log_query() record — everything
+    needed to trace a bad answer back to whichever stage produced it,
+    without having to cross-reference several log files. retrieval_trace
+    is RetrievalService.last_trace (candidates/reranker scores/kept
+    chunks per PRIMARY/SECONDARY/fallback stage) — None if retrieve()
+    was never called (can't happen in practice, but a missing trace
+    shouldn't crash logging). raw_answer_text is None when the LLM was
+    never called (nothing was retrieved)."""
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "question": question,
+        "category_override": category_override,
+        "retrieval": retrieval_trace,
+        "llm_raw_response": raw_answer_text,
+        "final_answer": result.answer_text,
+        "grounded": result.grounded,
+        "low_confidence": result.low_confidence,
+        "sources": [
+            {
+                "source_file": source.source_file,
+                "page_number": source.page_number,
+                "relevance_score": source.relevance_score,
+                "match_type": source.match_type,
+            }
+            for source in result.sources
+        ],
+        "timings_seconds": {
+            "retrieval": retrieval_seconds,
+            "llm": llm_seconds,
+            "total": total_seconds,
+        },
+    }
+
+
 class RagPipeline:
     """Answers a user question grounded in the retrieved policy chunks."""
 
@@ -139,6 +178,7 @@ class RagPipeline:
         llm_client: LlmClient,
         glossary: dict = None,
         no_match_message: str = NO_MATCH_MESSAGE,
+        log_query=None,
     ):
         """glossary, if given (see rag._01_ingestion.glossary_extractor),
         expands the retrieval query with matched institutional
@@ -150,26 +190,27 @@ class RagPipeline:
         exact refusal sentence the answer LLM is told to reply with
         verbatim when the CONTEXT doesn't answer the question — baked
         into the system prompt once here, rather than per-call, since it
-        never changes between calls either."""
+        never changes between calls either.
+
+        log_query, if given (the real app wires in
+        rag._09_common.query_logger.log_query via main_pipeline.py),
+        is called once per answer() with a full structured record
+        (question, retrieval trace, LLM response, timings) for later
+        debugging. Defaults to a no-op so unit tests constructing
+        RagPipeline directly never write to disk unless they opt in."""
         self._retrieval_service = retrieval_service
         self._llm_client = llm_client
         self._glossary = glossary or {}
         self._glossary_index = query_expander.build_glossary_index(self._glossary)
         self._no_match_message = no_match_message
         self._system_prompt = _build_system_prompt(no_match_message)
+        self._log_query = log_query or (lambda record: None)
 
-    def _finalize(
-        self,
-        rag_answer: RagAnswer,
-        question: str,
-        suggest_rephrase: bool,
-        used_conversation_context: bool,
-    ) -> RagAnswer:
+    def _finalize(self, rag_answer: RagAnswer, question: str, suggest_rephrase: bool) -> RagAnswer:
         """Attaches an alternative phrasing suggestion (see
-        rephrase_suggester) and used_conversation_context (see
-        RagAnswer's docstring) — the two bits every answer() return
-        point needs stamped onto its result, done here once instead of
-        at each of the two return points separately.
+        rephrase_suggester) — the one bit every answer() return point
+        needs stamped onto its result, done here once instead of at
+        each of the two return points separately.
 
         The rephrase suggestion only applies to the plain "nothing
         found" refusal (self._no_match_message) — the topic-matched
@@ -186,7 +227,7 @@ class RagPipeline:
         if suggest_rephrase and rag_answer.answer_text == self._no_match_message:
             suggestion = rephrase_suggester.suggest_rephrase(question, self._llm_client)
             rag_answer = dataclasses.replace(rag_answer, rephrase_suggestion=suggestion)
-        return dataclasses.replace(rag_answer, used_conversation_context=used_conversation_context)
+        return rag_answer
 
     def answer(
         self,
@@ -213,42 +254,29 @@ class RagPipeline:
 
         conversation_history (prior {"role", "content"} turns from the
         same session, if any) is passed to the LLM below so it can
-        resolve references like "it"/"that" in its reply. It's also
-        offered to query_condenser, which rewrites the retrieval query
-        (not question itself) IF this question depends on the single
-        most recent exchange — see query_condenser's docstring for
-        exactly how narrow that is. question (uncondensed, unexpanded)
-        is always what's sent to the LLM and everything user-facing,
-        so answer phrasing and citations never depend on either step
-        below.
+        resolve references like "it"/"that" in its reply. It never
+        affects the retrieval query — question (expanded for glossary
+        terms, see query_expander) is always what's searched, and
+        always what's sent to the LLM and everything user-facing, so
+        answer phrasing and citations never depend on conversation
+        history either.
 
         top_k / min_reranker_score, if given, override the retrieval
         service's configured defaults for this call only (used by
         evaluation scripts to try settings without editing config.yaml).
 
-        retrieval_service.retrieve() returns the matched topic along
+        retrieval_service.retrieve() returns the matched topics along
         with the chunks, so it only has to detect/embed the topic
         match once per question instead of a second time here.
-
-        The retrieval query itself may differ from question — see
-        query_condenser.condense (follow-up rewriting) and
-        query_expander.expand_query (glossary expansion), applied in
-        that order — but only for topic-matching/embedding.
         """
         overall_start = time.perf_counter()
-        condensed_question = query_condenser.condense(question, conversation_history, self._llm_client)
-        # True iff condense() actually rewrote the query, i.e. this
-        # question depended on the immediately preceding exchange —
-        # see RagAnswer.used_conversation_context.
-        used_conversation_context = condensed_question != question
-        retrieval_query = query_expander.expand_query(
-            condensed_question, self._glossary, self._glossary_index
-        )
-        chunks, matched_topic = self._retrieval_service.retrieve(
+        retrieval_query = query_expander.expand_query(question, self._glossary, self._glossary_index)
+        chunks, matched_topics = self._retrieval_service.retrieve(
             retrieval_query, top_k=top_k, min_reranker_score=min_reranker_score,
             category_override=category_override,
         )
         retrieval_seconds = time.perf_counter() - overall_start
+        retrieval_trace = self._retrieval_service.last_trace
 
         if not chunks:
             total_seconds = time.perf_counter() - overall_start
@@ -258,12 +286,17 @@ class RagPipeline:
                 total_seconds,
             )
             no_result = response_processor.build_no_result_response(
-                matched_topic,
+                matched_topics,
                 retrieval_seconds=retrieval_seconds,
                 total_seconds=total_seconds,
                 no_match_message=self._no_match_message,
             )
-            return self._finalize(no_result, question, suggest_rephrase, used_conversation_context)
+            result = self._finalize(no_result, question, suggest_rephrase)
+            self._log_query(_build_query_log_record(
+                question, category_override, retrieval_trace, None, result,
+                retrieval_seconds, None, total_seconds,
+            ))
+            return result
 
         context = context_builder.build(chunks)
         user_prompt = f"CONTEXT:\n{context}\n\nQUESTION: {question}"
@@ -281,13 +314,18 @@ class RagPipeline:
             llm_seconds,
             total_seconds,
         )
-        result = response_processor.process(
+        processed = response_processor.process(
             raw_answer_text,
             chunks,
-            matched_topic,
+            matched_topics,
             retrieval_seconds=retrieval_seconds,
             llm_seconds=llm_seconds,
             total_seconds=total_seconds,
             no_match_message=self._no_match_message,
         )
-        return self._finalize(result, question, suggest_rephrase, used_conversation_context)
+        result = self._finalize(processed, question, suggest_rephrase)
+        self._log_query(_build_query_log_record(
+            question, category_override, retrieval_trace, raw_answer_text, result,
+            retrieval_seconds, llm_seconds, total_seconds,
+        ))
+        return result

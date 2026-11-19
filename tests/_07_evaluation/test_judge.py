@@ -56,7 +56,7 @@ from rag._04_retrieval.bm25_retriever import BM25Index
 from rag._04_retrieval.dense_retriever import DenseRetriever
 from rag._04_retrieval.reranker import Reranker
 from rag._04_retrieval.retrieval_service import RetrievalService
-from rag._03_routing.docs_metadata import load_doc_topics
+from rag._03_routing.document_metadata import active_doc_topics, load_documents
 
 pytestmark = pytest.mark.deepeval
 
@@ -160,8 +160,8 @@ def pipeline_and_retriever(config):
     # doc_topics must be passed here the same way dashboard.py passes it
     # to the production RetrievalService — otherwise this evaluation
     # silently scores GLOBAL-mode-only behavior and never exercises the
-    # MAPPED_DOCUMENT path real users' topic-matched queries actually take.
-    doc_topics = load_doc_topics(config.documents.metadata_file)
+    # PRIMARY path real users' topic-matched queries actually take.
+    doc_topics = active_doc_topics(load_documents(config.documents.documents_file))
     retrieval_service = RetrievalService(
         dense_retriever=DenseRetriever(vector_store),
         embedding_generator=embedding_generator,
@@ -177,7 +177,7 @@ def pipeline_and_retriever(config):
         else None,
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=config.retrieval.mapped_document_primary_top_k,
+        primary_top_k=config.retrieval.primary_top_k,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
         topic_match_threshold=config.retrieval.topic_match_threshold,
     )
