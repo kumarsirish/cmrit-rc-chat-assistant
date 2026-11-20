@@ -111,6 +111,12 @@ retrieval:
   # this; below it, treat the query as unanswerable. Callers must surface
   # low_confidence=True clearly to the user.
   low_confidence_min_score: 0.05
+  # Minimum embedding cosine similarity between a fresh "nothing found"
+  # question and a past question that already got a grounded answer for
+  # that past question to be suggested back to the user instead of an
+  # LLM-guessed rephrasing. High on purpose — meant for near-duplicate
+  # phrasing, not just "same general topic".
+  similar_question_threshold: 0.90
   # PRIMARY chunks are judged by dense cosine similarity instead of
   # reranker score, since the matched document(s) are already trusted
   # by topic match and the reranker can undervalue short/heading-like chunks.
@@ -123,6 +129,31 @@ retrieval:
   # Minimum query-topic cosine similarity (rag/_03_routing/topic_matcher.py) to
   # count as a topic match; below this, retrieval falls back to a plain search.
   topic_match_threshold: 0.5
+  # How far below the single best-matched topic's score another topic can
+  # fall and still count as matched alongside it. Without this, a query
+  # where several topics happen to individually clear topic_match_threshold
+  # admits all of them regardless of how much worse they scored than the
+  # best — observed in practice matching 9-18 "relevant" topics for a
+  # single-document question, diluting PRIMARY search across mostly-wrong
+  # documents and crowding out the one correct answer.
+  topic_match_margin: 0.10
+  # Hard cap on how many topics match_all() ever returns, independent of
+  # the margin above — a second line of defense against PRIMARY fanning
+  # out across more documents than a single question could reasonably be
+  # about.
+  topic_match_max_matches: 3
+  # Minimum dense cosine score among PRIMARY's own raw candidates for it
+  # to be trusted with its full primary_top_k budget. Below this, a topic
+  # NAME match doesn't guarantee the document's CONTENT is actually a
+  # strong match for this specific question — observed in practice:
+  # PRIMARY claiming all its slots on a ~0.6-scored wrong document while
+  # a different, unscoped document scored 0.86+ but only had 1 leftover
+  # SECONDARY slot to compete for. Below this threshold PRIMARY still
+  # gets primary_weak_match_top_k slots, just not most of the budget.
+  primary_strong_match_threshold: 0.65
+  # How many PRIMARY slots a match below primary_strong_match_threshold
+  # still gets, instead of the full primary_top_k.
+  primary_weak_match_top_k: 1
   hybrid:
     # When enabled, dense + BM25 search run in parallel and are combined
     # via Reciprocal Rank Fusion; when disabled, search is dense-only.

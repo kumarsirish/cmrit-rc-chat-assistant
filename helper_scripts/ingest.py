@@ -39,9 +39,16 @@ from rag._01_ingestion.embeddings import EmbeddingGenerator
 # describing such a file in its documents listing.
 UNCATEGORIZED = "(uncategorized)"
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-logging.getLogger("rag").setLevel(logging.INFO)
-logging.getLogger(__name__).setLevel(logging.INFO)
+# Deliberately NOT configured at module level: admin_page.py imports
+# run_ingestion/load_ingestion_stats from this module for the Admin
+# UI's "Rebuild index" button, and a module-level logging.basicConfig()
+# call here would silently escalate the WHOLE live app's console
+# verbosity (including every other "rag.*" logger, not just this
+# module's) the moment that import happens. Verbose INFO-level console
+# output for this module is opt-in, under `if __name__ == "__main__":`
+# below, so it only applies to running this file directly as a CLI
+# script (`make ingest` / `python helper_scripts/ingest.py`) — the
+# Admin UI already shows this same progress in-browser instead.
 logger = logging.getLogger(__name__)
 
 
@@ -355,4 +362,7 @@ def run_ingestion(config: AppConfig = None, progress_callback=None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("rag").setLevel(logging.INFO)
+    logging.getLogger(__name__).setLevel(logging.INFO)
     run_ingestion()

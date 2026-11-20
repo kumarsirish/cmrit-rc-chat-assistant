@@ -235,6 +235,45 @@ def test_get_recent_queries_is_empty_when_no_messages(session_store):
 
 
 @requires_mysql
+def test_get_grounded_questions_only_returns_questions_with_a_grounded_reply(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    session_store.add_message(session_id, "user", "What is the leave policy?")
+    session_store.add_message(session_id, "assistant", "Staff get 12 days of leave.", grounded=True)
+    session_store.add_message(session_id, "user", "What about the capital of France?")
+    session_store.add_message(session_id, "assistant", "I could not find any information.", grounded=False)
+
+    assert session_store.get_grounded_questions() == ["What is the leave policy?"]
+
+
+@requires_mysql
+def test_get_grounded_questions_spans_multiple_sessions_newest_first(session_store):
+    session_a = session_store.create_session("student-a@cmrit.ac.in")
+    session_store.add_message(session_a, "user", "Question from A")
+    session_store.add_message(session_a, "assistant", "Answer for A", grounded=True)
+
+    session_b = session_store.create_session("student-b@cmrit.ac.in")
+    session_store.add_message(session_b, "user", "Question from B")
+    session_store.add_message(session_b, "assistant", "Answer for B", grounded=True)
+
+    assert session_store.get_grounded_questions() == ["Question from B", "Question from A"]
+
+
+@requires_mysql
+def test_get_grounded_questions_respects_limit(session_store):
+    session_id = session_store.create_session("student@cmrit.ac.in")
+    for i in range(5):
+        session_store.add_message(session_id, "user", f"question {i}")
+        session_store.add_message(session_id, "assistant", f"answer {i}", grounded=True)
+
+    assert session_store.get_grounded_questions(limit=2) == ["question 4", "question 3"]
+
+
+@requires_mysql
+def test_get_grounded_questions_is_empty_when_no_messages(session_store):
+    assert session_store.get_grounded_questions() == []
+
+
+@requires_mysql
 def test_clear_all_history_removes_every_session_and_message(session_store):
     session_a = session_store.create_session("student-a@cmrit.ac.in")
     session_store.add_message(session_a, "user", "Question from A")

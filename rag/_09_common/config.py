@@ -167,6 +167,34 @@ class RetrievalConfig:
     # score is at least this — below it, the query is treated as
     # genuinely unanswerable and no chunk is returned at all.
     low_confidence_min_score: float = 0.05
+    # Minimum embedding cosine similarity between a fresh "nothing
+    # found" question and a past question that already got a grounded
+    # answer (see rag._05_generation.similar_question_finder) for that
+    # past question to be suggested back to the user. High on purpose:
+    # this should only fire for near-duplicate phrasing, not a
+    # same-topic-but-different question.
+    similar_question_threshold: float = 0.90
+    # How far below the single best-matched topic's score another
+    # topic can fall and still count as matched alongside it (see
+    # topic_matcher.EmbeddingTopicMatcher.match_all) — without this, a
+    # query where several topics happen to individually clear
+    # topic_match_threshold admits all of them regardless of how much
+    # worse they scored than the best, diluting PRIMARY search across
+    # mostly-wrong documents.
+    topic_match_margin: float = 0.10
+    # Hard cap on how many topics match_all() ever returns, independent
+    # of the margin above.
+    topic_match_max_matches: int = 3
+    # Minimum dense cosine score among PRIMARY's own raw candidates for
+    # it to be trusted with its full primary_top_k budget — below this,
+    # a topic NAME match doesn't guarantee the document's CONTENT is
+    # actually strong for this question, so PRIMARY only gets
+    # primary_weak_match_top_k slots instead, leaving the rest of
+    # top_k for SECONDARY to fill with whatever's genuinely strongest.
+    primary_strong_match_threshold: float = 0.65
+    # How many PRIMARY slots a match below primary_strong_match_threshold
+    # still gets, instead of the full primary_top_k.
+    primary_weak_match_top_k: int = 1
 
 
 @dataclass

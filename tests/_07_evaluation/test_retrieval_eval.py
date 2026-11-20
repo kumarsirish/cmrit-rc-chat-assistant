@@ -81,7 +81,11 @@ def retrieval_service(config):
         rerank_candidates=config.retrieval.rerank.candidates,
         doc_topics=doc_topics,
         primary_top_k=config.retrieval.primary_top_k,
+        primary_strong_match_threshold=config.retrieval.primary_strong_match_threshold,
+        primary_weak_match_top_k=config.retrieval.primary_weak_match_top_k,
         topic_match_threshold=config.retrieval.topic_match_threshold,
+        topic_match_margin=config.retrieval.topic_match_margin,
+        topic_match_max_matches=config.retrieval.topic_match_max_matches,
         low_confidence_min_score=config.retrieval.low_confidence_min_score,
     )
 

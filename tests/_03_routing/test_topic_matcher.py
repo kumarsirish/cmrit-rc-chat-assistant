@@ -55,13 +55,55 @@ def test_match_all_picks_the_most_semantically_similar_topic_first():
 def test_match_all_returns_every_topic_clearing_zero_overlap_threshold():
     # A threshold low enough that multiple sample topics clear it for
     # a query overlapping both "leave"/"application" and "student" —
-    # proving match_all returns every match, not just the best one.
-    matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.2)
+    # proving match_all CAN return more than one match. similarity_margin
+    # is widened to isolate that from the margin behavior tested below,
+    # since these two sample topics don't score within the default 0.1
+    # margin of each other.
+    matcher = EmbeddingTopicMatcher(
+        _sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.2, similarity_margin=1.0
+    )
     matched = matcher.match_all("leave application student handbook")
     assert {topic.topic for topic in matched} == {
         "leave application process approval",
         "student handbook",
     }
+
+
+def test_match_all_excludes_a_topic_outside_the_margin_of_the_best_match():
+    # Same query/threshold as above, but with the default margin (0.1):
+    # "student handbook" scores far higher (~0.71) than "leave
+    # application process approval" (~0.5) for this query — outside a
+    # 0.1 margin of the best, so only the best survives even though
+    # both individually clear the threshold.
+    matcher = EmbeddingTopicMatcher(_sample_topics(), FakeEmbeddingGenerator(), similarity_threshold=0.2)
+    matched = matcher.match_all("leave application student handbook")
+    assert [topic.topic for topic in matched] == ["student handbook"]
+
+
+def test_match_all_keeps_topics_within_the_margin_of_the_best_match():
+    # "leave application process approval" and a near-duplicate phrase
+    # score close enough to each other (within 0.1) that both should
+    # survive — this is the genuine multi-topic case match_all exists
+    # for (e.g. two related forms in the same category).
+    topics = [
+        DocTopic(topic="leave application process", link="https://example.com/a", docs_filename="a.pdf"),
+        DocTopic(topic="leave application approval", link="https://example.com/b", docs_filename="b.pdf"),
+    ]
+    matcher = EmbeddingTopicMatcher(topics, FakeEmbeddingGenerator(), similarity_threshold=0.2)
+    matched = matcher.match_all("leave application")
+    assert {topic.topic for topic in matched} == {"leave application process", "leave application approval"}
+
+
+def test_match_all_respects_the_max_matches_cap():
+    topics = [
+        DocTopic(topic=f"leave application {suffix}", link=f"https://example.com/{suffix}", docs_filename=f"{suffix}.pdf")
+        for suffix in ("a", "b", "c", "d")
+    ]
+    matcher = EmbeddingTopicMatcher(
+        topics, FakeEmbeddingGenerator(), similarity_threshold=0.2, similarity_margin=1.0, max_matches=2
+    )
+    matched = matcher.match_all("leave application")
+    assert len(matched) == 2
 
 
 def test_match_all_returns_empty_when_nothing_clears_the_threshold():

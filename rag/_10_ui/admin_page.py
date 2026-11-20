@@ -55,7 +55,12 @@ def _render_password_gate(config) -> bool:
         return True
 
     st.subheader("Admin sign-in")
-    password = st.text_input("Admin password", type="password")
+    # Streamlit defaults password-type inputs to autocomplete="new-password",
+    # which tells the browser this is a signup field and makes it offer to
+    # generate/save a fresh strong password — misleading here, since this
+    # is a login field for an existing shared password. "current-password"
+    # is the correct MDN autocomplete token for that case.
+    password = st.text_input("Admin password", type="password", autocomplete="current-password")
     if st.button("Sign in"):
         if password == config.admin.password:
             st.session_state.admin_authenticated = True

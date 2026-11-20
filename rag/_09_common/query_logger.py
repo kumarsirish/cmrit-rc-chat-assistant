@@ -28,7 +28,12 @@ from pathlib import Path
 from rag._09_common.config import PROJECT_ROOT
 
 _LOG_DIRECTORY = PROJECT_ROOT / "logs"
-_LOG_PATH = _LOG_DIRECTORY / f"query_log_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
+# dd-mm-yyyy.HH:MM — the colon is a valid filename character on this
+# app's deployment target (Linux); if this is ever deployed where the
+# log directory is read back through a Windows/NTFS path (e.g. Windows
+# Explorer over a WSL \\wsl$ share), NTFS forbids ":" in filenames and
+# this format would need adjusting.
+_LOG_PATH = _LOG_DIRECTORY / f"query_log_{datetime.now():%d-%m-%Y.%H:%M}.jsonl"
 
 logger = logging.getLogger(__name__)
 

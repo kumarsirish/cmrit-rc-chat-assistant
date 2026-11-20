@@ -6,12 +6,14 @@ overlap: a query like "who do I email if I'm sick" shares zero words
 with the topic name "Leave Information, Application and Approval
 Process" but is clearly about it. A query can match more than one
 topic — e.g. two different forms filed under the same category — so
-this returns every topic that clears the threshold, not just the
-single best one. Each topic's name is embedded once, at construction
-time, with the same sentence-transformers model retrieval already
-uses for dense search; matching a query then costs one embedding call
-plus a handful of cosine-similarity comparisons against those
-precomputed vectors.
+this returns every topic that both clears the absolute threshold AND
+is competitive with the single best match (see similarity_margin
+below), not just whichever topics happen to clear the threshold on
+their own. Each topic's name is embedded once, at construction time,
+with the same sentence-transformers model retrieval already uses for
+dense search; matching a query then costs one embedding call plus a
+handful of cosine-similarity comparisons against those precomputed
+vectors.
 
 The matched topics drive two things downstream (see
 retrieval_service.py): which document(s), if any, retrieval should
@@ -26,6 +28,25 @@ import math
 # unmatched (see document_metadata.DocTopic / retriever.py's GLOBAL_MODE
 # fallback) rather than forced onto the closest-but-unrelated topic.
 DEFAULT_SIMILARITY_THRESHOLD = 0.5
+
+# How far below the single best-scoring topic's score another topic
+# can fall and still count as matched alongside it. Without this, a
+# query where ANY topic happens to clear the absolute threshold admits
+# every one of them regardless of how much worse it scored than the
+# best — observed in practice matching 9-18 "relevant" topics for a
+# single-document question, which then let PRIMARY search dilute
+# itself across mostly-wrong documents and crowd out the one correct
+# answer. Kept topics must be within this margin of the best score, so
+# only genuinely competitive matches (e.g. two forms in the same
+# category that are both plausibly what the query means) survive
+# alongside it, not every topic that merely cleared the floor.
+DEFAULT_SIMILARITY_MARGIN = 0.10
+
+# Hard cap on how many topics match_all() ever returns, independent of
+# the margin above — a second line of defense against PRIMARY fanning
+# out across more documents than a single question could reasonably
+# be about.
+DEFAULT_MAX_MATCHES = 3
 
 
 def _phrases_for(topic) -> list:
@@ -66,10 +87,19 @@ class EmbeddingTopicMatcher:
     embed the query itself.
     """
 
-    def __init__(self, topics: list, embedding_generator, similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD):
+    def __init__(
+        self,
+        topics: list,
+        embedding_generator,
+        similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+        similarity_margin: float = DEFAULT_SIMILARITY_MARGIN,
+        max_matches: int = DEFAULT_MAX_MATCHES,
+    ):
         self._topics = topics
         self._embedding_generator = embedding_generator
         self._similarity_threshold = similarity_threshold
+        self._similarity_margin = similarity_margin
+        self._max_matches = max_matches
 
         # Each topic can contribute multiple candidate phrases (name +
         # keywords); flatten them into one batched embed_texts() call,
@@ -84,9 +114,20 @@ class EmbeddingTopicMatcher:
         self._phrase_embeddings = embedding_generator.embed_texts(all_phrases) if all_phrases else []
 
     def match_all(self, query: str, query_embedding: list = None) -> list:
-        """Returns every DocTopic whose name/keyword phrase clears
-        similarity_threshold against query, most similar first — empty
-        if none do (or there are no topics at all).
+        """Returns every DocTopic competitive with the best match for
+        query, most similar first — empty if nothing clears
+        similarity_threshold (or there are no topics at all).
+
+        A topic survives two filters, not just the threshold: its
+        score must clear similarity_threshold, AND it must be within
+        similarity_margin of the single best-scoring topic found —
+        plus a hard cap of max_matches regardless of how many are
+        within the margin. This is what keeps a query that's really
+        about one document from also admitting a handful of other
+        topics that merely cleared the absolute threshold on their
+        own without being genuinely competitive with the best match —
+        see DEFAULT_SIMILARITY_MARGIN's docstring for the real
+        over-matching case this guards against.
 
         query_embedding, if given, is used instead of re-embedding
         query — callers (e.g. RetrievalService) that already computed
@@ -104,5 +145,13 @@ class EmbeddingTopicMatcher:
             if score >= self._similarity_threshold:
                 best_score_by_topic[topic_index] = max(score, best_score_by_topic.get(topic_index, score))
 
-        ranked_indices = sorted(best_score_by_topic, key=best_score_by_topic.get, reverse=True)
+        if not best_score_by_topic:
+            return []
+
+        margin_floor = max(best_score_by_topic.values()) - self._similarity_margin
+        qualifying = {
+            topic_index: score for topic_index, score in best_score_by_topic.items() if score >= margin_floor
+        }
+
+        ranked_indices = sorted(qualifying, key=qualifying.get, reverse=True)[: self._max_matches]
         return [self._topics[topic_index] for topic_index in ranked_indices]

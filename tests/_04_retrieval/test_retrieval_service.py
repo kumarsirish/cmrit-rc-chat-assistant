@@ -332,9 +332,77 @@ def test_primary_reranker_reorders_but_does_not_evict_dense_relevant_chunks():
         rerank_candidates=8,
         doc_topics=doc_topics,
         primary_top_k=2,
+        # Isolated from the weak-match budget behavior (see below) —
+        # this test is specifically about reorder-not-evict, so force
+        # PRIMARY to always be treated as a confident match regardless
+        # of A/B's own dense scores (0.60/0.55).
+        primary_strong_match_threshold=0.0,
     )
     results, _ = service.retrieve("what is the mapped policy")
     assert [chunk.text for chunk in results] == ["B", "A"]
+
+
+def test_primary_weak_match_shrinks_to_weak_match_top_k_and_frees_secondary_budget():
+    # A topic-name match whose own content scores below
+    # primary_strong_match_threshold doesn't get to keep primary_top_k
+    # slots — only primary_weak_match_top_k — freeing the rest of
+    # top_k for SECONDARY, which here finds a much stronger chunk.
+    class LabeledDenseRetriever:
+        def search(self, query_embedding, top_k, filter=None):
+            if filter:  # PRIMARY, scoped — both candidates score weak (0.55/0.50)
+                return [
+                    (FakeDocument(page_content="WeakA", metadata={"source_file": "mapped.pdf", "page_number": 1, "chunk_index": 0}), 0.55),
+                    (FakeDocument(page_content="WeakB", metadata={"source_file": "mapped.pdf", "page_number": 2, "chunk_index": 0}), 0.50),
+                ][:top_k]
+            # SECONDARY, unscoped — a much stronger chunk elsewhere.
+            return [
+                (FakeDocument(page_content="Strong", metadata={"source_file": "other.pdf", "page_number": 1, "chunk_index": 0}), 0.9),
+            ][:top_k]
+
+    doc_topics = [DocTopic(topic="Mapped Policy", link="https://example.com/mapped", docs_filename="mapped.pdf")]
+    service = RetrievalService(
+        dense_retriever=LabeledDenseRetriever(),
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        min_relevance_score=0.40,
+        doc_topics=doc_topics,
+        primary_top_k=3,
+        primary_strong_match_threshold=0.65,
+        primary_weak_match_top_k=1,
+    )
+    results, _ = service.retrieve("what is the mapped policy")
+    sources = [chunk.source_file for chunk in results]
+    assert sources.count("mapped.pdf") == 1  # shrunk from primary_top_k=3 to 1
+    assert "other.pdf" in sources
+
+
+def test_primary_strong_match_keeps_the_full_primary_top_k():
+    # Mirror of the above with a confident (>= threshold) PRIMARY
+    # match — it should keep its full primary_top_k budget, not shrink.
+    class LabeledDenseRetriever:
+        def search(self, query_embedding, top_k, filter=None):
+            if filter:  # PRIMARY, scoped — both candidates score strong
+                return [
+                    (FakeDocument(page_content="StrongA", metadata={"source_file": "mapped.pdf", "page_number": 1, "chunk_index": 0}), 0.9),
+                    (FakeDocument(page_content="StrongB", metadata={"source_file": "mapped.pdf", "page_number": 2, "chunk_index": 0}), 0.85),
+                ][:top_k]
+            return []
+
+    doc_topics = [DocTopic(topic="Mapped Policy", link="https://example.com/mapped", docs_filename="mapped.pdf")]
+    service = RetrievalService(
+        dense_retriever=LabeledDenseRetriever(),
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        min_relevance_score=0.40,
+        doc_topics=doc_topics,
+        primary_top_k=3,
+        primary_strong_match_threshold=0.65,
+        primary_weak_match_top_k=1,
+    )
+    results, _ = service.retrieve("what is the mapped policy")
+    assert [chunk.text for chunk in results] == ["StrongA", "StrongB"]
 
 
 def test_secondary_slot_fill_applies_after_relevance_filter():

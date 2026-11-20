@@ -39,7 +39,12 @@ from dataclasses import dataclass
 
 from rag._04_retrieval import hybrid_retriever
 from rag._03_routing.query_expander import strip_institution_name
-from rag._03_routing.topic_matcher import DEFAULT_SIMILARITY_THRESHOLD, EmbeddingTopicMatcher
+from rag._03_routing.topic_matcher import (
+    DEFAULT_MAX_MATCHES,
+    DEFAULT_SIMILARITY_MARGIN,
+    DEFAULT_SIMILARITY_THRESHOLD,
+    EmbeddingTopicMatcher,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +58,28 @@ PRIMARY_CANDIDATES = 12
 # before remaining slots go to SECONDARY. Kept smaller than top_k
 # itself so PRIMARY can't consume the whole budget on its own — with
 # several matched documents now sharing this cap, it's a bit more
-# generous than the old single-document default.
+# generous than the old single-document default. Only granted in full
+# to a confident match — see PRIMARY_STRONG_MATCH_THRESHOLD.
 PRIMARY_TOP_K_DEFAULT = 4
+
+# Minimum dense cosine score (same scale as min_relevance_score),
+# among PRIMARY's own raw candidates before any filtering, for PRIMARY
+# to be trusted with its full primary_top_k budget. Below this, a
+# topic name can still have matched correctly in name only, without
+# its document's actual content being a strong match for this specific
+# question — observed in practice: PRIMARY claiming all 4 of its slots
+# on a ~0.6-scored wrong document while a different, unscoped document
+# scored 0.86+ but only had 1 leftover SECONDARY slot to compete for.
+# PRIMARY still gets PRIMARY_WEAK_MATCH_TOP_K slots even below this —
+# the topic match isn't discarded, just not trusted with most of the
+# budget — and nothing here touches reranker reordering: a confident
+# PRIMARY match is still never evicted by a low reranker score (see
+# _search's trusted_pool docstring for why that's deliberate).
+PRIMARY_STRONG_MATCH_THRESHOLD = 0.65
+
+# How many PRIMARY slots a match below PRIMARY_STRONG_MATCH_THRESHOLD
+# still gets, instead of the full primary_top_k.
+PRIMARY_WEAK_MATCH_TOP_K = 1
 
 FOCUSSED_CATEGORY_MODE = "FOCUSSED_CATEGORY"
 GLOBAL_MODE = "GLOBAL"
@@ -212,12 +237,19 @@ class RetrievalService:
         doc_topics: list = None,
         primary_top_k: int = PRIMARY_TOP_K_DEFAULT,
         primary_candidates: int = PRIMARY_CANDIDATES,
+        primary_strong_match_threshold: float = PRIMARY_STRONG_MATCH_THRESHOLD,
+        primary_weak_match_top_k: int = PRIMARY_WEAK_MATCH_TOP_K,
         topic_match_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+        topic_match_margin: float = DEFAULT_SIMILARITY_MARGIN,
+        topic_match_max_matches: int = DEFAULT_MAX_MATCHES,
         low_confidence_min_score: float = 0.05,
         institution_name: str = None,
     ):
         self._dense_retriever = dense_retriever
-        self._embedding_generator = embedding_generator
+        # Public (no leading underscore): main_pipeline.py reuses this
+        # same loaded model for similar_question_finder.py instead of
+        # loading a second instance of it.
+        self.embedding_generator = embedding_generator
         self._top_k = top_k
         self._min_reranker_score = min_reranker_score
         # Only used for PRIMARY search — see _search's trusted_pool
@@ -241,10 +273,16 @@ class RetrievalService:
         self._low_confidence_min_score = low_confidence_min_score
         self._primary_top_k = primary_top_k
         self._primary_candidates = primary_candidates
+        self._primary_strong_match_threshold = primary_strong_match_threshold
+        self._primary_weak_match_top_k = primary_weak_match_top_k
         self._institution_name = institution_name
         doc_topics = doc_topics or []
         self._global_topic_matcher = EmbeddingTopicMatcher(
-            doc_topics, embedding_generator, similarity_threshold=topic_match_threshold
+            doc_topics,
+            embedding_generator,
+            similarity_threshold=topic_match_threshold,
+            similarity_margin=topic_match_margin,
+            max_matches=topic_match_max_matches,
         )
         # One EmbeddingTopicMatcher per category, built once here from
         # doc_topics grouped by their .category — so a FOCUSSED_CATEGORY
@@ -253,7 +291,13 @@ class RetrievalService:
         # after any change to categories/documents keeps this current;
         # see admin_page.py's post-rebuild cache invalidation.
         self._category_topic_matchers = {
-            category: EmbeddingTopicMatcher(topics, embedding_generator, similarity_threshold=topic_match_threshold)
+            category: EmbeddingTopicMatcher(
+                topics,
+                embedding_generator,
+                similarity_threshold=topic_match_threshold,
+                similarity_margin=topic_match_margin,
+                max_matches=topic_match_max_matches,
+            )
             for category, topics in _group_topics_by_category(doc_topics).items()
         }
         # The full structured trace (candidates considered, every
@@ -336,7 +380,7 @@ class RetrievalService:
 
         overall_start = time.perf_counter()
 
-        query_embedding = self._embedding_generator.embed_query(query)
+        query_embedding = self.embedding_generator.embed_query(query)
 
         category = category_override if (category_override and category_override != ALL_CATEGORIES) else None
         mode = FOCUSSED_CATEGORY_MODE if category else GLOBAL_MODE
@@ -433,6 +477,17 @@ class RetrievalService:
         matched document's own top chunk just forces a worse fallback.
         SECONDARY/GLOBAL pools are not from a trusted document, so
         reranker_score stays the hard gate there.
+
+        `keep` itself is shrunk to primary_weak_match_top_k (before any
+        of the above) when trusted_pool's own best dense score among
+        its raw candidates doesn't clear primary_strong_match_threshold
+        — a topic NAME match doesn't guarantee the document's CONTENT
+        is actually a strong match for this specific question, and a
+        weak one shouldn't be trusted with most of top_k's budget at
+        the expense of what SECONDARY might find. This only changes how
+        much of the budget PRIMARY gets, never which of its own
+        candidates the reranker is allowed to keep — the no-eviction
+        guarantee above is unaffected.
         """
         dense_results = self._dense_retriever.search(query_embedding, candidate_count, filter=metadata_filter)
         lexical_results = (
@@ -452,6 +507,12 @@ class RetrievalService:
             return fused_candidates, [], []
 
         if trusted_pool:
+            best_dense_score = max(
+                (candidate.dense_score for candidate in fused_candidates if candidate.dense_score is not None),
+                default=0.0,
+            )
+            if best_dense_score < self._primary_strong_match_threshold:
+                keep = min(keep, self._primary_weak_match_top_k)
             relevant_chunks = self._filter_relevant_by_dense_score(fused_candidates, self._min_relevance_score)
             if self._reranker and relevant_chunks:
                 # Scored (not .rerank()'d) directly so the per-candidate

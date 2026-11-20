@@ -28,6 +28,7 @@ from rag._10_ui.page_header import (
 )
 from rag._04_retrieval.retrieval_service import ALL_CATEGORIES
 from rag._01_ingestion.document_loader import list_categories
+from rag._03_routing import document_metadata
 from rag.main_pipeline import build_rag_pipeline
 
 # Enabled by `make run-debug` (sets RAG_DEBUG=true). Shows the raw
@@ -98,8 +99,13 @@ def get_rag_pipeline():
     @st.cache_resource decorator): build_rag_pipeline() itself does the
     expensive assembly (embedding/reranker model loads, BM25 index
     build), so without this decorator every chat question would rebuild
-    the whole retrieval stack from scratch instead of reusing it."""
-    return build_rag_pipeline(get_config())
+    the whole retrieval stack from scratch instead of reusing it.
+
+    Passes get_session_store() through so the pipeline's "did you mean
+    this already-answered question?" suggestion (see
+    rag._05_generation.similar_question_finder) has real past
+    questions to match against."""
+    return build_rag_pipeline(get_config(), session_store=get_session_store())
 
 
 @st.cache_resource
@@ -224,20 +230,36 @@ CATEGORY_PICKER_KEY = "category_picker"
 EXAMPLE_QUERY_COUNT = 4
 
 
-def _citation_label(rank, source):
+_DOCUMENT_DATE_FORMAT = "%d %b %Y"
+
+
+def _format_document_date(upload_date: str) -> str:
+    """Formats a DocumentRecord.upload_date ISO timestamp (see
+    rag._03_routing.document_metadata) as a short, human-readable date,
+    e.g. "17 Nov 2026" — just the date, not the time, since that's all
+    a citation needs."""
+    return datetime.fromisoformat(upload_date).strftime(_DOCUMENT_DATE_FORMAT)
+
+
+def _citation_label(rank, source, upload_date: str = None):
     """Formats a source as a numbered, research-paper-style citation,
-    e.g. "[1] HoD Handbook - CMRIT, p. 20" or, for a chunk that spans a
-    page break, "[1] HoD Handbook - CMRIT, p. 20-21".
+    e.g. "[1] HoD Handbook - CMRIT, p. 20 — 17 Nov 2026" or, for a chunk
+    that spans a page break, "[1] HoD Handbook - CMRIT, p. 20-21 —
+    17 Nov 2026". upload_date is omitted (no trailing date) when the
+    document has no record in config/documents.json to read it from.
     """
     title = Path(source.source_file).stem
     if source.page_end and source.page_end != source.page_number:
         page_label = f"p. {source.page_number}-{source.page_end}"
     else:
         page_label = f"p. {source.page_number}"
-    return f"[{rank}] {title}, {page_label}"
+    citation = f"[{rank}] {title}, {page_label}"
+    if upload_date:
+        citation += f" — {_format_document_date(upload_date)}"
+    return citation
 
 
-def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
+def render_sources(sources, config, key_suffix, cited_indices=None) -> None:
     """Shows links to the source PDFs below the answer.
 
     When the answer text carries inline "[N]" citations (see
@@ -247,13 +269,9 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
     wrote — so the numbers always line up and nothing is fabricated.
     Falls back to the top TOP_SOURCES_SHOWN retrieved sources when
     nothing was cited (e.g. a short, non-committal reply).
-
-    Returns the set of source_link values actually shown, so a caller
-    (see render_chat_page) can skip render_topic_link's "Related:"
-    line when it would just repeat a link already shown here.
     """
     if not sources:
-        return set()
+        return
     if cited_indices:
         shown = [(index, sources[index - 1]) for index in cited_indices]
     else:
@@ -290,11 +308,15 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
         )
         shown.append((entry["rank"], merged_source))
 
-    shown_source_links = set()
+    records_by_filename = {
+        record.filename: record for record in document_metadata.load_documents(config.documents.documents_file)
+    }
+
     with st.expander(f"📎 {len(shown)} source document{'s' if len(shown) != 1 else ''}"):
         for rank, source in shown:
             pdf_path = Path(config.documents.source_directory) / source.source_file
-            citation = _citation_label(rank, source)
+            record = records_by_filename.get(source.source_file)
+            citation = _citation_label(rank, source, upload_date=record.upload_date if record else None)
             download_column, link_column = st.columns([2, 3])
 
             with download_column:
@@ -313,14 +335,8 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
 
             with link_column:
                 if source.source_link:
-                    # Same "name: link" presentation as render_topic_link's
-                    # "Related:" line (document title as the hyperlink text,
-                    # not the bare URL) — kept consistent between the two.
                     title = Path(source.source_file).stem
                     st.caption(f"[{title}]({source.source_link})")
-                    shown_source_links.add(source.source_link)
-
-    return shown_source_links
 
 
 def render_low_confidence_warning(low_confidence: bool) -> None:
@@ -372,18 +388,6 @@ def render_rephrase_suggestion(rephrase_suggestion, message_index):
         # see RagPipeline.answer's suggest_rephrase parameter.
         st.session_state.pending_question_is_rephrase_retry = True
         st.rerun()
-
-
-def render_topic_link(topic_name, topic_link):
-    """Shows the canonical URL for the topic docs-metadata.json says the
-    question was about, if one was identified (see
-    rag._03_routing.topic_matcher.EmbeddingTopicMatcher). Shown regardless of whether
-    the answer came from a locally-indexed chunk, since some topics
-    (e.g. the college website) have no local PDF to index at all.
-    """
-    if not topic_link:
-        return
-    st.caption(f"🔗 Related: [{topic_name}]({topic_link})")
 
 
 def render_estimated_response_time(session_store):
@@ -544,14 +548,12 @@ def render_chat_page():
             st.write(message["content"])
             if message["role"] == "assistant":
                 render_low_confidence_warning(message.get("low_confidence", False))
-                shown_source_links = render_sources(
+                render_sources(
                     message.get("sources", []),
                     config,
                     f"history-{message_index}",
                     cited_indices=message.get("cited_indices"),
                 )
-                if message.get("topic_link") not in shown_source_links:
-                    render_topic_link(message.get("topic_name"), message.get("topic_link"))
                 render_rephrase_suggestion(message.get("rephrase_suggestion"), message_index)
                 render_answer_time(message.get("total_seconds"))
                 render_rating(
@@ -660,14 +662,12 @@ def render_chat_page():
             touch_session(session_store)
             st.write(result.answer_text)
             render_low_confidence_warning(result.low_confidence)
-            shown_source_links = render_sources(
+            render_sources(
                 result.sources,
                 config,
                 f"new-{len(st.session_state.chat_history)}",
                 cited_indices=result.cited_indices,
             )
-            if result.topic_link not in shown_source_links:
-                render_topic_link(result.topic_name, result.topic_link)
             render_rephrase_suggestion(result.rephrase_suggestion, len(st.session_state.chat_history))
             render_answer_time(result.total_seconds)
             message_id = session_store.add_message(
@@ -677,6 +677,7 @@ def render_chat_page():
                 retrieval_seconds=result.retrieval_seconds,
                 llm_seconds=result.llm_seconds,
                 total_seconds=result.total_seconds,
+                grounded=result.grounded,
             )
             render_rating(
                 session_store, message_id, current_rating=None, widget_key=f"rating-{message_id}"
@@ -689,8 +690,6 @@ def render_chat_page():
                 "content": result.answer_text,
                 "sources": result.sources,
                 "question": question,
-                "topic_name": result.topic_name,
-                "topic_link": result.topic_link,
                 "cited_indices": result.cited_indices,
                 "total_seconds": result.total_seconds,
                 "low_confidence": result.low_confidence,

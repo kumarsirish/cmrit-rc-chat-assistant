@@ -10,9 +10,14 @@ Two layers keep the assistant from answering with outside knowledge:
    context does not contain the answer.
 
 Either way, a plain "nothing found" refusal (not the topic-matched
-branch, which already gives an official link instead) makes one more
-LLM call to suggest a better-phrased question — see
-rephrase_suggester and RagAnswer.rephrase_suggestion.
+branch, which already gives an official link instead) tries to offer
+the user a next step: first a real past question that's nearly
+identical and already got a grounded answer (see
+similar_question_finder.py), falling back to one more LLM call that
+suggests a better-phrased question (see rephrase_suggester.py) only
+when no such past question exists. Either way the result lands in
+RagAnswer.rephrase_suggestion — the UI doesn't need to know which one
+produced it.
 
 RagPipeline itself only orchestrates: it delegates context formatting
 to context_builder and citation/response assembly to
@@ -179,6 +184,7 @@ class RagPipeline:
         glossary: dict = None,
         no_match_message: str = NO_MATCH_MESSAGE,
         log_query=None,
+        similar_question_finder=None,
     ):
         """glossary, if given (see rag._01_ingestion.glossary_extractor),
         expands the retrieval query with matched institutional
@@ -197,7 +203,18 @@ class RagPipeline:
         is called once per answer() with a full structured record
         (question, retrieval trace, LLM response, timings) for later
         debugging. Defaults to a no-op so unit tests constructing
-        RagPipeline directly never write to disk unless they opt in."""
+        RagPipeline directly never write to disk unless they opt in.
+
+        similar_question_finder, if given (the real app wires in a
+        closure over rag._05_generation.similar_question_finder.
+        find_similar_question + SessionStore.get_grounded_questions via
+        main_pipeline.py), is called with just the question on a
+        "nothing found" refusal and may return a real past question to
+        suggest instead of (or before) asking the LLM to guess a
+        rephrasing — see _finalize. Kept as an injected callable rather
+        than a direct dependency so RagPipeline itself never needs to
+        know about SessionStore/MySQL; defaults to a no-op returning
+        None, same reasoning as log_query above."""
         self._retrieval_service = retrieval_service
         self._llm_client = llm_client
         self._glossary = glossary or {}
@@ -205,27 +222,34 @@ class RagPipeline:
         self._no_match_message = no_match_message
         self._system_prompt = _build_system_prompt(no_match_message)
         self._log_query = log_query or (lambda record: None)
+        self._similar_question_finder = similar_question_finder or (lambda question: None)
 
     def _finalize(self, rag_answer: RagAnswer, question: str, suggest_rephrase: bool) -> RagAnswer:
-        """Attaches an alternative phrasing suggestion (see
-        rephrase_suggester) — the one bit every answer() return point
-        needs stamped onto its result, done here once instead of at
-        each of the two return points separately.
+        """Attaches a "try this instead" suggestion — the one bit every
+        answer() return point needs stamped onto its result, done here
+        once instead of at each of the two return points separately.
 
-        The rephrase suggestion only applies to the plain "nothing
-        found" refusal (self._no_match_message) — the topic-matched
-        branch of build_no_result_response is also ungrounded but
-        already gives the user a concrete official link instead, so a
-        rephrasing suggestion there would just be clutter, not a next
-        step.
+        Two sources, tried in order: first a real past question that's
+        nearly identical and already got a grounded answer (see
+        similar_question_finder) — strictly more trustworthy than a
+        guess, since it's proven to work — falling back to the LLM-
+        generated rephrasing (rephrase_suggester) only when no such
+        past question exists.
+
+        Only applies to the plain "nothing found" refusal
+        (self._no_match_message) — the topic-matched branch of
+        build_no_result_response is also ungrounded but already gives
+        the user a concrete official link instead, so a suggestion
+        there would just be clutter, not a next step.
 
         suggest_rephrase=False (passed by callers retrying a question
-        that IS ITSELF a previous rephrase suggestion — see
-        rag_pipeline.answer) skips the suggestion entirely, so a
-        failed rephrase attempt doesn't chain into offering yet
-        another one."""
+        that IS ITSELF a previous suggestion — see rag_pipeline.answer)
+        skips this entirely, so a failed retry doesn't chain into
+        offering yet another one."""
         if suggest_rephrase and rag_answer.answer_text == self._no_match_message:
-            suggestion = rephrase_suggester.suggest_rephrase(question, self._llm_client)
+            suggestion = self._similar_question_finder(question) or rephrase_suggester.suggest_rephrase(
+                question, self._llm_client, self._glossary
+            )
             rag_answer = dataclasses.replace(rag_answer, rephrase_suggestion=suggestion)
         return rag_answer
 

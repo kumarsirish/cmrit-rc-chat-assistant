@@ -20,6 +20,15 @@ elsewhere:
 
 import streamlit.runtime
 
+from rag._09_common.logging_config import configure_logging
+
+# Called before any other project import below, so whichever library
+# first pulls in transformers/sentence-transformers (both known to
+# turn on noisy INFO-level console logging as an import side effect)
+# finds this process's logging already configured instead of
+# configuring it themselves — see logging_config.py.
+configure_logging()
+
 if __name__ == "__main__":
     if not streamlit.runtime.exists():
         raise SystemExit("Run this with `streamlit run main.py`, not `python main.py`.")

@@ -31,6 +31,11 @@ class Message:
     # SessionStore.rate_message) — None until rated, always None for a
     # user-role message.
     rating: int = None
+    # Whether this assistant message's answer was grounded (see
+    # RagAnswer.grounded) — None for a user-role message. Used by
+    # get_grounded_questions() to only ever recommend a past question
+    # that's known to have gotten a real answer.
+    grounded: bool = None
 
 
 @dataclass
@@ -58,6 +63,11 @@ RECENT_TIMING_LIMIT = 50
 # Default cap for the "Recent Queries" page (see get_recent_queries) —
 # newest first, across every user's session.
 RECENT_QUERIES_LIMIT = 100
+
+# Default cap for the candidate pool get_grounded_questions() returns
+# (see rag._05_generation.similar_question_finder) — newest first,
+# across every user's session.
+GROUNDED_QUESTIONS_LIMIT = 200
 
 
 class SessionStore:
@@ -121,6 +131,7 @@ class SessionStore:
         connection.commit()
         self._add_timing_columns_if_missing(cursor)
         self._add_rating_column_if_missing(cursor)
+        self._add_grounded_column_if_missing(cursor)
         self._backfill_legacy_timings(cursor)
         # Superseded by the timing columns on `messages` above — a
         # query's timing now lives on the assistant message it belongs
@@ -154,6 +165,13 @@ class SessionStore:
         columns above)."""
         if not self._column_exists(cursor, "messages", "rating"):
             cursor.execute("ALTER TABLE messages ADD COLUMN rating TINYINT NULL")
+
+    def _add_grounded_column_if_missing(self, cursor) -> None:
+        """Adds the grounded column to a `messages` table created
+        before it existed (same upgrade pattern as the timing/rating
+        columns above)."""
+        if not self._column_exists(cursor, "messages", "grounded"):
+            cursor.execute("ALTER TABLE messages ADD COLUMN grounded BOOLEAN NULL")
 
     def _backfill_legacy_timings(self, cursor) -> None:
         """Assistant messages stored before timing was tracked have no
@@ -223,21 +241,23 @@ class SessionStore:
         retrieval_seconds: float = None,
         llm_seconds: float = None,
         total_seconds: float = None,
+        grounded: bool = None,
     ) -> int:
         """Stores one chat message and returns its new row id —
         callers (see dashboard.py) keep this id alongside the message
         so a later rate_message() call knows which row to update.
-        retrieval_seconds/llm_seconds/total_seconds are only meaningful
-        for role="assistant" (how long that answer took to produce)
-        and left as NULL otherwise.
+        retrieval_seconds/llm_seconds/total_seconds/grounded are only
+        meaningful for role="assistant" (how long that answer took to
+        produce, and whether it was a real grounded answer — see
+        RagAnswer.grounded) and left as NULL otherwise.
         """
         connection = self._connect()
         cursor = connection.cursor()
         cursor.execute(
             "INSERT INTO messages "
-            "(session_id, role, content, created_at, retrieval_seconds, llm_seconds, total_seconds) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (session_id, role, content, datetime.now(), retrieval_seconds, llm_seconds, total_seconds),
+            "(session_id, role, content, created_at, retrieval_seconds, llm_seconds, total_seconds, grounded) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (session_id, role, content, datetime.now(), retrieval_seconds, llm_seconds, total_seconds, grounded),
         )
         connection.commit()
         message_id = cursor.lastrowid
@@ -366,3 +386,39 @@ class SessionStore:
             for row in rows
             if row[0] is not None
         ]
+
+    def get_grounded_questions(self, limit: int = GROUNDED_QUESTIONS_LIMIT) -> list:
+        """Returns the text of the most recent `limit` user questions,
+        newest first, across every session/user, whose immediately-
+        following assistant reply was grounded (see RagAnswer.grounded)
+        — i.e. questions known to have gotten a real answer, not a
+        refusal. Used by rag._05_generation.similar_question_finder as
+        the candidate pool for "did you mean this question someone
+        already got an answer to?" suggestions on a fresh refusal.
+
+        The immediately-following assistant message is found the same
+        way get_recent_queries() finds the preceding user message —
+        a correlated subquery for the nearest row by id in the same
+        session, not a plain join (which would match every later
+        assistant message in that session, not just the one that
+        actually answered this question).
+        """
+        connection = self._connect()
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT u.content FROM messages u "
+            "WHERE u.role = 'user' AND EXISTS ("
+            "  SELECT 1 FROM messages a "
+            "  WHERE a.id = ("
+            "    SELECT MIN(id) FROM messages a2 "
+            "    WHERE a2.session_id = u.session_id AND a2.role = 'assistant' AND a2.id > u.id"
+            "  ) AND a.grounded = 1"
+            ") "
+            "ORDER BY u.id DESC "
+            "LIMIT %s",
+            (limit,),
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return [row[0] for row in rows]
