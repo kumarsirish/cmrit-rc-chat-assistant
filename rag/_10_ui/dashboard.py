@@ -9,7 +9,6 @@ instead of going through its own CLI.
 """
 
 import json
-import logging
 import os
 from dataclasses import replace
 from datetime import datetime
@@ -19,7 +18,7 @@ import streamlit as st
 
 from rag._08_auth.session_store import SessionStore
 from rag._08_auth.user_identity import normalize_email
-from rag._09_common.config import PROJECT_ROOT, load_config
+from rag._09_common.config import load_config
 from rag._10_ui.admin_page import render_admin_page
 from rag._10_ui.page_header import (
     APP_ICON_PATH,
@@ -27,46 +26,18 @@ from rag._10_ui.page_header import (
     render_page_title,
     render_status_pill,
 )
-from rag._04_retrieval.retrieval_service import ALL_CATEGORIES, TRACE_LOGGER_NAME
+from rag._04_retrieval.retrieval_service import ALL_CATEGORIES
 from rag._01_ingestion.document_loader import list_categories
+from rag._03_routing import document_metadata
 from rag.main_pipeline import build_rag_pipeline
 
 # Enabled by `make run-debug` (sets RAG_DEBUG=true). Shows the raw
 # query, every retrieved chunk's source document/page, and its
 # similarity score, so retrieval behaviour can be inspected live.
+# Independent of the per-query JSON file log (see
+# rag._09_common.query_logger, wired in by main_pipeline.build_rag_pipeline),
+# which always runs regardless of this flag.
 DEBUG_ENABLED = os.environ.get("RAG_DEBUG", "false").lower() == "true"
-
-RETRIEVAL_DEBUG_LOG_PATH = PROJECT_ROOT / "logs" / "retrieval_debug.log"
-
-
-@st.cache_resource
-def _configure_retrieval_debug_logging():
-    """Attaches a file handler to Retriever's trace logger (see
-    retriever.py's _log_debug_trace) so every query's retrieval trace —
-    detected topic, mapped document, retrieval mode
-    (MAPPED_DOCUMENT/GLOBAL), candidates, final chunks and their source
-    metadata — is written to logs/retrieval_debug.log on every run,
-    debug or not. RAG_DEBUG=true additionally surfaces the same trace
-    in the in-app debug panel (see render_debug_panel).
-
-    @st.cache_resource makes this run its body only once per process:
-    Streamlit re-executes this module on every rerun (i.e. after every
-    question), and without caching that would attach a duplicate
-    handler — and duplicate log lines — each time.
-    """
-    trace_logger = logging.getLogger(TRACE_LOGGER_NAME)
-    RETRIEVAL_DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler(RETRIEVAL_DEBUG_LOG_PATH, encoding="utf-8")
-    handler.setFormatter(logging.Formatter("\n[%(asctime)s]\n%(message)s"))
-    trace_logger.addHandler(handler)
-    trace_logger.setLevel(logging.DEBUG)
-    # Keep this out of the console/root logger — it's a lot of detail
-    # per query, meant for the dedicated log file only.
-    trace_logger.propagate = False
-    return trace_logger
-
-
-_configure_retrieval_debug_logging()
 
 
 @st.cache_resource
@@ -128,8 +99,13 @@ def get_rag_pipeline():
     @st.cache_resource decorator): build_rag_pipeline() itself does the
     expensive assembly (embedding/reranker model loads, BM25 index
     build), so without this decorator every chat question would rebuild
-    the whole retrieval stack from scratch instead of reusing it."""
-    return build_rag_pipeline(get_config())
+    the whole retrieval stack from scratch instead of reusing it.
+
+    Passes get_session_store() through so the pipeline's "did you mean
+    this already-answered question?" suggestion (see
+    rag._05_generation.similar_question_finder) has real past
+    questions to match against."""
+    return build_rag_pipeline(get_config(), session_store=get_session_store())
 
 
 @st.cache_resource
@@ -148,7 +124,6 @@ def start_new_session(session_store, user_email):
     st.session_state.chat_history = []
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = 0
-    st.session_state.follow_up_count = 0
 
 
 def touch_session(session_store):
@@ -171,7 +146,6 @@ def reset_expired_session(session_store, user_email):
     st.session_state.session_id = session_id
     st.session_state.last_active_at = datetime.now()
     st.session_state.history_reset_at_index = len(st.session_state.chat_history)
-    st.session_state.follow_up_count = 0
 
 
 def ensure_active_session(session_store, timeout_minutes):
@@ -245,18 +219,6 @@ TOP_SOURCES_SHOWN = 2
 # comes back empty, retried as ALL_CATEGORIES — see render_chat_page).
 ALL_CATEGORIES_LABEL = "All categories"
 
-# Max consecutive questions within the same follow-up thread (see
-# render_chat_page) — a question only counts toward this if
-# RagAnswer.used_conversation_context says it actually depended on the
-# preceding exchange; a self-contained/unrelated question doesn't
-# count and resets the count to 0, starting a new thread. Once the
-# limit is hit, conversation_history is silently dropped for the next
-# question (not blocked, just answered as if it were a fresh one),
-# which — since condensation then has nothing to depend on — makes
-# that same question register as a fresh thread, naturally resetting
-# the count.
-FOLLOW_UP_LIMIT = 2
-
 # Explicit key for the Chat page's category st.selectbox, so a sidebar
 # example-question click (see render_example_queries) can set its
 # value in code before the widget is (re)created on the next rerun —
@@ -268,20 +230,36 @@ CATEGORY_PICKER_KEY = "category_picker"
 EXAMPLE_QUERY_COUNT = 4
 
 
-def _citation_label(rank, source):
+_DOCUMENT_DATE_FORMAT = "%d %b %Y"
+
+
+def _format_document_date(upload_date: str) -> str:
+    """Formats a DocumentRecord.upload_date ISO timestamp (see
+    rag._03_routing.document_metadata) as a short, human-readable date,
+    e.g. "17 Nov 2026" — just the date, not the time, since that's all
+    a citation needs."""
+    return datetime.fromisoformat(upload_date).strftime(_DOCUMENT_DATE_FORMAT)
+
+
+def _citation_label(rank, source, upload_date: str = None):
     """Formats a source as a numbered, research-paper-style citation,
-    e.g. "[1] HoD Handbook - CMRIT, p. 20" or, for a chunk that spans a
-    page break, "[1] HoD Handbook - CMRIT, p. 20-21".
+    e.g. "[1] HoD Handbook - CMRIT, p. 20 — 17 Nov 2026" or, for a chunk
+    that spans a page break, "[1] HoD Handbook - CMRIT, p. 20-21 —
+    17 Nov 2026". upload_date is omitted (no trailing date) when the
+    document has no record in config/documents.json to read it from.
     """
     title = Path(source.source_file).stem
     if source.page_end and source.page_end != source.page_number:
         page_label = f"p. {source.page_number}-{source.page_end}"
     else:
         page_label = f"p. {source.page_number}"
-    return f"[{rank}] {title}, {page_label}"
+    citation = f"[{rank}] {title}, {page_label}"
+    if upload_date:
+        citation += f" — {_format_document_date(upload_date)}"
+    return citation
 
 
-def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
+def render_sources(sources, config, key_suffix, cited_indices=None) -> None:
     """Shows links to the source PDFs below the answer.
 
     When the answer text carries inline "[N]" citations (see
@@ -291,13 +269,9 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
     wrote — so the numbers always line up and nothing is fabricated.
     Falls back to the top TOP_SOURCES_SHOWN retrieved sources when
     nothing was cited (e.g. a short, non-committal reply).
-
-    Returns the set of source_link values actually shown, so a caller
-    (see render_chat_page) can skip render_topic_link's "Related:"
-    line when it would just repeat a link already shown here.
     """
     if not sources:
-        return set()
+        return
     if cited_indices:
         shown = [(index, sources[index - 1]) for index in cited_indices]
     else:
@@ -334,11 +308,15 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
         )
         shown.append((entry["rank"], merged_source))
 
-    shown_source_links = set()
+    records_by_filename = {
+        record.filename: record for record in document_metadata.load_documents(config.documents.documents_file)
+    }
+
     with st.expander(f"📎 {len(shown)} source document{'s' if len(shown) != 1 else ''}"):
         for rank, source in shown:
             pdf_path = Path(config.documents.source_directory) / source.source_file
-            citation = _citation_label(rank, source)
+            record = records_by_filename.get(source.source_file)
+            citation = _citation_label(rank, source, upload_date=record.upload_date if record else None)
             download_column, link_column = st.columns([2, 3])
 
             with download_column:
@@ -357,14 +335,8 @@ def render_sources(sources, config, key_suffix, cited_indices=None) -> set:
 
             with link_column:
                 if source.source_link:
-                    # Same "name: link" presentation as render_topic_link's
-                    # "Related:" line (document title as the hyperlink text,
-                    # not the bare URL) — kept consistent between the two.
                     title = Path(source.source_file).stem
                     st.caption(f"[{title}]({source.source_link})")
-                    shown_source_links.add(source.source_link)
-
-    return shown_source_links
 
 
 def render_low_confidence_warning(low_confidence: bool) -> None:
@@ -416,18 +388,6 @@ def render_rephrase_suggestion(rephrase_suggestion, message_index):
         # see RagPipeline.answer's suggest_rephrase parameter.
         st.session_state.pending_question_is_rephrase_retry = True
         st.rerun()
-
-
-def render_topic_link(topic_name, topic_link):
-    """Shows the canonical URL for the topic docs-metadata.json says the
-    question was about, if one was identified (see
-    rag._03_routing.topic_matcher.EmbeddingTopicMatcher). Shown regardless of whether
-    the answer came from a locally-indexed chunk, since some topics
-    (e.g. the college website) have no local PDF to index at all.
-    """
-    if not topic_link:
-        return
-    st.caption(f"🔗 Related: [{topic_name}]({topic_link})")
 
 
 def render_estimated_response_time(session_store):
@@ -588,14 +548,12 @@ def render_chat_page():
             st.write(message["content"])
             if message["role"] == "assistant":
                 render_low_confidence_warning(message.get("low_confidence", False))
-                shown_source_links = render_sources(
+                render_sources(
                     message.get("sources", []),
                     config,
                     f"history-{message_index}",
                     cited_indices=message.get("cited_indices"),
                 )
-                if message.get("topic_link") not in shown_source_links:
-                    render_topic_link(message.get("topic_name"), message.get("topic_link"))
                 render_rephrase_suggestion(message.get("rephrase_suggestion"), message_index)
                 render_answer_time(message.get("total_seconds"))
                 render_rating(
@@ -669,18 +627,6 @@ def render_chat_page():
                 st.session_state.history_reset_at_index,
             )
 
-        # Once FOLLOW_UP_LIMIT consecutive context-dependent follow-ups
-        # have been asked, silently drop conversation_history for this
-        # turn — the question is still answered, just without the
-        # preceding exchange to depend on. Since query_condenser then
-        # has nothing to condense against, this turn's
-        # used_conversation_context will come back False, which is
-        # exactly what resets follow_up_count to 0 below — a new
-        # follow-up thread can then build back up from scratch.
-        effective_conversation_history = (
-            None if st.session_state.get("follow_up_count", 0) >= FOLLOW_UP_LIMIT else conversation_history
-        )
-
         with st.chat_message("assistant", avatar=str(APP_ICON_PATH)):
             rag_pipeline = get_rag_pipeline()
             spinner_label = (
@@ -691,7 +637,7 @@ def render_chat_page():
             with st.spinner(spinner_label):
                 result = rag_pipeline.answer(
                     question,
-                    conversation_history=effective_conversation_history,
+                    conversation_history=conversation_history,
                     suggest_rephrase=not is_rephrase_retry,
                     category_override=category_override,
                 )
@@ -705,13 +651,10 @@ def render_chat_page():
                 with st.spinner("Checking other categories..."):
                     result = rag_pipeline.answer(
                         question,
-                        conversation_history=effective_conversation_history,
+                        conversation_history=conversation_history,
                         suggest_rephrase=not is_rephrase_retry,
                         category_override=ALL_CATEGORIES,
                     )
-            st.session_state.follow_up_count = (
-                st.session_state.get("follow_up_count", 0) + 1 if result.used_conversation_context else 0
-            )
             # Idle countdown restarts from when the answer is delivered,
             # not from when the question was submitted, so a slow
             # generation doesn't eat into (or get cut short by) the
@@ -719,14 +662,12 @@ def render_chat_page():
             touch_session(session_store)
             st.write(result.answer_text)
             render_low_confidence_warning(result.low_confidence)
-            shown_source_links = render_sources(
+            render_sources(
                 result.sources,
                 config,
                 f"new-{len(st.session_state.chat_history)}",
                 cited_indices=result.cited_indices,
             )
-            if result.topic_link not in shown_source_links:
-                render_topic_link(result.topic_name, result.topic_link)
             render_rephrase_suggestion(result.rephrase_suggestion, len(st.session_state.chat_history))
             render_answer_time(result.total_seconds)
             message_id = session_store.add_message(
@@ -736,6 +677,7 @@ def render_chat_page():
                 retrieval_seconds=result.retrieval_seconds,
                 llm_seconds=result.llm_seconds,
                 total_seconds=result.total_seconds,
+                grounded=result.grounded,
             )
             render_rating(
                 session_store, message_id, current_rating=None, widget_key=f"rating-{message_id}"
@@ -748,8 +690,6 @@ def render_chat_page():
                 "content": result.answer_text,
                 "sources": result.sources,
                 "question": question,
-                "topic_name": result.topic_name,
-                "topic_link": result.topic_link,
                 "cited_indices": result.cited_indices,
                 "total_seconds": result.total_seconds,
                 "low_confidence": result.low_confidence,

@@ -2,7 +2,7 @@
 Fusion (RRF).
 
 This module knows nothing about topics, mapped documents, or the
-retrieval policy (MAPPED_DOCUMENT/PRIMARY/SECONDARY/GLOBAL) — see
+retrieval policy (FOCUSSED_CATEGORY/GLOBAL, PRIMARY/SECONDARY) — see
 retrieval_service.py for that. It just takes a dense retriever, a
 BM25 index, and a query, and returns one fused, ranked candidate list.
 

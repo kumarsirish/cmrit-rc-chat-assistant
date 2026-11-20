@@ -2,7 +2,7 @@
 
 Builds an acronym -> full-phrase glossary automatically from the
 ingested documents themselves, instead of a hand-maintained keyword
-list per topic (see rag._03_routing.docs_metadata.DocTopic.keywords for
+list per topic (see rag._03_routing.document_metadata.DocTopic.keywords for
 that older, per-topic approach). Institutional documents almost
 always spell an acronym's meaning out on first use, in one of two
 conventional forms: "<full phrase> (<ACRONYM>)" or "<ACRONYM> (<full

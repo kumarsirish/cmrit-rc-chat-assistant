@@ -12,10 +12,10 @@ from helper_scripts.ingest import (
 )
 
 
-def _fake_config(metadata_file, source_directory=None, archived_subfolder_name="_archived"):
+def _fake_config(documents_file, source_directory=None, archived_subfolder_name="_archived"):
     return SimpleNamespace(
         documents=SimpleNamespace(
-            metadata_file=str(metadata_file),
+            documents_file=str(documents_file),
             # Nonexistent by default — _build_filename_location_map
             # tolerates that (returns {}), which is fine for tests that
             # don't care about category/source_path specifics.
@@ -25,9 +25,9 @@ def _fake_config(metadata_file, source_directory=None, archived_subfolder_name="
     )
 
 
-def _write_metadata_file(tmp_path, resources):
-    path = tmp_path / "docs-metadata.json"
-    path.write_text(json.dumps({"resources": resources}), encoding="utf-8")
+def _write_documents_file(tmp_path, records):
+    path = tmp_path / "documents.json"
+    path.write_text(json.dumps({"documents": records}), encoding="utf-8")
     return path
 
 
@@ -37,9 +37,17 @@ def test_chunk_id_is_stable_and_unique_per_chunk():
 
 
 def test_build_chunk_metadata_matches_chunk_to_its_topic_by_filename(tmp_path):
-    metadata_file = _write_metadata_file(
+    documents_file = _write_documents_file(
         tmp_path,
-        [{"topic": "Leave Policy", "link": "https://example.com/leave", "docs": "leave.pdf"}],
+        [
+            {
+                "filename": "leave.pdf",
+                "category": "Leave Policy",
+                "upload_date": "2026-01-01T00:00:00+00:00",
+                "link": "https://example.com/leave",
+                "label": "Leave Policy",
+            }
+        ],
     )
     source_directory = tmp_path / "knowledge_documents"
     category_dir = source_directory / "Leave Policy"
@@ -55,7 +63,7 @@ def test_build_chunk_metadata_matches_chunk_to_its_topic_by_filename(tmp_path):
         section_title="Casual Leave",
     )
 
-    ids, metadatas = build_chunk_metadata(_fake_config(metadata_file, source_directory), [chunk])
+    ids, metadatas = build_chunk_metadata(_fake_config(documents_file, source_directory), [chunk])
 
     assert ids == ["leave.pdf::page-1::chunk-0"]
     assert metadatas[0] == {
@@ -77,14 +85,14 @@ def test_build_chunk_metadata_matches_chunk_to_its_topic_by_filename(tmp_path):
 
 
 def test_build_chunk_metadata_uses_uncategorized_for_a_file_with_no_category_subfolder(tmp_path):
-    metadata_file = _write_metadata_file(tmp_path, [])
+    documents_file = _write_documents_file(tmp_path, [])
     source_directory = tmp_path / "knowledge_documents"
     source_directory.mkdir()
     (source_directory / "unlisted.pdf").write_bytes(b"x")
 
     chunk = Chunk(text="Some text.", source_file="unlisted.pdf", page_number=1, chunk_index=0)
 
-    _, metadatas = build_chunk_metadata(_fake_config(metadata_file, source_directory), [chunk])
+    _, metadatas = build_chunk_metadata(_fake_config(documents_file, source_directory), [chunk])
 
     assert metadatas[0]["topic"] == ""
     assert metadatas[0]["source_link"] == ""
@@ -95,20 +103,20 @@ def test_build_chunk_metadata_uses_uncategorized_for_a_file_with_no_category_sub
 
 
 def test_build_chunk_metadata_falls_back_to_uncategorized_when_source_directory_is_missing(tmp_path):
-    metadata_file = _write_metadata_file(tmp_path, [])
+    documents_file = _write_documents_file(tmp_path, [])
     chunk = Chunk(text="Some text.", source_file="unlisted.pdf", page_number=1, chunk_index=0)
 
-    _, metadatas = build_chunk_metadata(_fake_config(metadata_file), [chunk])
+    _, metadatas = build_chunk_metadata(_fake_config(documents_file), [chunk])
 
     assert metadatas[0]["category"] == UNCATEGORIZED
     assert metadatas[0]["source_path"] == "unlisted.pdf"
 
 
 def test_build_chunk_metadata_document_type_matches_extension(tmp_path):
-    metadata_file = _write_metadata_file(tmp_path, [])
+    documents_file = _write_documents_file(tmp_path, [])
     chunk = Chunk(text="Slide text.", source_file="deck.pptx", page_number=1, chunk_index=0)
 
-    _, metadatas = build_chunk_metadata(_fake_config(metadata_file), [chunk])
+    _, metadatas = build_chunk_metadata(_fake_config(documents_file), [chunk])
 
     assert metadatas[0]["document_type"] == "pptx"
 
@@ -132,20 +140,21 @@ def test_build_filename_location_map_excludes_archived_files(tmp_path):
 
 
 def test_build_chunk_metadata_carries_topic_keywords(tmp_path):
-    metadata_file = _write_metadata_file(
+    documents_file = _write_documents_file(
         tmp_path,
         [
             {
-                "topic": "Roles and Responsibilities",
+                "filename": "roles.pdf",
+                "category": "Roles and Responsibilities",
+                "upload_date": "2026-01-01T00:00:00+00:00",
                 "link": "https://example.com/roles",
-                "docs": "roles.pdf",
                 "keywords": "Director, Principal, HOD",
             }
         ],
     )
     chunk = Chunk(text="1. Leading functions and operations.", source_file="roles.pdf", page_number=1, chunk_index=0)
 
-    _, metadatas = build_chunk_metadata(_fake_config(metadata_file), [chunk])
+    _, metadatas = build_chunk_metadata(_fake_config(documents_file), [chunk])
 
     assert metadatas[0]["keywords"] == "Director, Principal, HOD"
 
@@ -200,13 +209,13 @@ def test_dedupe_chunks_preserves_order_of_first_occurrences():
 
 
 def test_build_chunk_metadata_preserves_chunk_order(tmp_path):
-    metadata_file = _write_metadata_file(tmp_path, [])
+    documents_file = _write_documents_file(tmp_path, [])
     chunks = [
         Chunk(text="a", source_file="a.pdf", page_number=1, chunk_index=0),
         Chunk(text="b", source_file="b.pdf", page_number=1, chunk_index=0),
     ]
 
-    ids, metadatas = build_chunk_metadata(_fake_config(metadata_file), chunks)
+    ids, metadatas = build_chunk_metadata(_fake_config(documents_file), chunks)
 
     assert ids == ["a.pdf::page-1::chunk-0", "b.pdf::page-1::chunk-0"]
     assert [m["source_file"] for m in metadatas] == ["a.pdf", "b.pdf"]

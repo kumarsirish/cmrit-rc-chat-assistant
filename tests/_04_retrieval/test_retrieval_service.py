@@ -4,26 +4,12 @@ from dataclasses import dataclass, field
 from rag._04_retrieval.bm25_retriever import BM25Document, BM25Index
 from rag._04_retrieval.retrieval_service import (
     ALL_CATEGORIES,
+    FOCUSSED_CATEGORY_MODE,
     GLOBAL_MODE,
-    MAPPED_DOCUMENT_MODE,
     RetrievalService,
     RetrievedChunk,
 )
-from rag._03_routing.docs_metadata import DocTopic
-
-
-class FakeCategoryMatcher:
-    """Returns a fixed list of matched categories regardless of query,
-    so tests can control exactly what retrieve()'s category routing
-    sees without a real embedding model."""
-
-    def __init__(self, matches):
-        self._matches = matches
-        self.match_call_count = 0
-
-    def match(self, query, query_embedding=None):
-        self.match_call_count += 1
-        return self._matches
+from rag._03_routing.document_metadata import DocTopic
 
 
 def _matches(actual, expected):
@@ -287,7 +273,7 @@ def test_primary_cap_applies_after_dense_relevance_filter():
         min_reranker_score=0.5,
         min_relevance_score=0.5,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=2,
+        primary_top_k=2,
     )
     results, _ = service.retrieve("what is the mapped policy")
     assert [chunk.text for chunk in results] == ["A", "C"]
@@ -298,7 +284,7 @@ def test_primary_relevance_is_decided_by_dense_score_not_reranker_score():
     # chunk low (observed for real: a reranker scored the correct
     # "Welfare Measures for Staff" heading chunk 0.05-ish, well below
     # any sane threshold, even though it was the #1 dense AND lexical
-    # hit in its own document). The mapped document is already
+    # hit in its own document). The matched document is already
     # trusted by the topic match, so PRIMARY must not drop this chunk
     # just because the reranker underscores it — the reranker may
     # still reorder within PRIMARY, but not evict.
@@ -319,7 +305,7 @@ def test_primary_relevance_is_decided_by_dense_score_not_reranker_score():
         reranker=reranker,
         rerank_candidates=8,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=2,
+        primary_top_k=2,
     )
     results, _ = service.retrieve("what is the mapped policy")
     assert [chunk.text for chunk in results] == ["A"]
@@ -345,10 +331,78 @@ def test_primary_reranker_reorders_but_does_not_evict_dense_relevant_chunks():
         reranker=reranker,
         rerank_candidates=8,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=2,
+        primary_top_k=2,
+        # Isolated from the weak-match budget behavior (see below) —
+        # this test is specifically about reorder-not-evict, so force
+        # PRIMARY to always be treated as a confident match regardless
+        # of A/B's own dense scores (0.60/0.55).
+        primary_strong_match_threshold=0.0,
     )
     results, _ = service.retrieve("what is the mapped policy")
     assert [chunk.text for chunk in results] == ["B", "A"]
+
+
+def test_primary_weak_match_shrinks_to_weak_match_top_k_and_frees_secondary_budget():
+    # A topic-name match whose own content scores below
+    # primary_strong_match_threshold doesn't get to keep primary_top_k
+    # slots — only primary_weak_match_top_k — freeing the rest of
+    # top_k for SECONDARY, which here finds a much stronger chunk.
+    class LabeledDenseRetriever:
+        def search(self, query_embedding, top_k, filter=None):
+            if filter:  # PRIMARY, scoped — both candidates score weak (0.55/0.50)
+                return [
+                    (FakeDocument(page_content="WeakA", metadata={"source_file": "mapped.pdf", "page_number": 1, "chunk_index": 0}), 0.55),
+                    (FakeDocument(page_content="WeakB", metadata={"source_file": "mapped.pdf", "page_number": 2, "chunk_index": 0}), 0.50),
+                ][:top_k]
+            # SECONDARY, unscoped — a much stronger chunk elsewhere.
+            return [
+                (FakeDocument(page_content="Strong", metadata={"source_file": "other.pdf", "page_number": 1, "chunk_index": 0}), 0.9),
+            ][:top_k]
+
+    doc_topics = [DocTopic(topic="Mapped Policy", link="https://example.com/mapped", docs_filename="mapped.pdf")]
+    service = RetrievalService(
+        dense_retriever=LabeledDenseRetriever(),
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        min_relevance_score=0.40,
+        doc_topics=doc_topics,
+        primary_top_k=3,
+        primary_strong_match_threshold=0.65,
+        primary_weak_match_top_k=1,
+    )
+    results, _ = service.retrieve("what is the mapped policy")
+    sources = [chunk.source_file for chunk in results]
+    assert sources.count("mapped.pdf") == 1  # shrunk from primary_top_k=3 to 1
+    assert "other.pdf" in sources
+
+
+def test_primary_strong_match_keeps_the_full_primary_top_k():
+    # Mirror of the above with a confident (>= threshold) PRIMARY
+    # match — it should keep its full primary_top_k budget, not shrink.
+    class LabeledDenseRetriever:
+        def search(self, query_embedding, top_k, filter=None):
+            if filter:  # PRIMARY, scoped — both candidates score strong
+                return [
+                    (FakeDocument(page_content="StrongA", metadata={"source_file": "mapped.pdf", "page_number": 1, "chunk_index": 0}), 0.9),
+                    (FakeDocument(page_content="StrongB", metadata={"source_file": "mapped.pdf", "page_number": 2, "chunk_index": 0}), 0.85),
+                ][:top_k]
+            return []
+
+    doc_topics = [DocTopic(topic="Mapped Policy", link="https://example.com/mapped", docs_filename="mapped.pdf")]
+    service = RetrievalService(
+        dense_retriever=LabeledDenseRetriever(),
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=4,
+        min_reranker_score=0.35,
+        min_relevance_score=0.40,
+        doc_topics=doc_topics,
+        primary_top_k=3,
+        primary_strong_match_threshold=0.65,
+        primary_weak_match_top_k=1,
+    )
+    results, _ = service.retrieve("what is the mapped policy")
+    assert [chunk.text for chunk in results] == ["StrongA", "StrongB"]
 
 
 def test_secondary_slot_fill_applies_after_relevance_filter():
@@ -383,7 +437,7 @@ def test_secondary_slot_fill_applies_after_relevance_filter():
         reranker=reranker,
         rerank_candidates=8,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=2,
+        primary_top_k=2,
     )
     results, _ = service.retrieve("what is the mapped policy")
     # PRIMARY = [P1]. SECONDARY has 1 slot; F fails the threshold
@@ -391,10 +445,10 @@ def test_secondary_slot_fill_applies_after_relevance_filter():
     assert [chunk.text for chunk in results] == ["P1", "E"]
 
 
-# --- PRIMARY / SECONDARY / GLOBAL routing ---------------------------------
+# --- PRIMARY / SECONDARY / fallback routing (GLOBAL scope) ----------------
 
 
-def test_topic_match_puts_mapped_document_chunks_first_but_allows_secondary_fill():
+def test_topic_match_puts_matched_document_chunks_first_but_allows_secondary_fill():
     dense_retriever = FakeDenseRetriever(
         distances=[0.02, 0.6],
         metadatas=[
@@ -463,11 +517,42 @@ def test_topic_mapped_to_multiple_documents_searches_all_of_them_as_primary():
         top_k=3,
         min_reranker_score=0.35,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=2,
+        primary_top_k=2,
     )
     results, _ = service.retrieve("what is the leave policy")
     assert [chunk.source_file for chunk in results] == ["leave.pdf", "leave-addendum.pdf", "doc0.pdf"]
     assert dense_retriever.last_filter is None  # last call is the SECONDARY (unfiltered) search
+
+
+def test_query_matching_multiple_topics_searches_the_union_as_primary():
+    # Two distinct topics (two different documents) both match the
+    # same query (FakeEmbeddingGenerator scores every phrase 1.0
+    # against any query) — PRIMARY must search the union of both, not
+    # just whichever topic happened to score best.
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.02, 0.03, 0.6],
+        metadatas=[
+            {"source_file": "form-a.pdf", "page_number": 1, "chunk_index": 0},
+            {"source_file": "form-b.pdf", "page_number": 1, "chunk_index": 0},
+            {"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0},
+        ],
+    )
+    doc_topics = [
+        DocTopic(topic="Form A", link="https://example.com/a", docs_filename="form-a.pdf"),
+        DocTopic(topic="Form B", link="https://example.com/b", docs_filename="form-b.pdf"),
+    ]
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=3,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+        primary_top_k=2,
+    )
+    results, matched_topics = service.retrieve("tell me about the forms")
+    assert {topic.topic for topic in matched_topics} == {"Form A", "Form B"}
+    assert {chunk.source_file for chunk in results[:2]} == {"form-a.pdf", "form-b.pdf"}
+    assert dense_retriever.last_filter is None  # SECONDARY (unfiltered) search ran last
 
 
 def test_primary_full_with_overridden_config_still_skips_secondary():
@@ -488,7 +573,7 @@ def test_primary_full_with_overridden_config_still_skips_secondary():
         top_k=3,
         min_reranker_score=0.35,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=3,
+        primary_top_k=3,
     )
     results, _ = service.retrieve("what is the mapped policy")
     assert len(results) == 3
@@ -496,7 +581,7 @@ def test_primary_full_with_overridden_config_still_skips_secondary():
     assert dense_retriever.search_call_count == 1  # PRIMARY only, no SECONDARY call
 
 
-def test_secondary_excludes_the_entire_mapped_document_not_just_returned_chunks():
+def test_secondary_excludes_the_entire_matched_document_not_just_returned_chunks():
     # mapped.pdf has 3 relevant chunks but primary_top_k only lets 1
     # into PRIMARY. None of the other 2 (never selected by PRIMARY)
     # may leak into SECONDARY's results.
@@ -521,7 +606,7 @@ def test_secondary_excludes_the_entire_mapped_document_not_just_returned_chunks(
         top_k=3,
         min_reranker_score=0.35,
         doc_topics=doc_topics,
-        mapped_document_primary_top_k=1,
+        primary_top_k=1,
     )
     results, _ = service.retrieve("what is the mapped policy")
     sources = [chunk.source_file for chunk in results]
@@ -529,7 +614,7 @@ def test_secondary_excludes_the_entire_mapped_document_not_just_returned_chunks(
     assert "other.pdf" in sources
 
 
-def test_topic_match_with_no_local_document_falls_back_to_global_mode():
+def test_topic_match_with_no_local_document_falls_back_to_global_search():
     dense_retriever = FakeDenseRetriever(distances=[0.1])
     doc_topics = [DocTopic(topic="External Portal", link="https://example.com/portal", docs_filename=None)]
     service = RetrievalService(
@@ -564,8 +649,8 @@ def test_explicit_metadata_filter_overrides_topic_detection():
     assert [chunk.source_file for chunk in results] == ["probation.pdf"]
 
 
-def test_retrieve_returns_matched_topic_alongside_chunks():
-    # This is what lets rag_pipeline.py avoid a second match_topic()
+def test_retrieve_returns_matched_topics_alongside_chunks():
+    # This is what lets rag_pipeline.py avoid a second match_topics()
     # call (and a second query embedding) for the same question.
     dense_retriever = FakeDenseRetriever(
         distances=[0.1], metadatas=[{"source_file": "leave.pdf", "page_number": 1, "chunk_index": 0}]
@@ -578,11 +663,11 @@ def test_retrieve_returns_matched_topic_alongside_chunks():
         min_reranker_score=0.35,
         doc_topics=doc_topics,
     )
-    _, matched_topic = service.retrieve("what is the leave policy")
-    assert matched_topic.topic == "Leave Policy"
+    _, matched_topics = service.retrieve("what is the leave policy")
+    assert [topic.topic for topic in matched_topics] == ["Leave Policy"]
 
 
-def test_retrieve_logs_mode_and_mapped_document(caplog):
+def test_retrieve_logs_global_mode_and_mapped_document(caplog):
     import logging
 
     dense_retriever = FakeDenseRetriever(
@@ -599,7 +684,7 @@ def test_retrieve_logs_mode_and_mapped_document(caplog):
     with caplog.at_level(logging.INFO, logger="rag._04_retrieval.retrieval_service"):
         service.retrieve("what is the leave policy")
     assert any(
-        f"mode={MAPPED_DOCUMENT_MODE}" in record.message and "leave.pdf" in record.message
+        f"mode={GLOBAL_MODE}" in record.message and "leave.pdf" in record.message
         for record in caplog.records
     )
 
@@ -646,15 +731,24 @@ def test_retrieve_min_reranker_score_override_replaces_the_configured_default():
     assert len(results) == 1
 
 
-# --- category routing (see dashboard.py's Chat page category picker) -----
+# --- FOCUSSED_CATEGORY routing (see dashboard.py's Chat page category picker) --
 
 
-def test_category_override_hard_scopes_search_and_skips_topic_matching():
+def test_category_override_scopes_topic_matching_to_that_category_alone():
+    # Two topics exist, in different categories; the query matches
+    # both by name, but with category_override="Funding schemes" only
+    # the topic actually in that category must drive PRIMARY.
     dense_retriever = FakeDenseRetriever(
-        distances=[0.1],
-        metadatas=[{"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
+        distances=[0.02, 0.6],
+        metadatas=[
+            {"source_file": "grant.pdf", "page_number": 1, "chunk_index": 0},
+            {"source_file": "other.pdf", "page_number": 1, "chunk_index": 0},
+        ],
     )
-    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
+    doc_topics = [
+        DocTopic(topic="Grant Form", link="https://example.com/grant", docs_filename="grant.pdf", category="Funding schemes"),
+        DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf", category="Policies and norms"),
+    ]
     service = RetrievalService(
         dense_retriever=dense_retriever,
         embedding_generator=FakeEmbeddingGenerator(),
@@ -662,112 +756,113 @@ def test_category_override_hard_scopes_search_and_skips_topic_matching():
         min_reranker_score=0.35,
         doc_topics=doc_topics,
     )
-    results, matched_topic = service.retrieve("what is the leave policy", category_override="Funding schemes")
-    assert matched_topic is None
+    results, matched_topics = service.retrieve("what is the grant form", category_override="Funding schemes")
+    assert [topic.topic for topic in matched_topics] == ["Grant Form"]
+    # SECONDARY ran last, scoped to the category (not source_file).
+    assert dense_retriever.last_filter == {"category": "Funding schemes"}
+
+
+def test_category_override_with_no_topic_match_falls_back_to_flat_category_search():
+    dense_retriever = FakeDenseRetriever(
+        distances=[0.1],
+        metadatas=[{"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
+    )
+    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf", category="Policies and norms")]
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+    )
+    results, matched_topics = service.retrieve("tell me about grants", category_override="Funding schemes")
+    assert matched_topics == []
     assert dense_retriever.last_filter == {"category": "Funding schemes"}
     assert len(results) == 1
 
 
-def test_all_categories_override_skips_classifier_but_keeps_topic_matching():
+def test_category_override_primary_empty_falls_back_to_flat_category_search():
+    # The topic matches within the category, but its document has
+    # nothing relevant — PRIMARY comes back empty, so retrieval must
+    # fall back to a flat category-scoped search rather than refusing.
+    class LabeledDenseRetriever:
+        def search(self, query_embedding, top_k, filter=None):
+            if filter == {"source_file": {"$in": ["grant.pdf"]}}:
+                return []  # PRIMARY: nothing in the matched document
+            return [
+                (FakeDocument(page_content="O1", metadata={"source_file": "other.pdf", "page_number": 1, "chunk_index": 0}), 0.8),
+            ][:top_k]
+
+    doc_topics = [DocTopic(topic="Grant Form", link="https://example.com/grant", docs_filename="grant.pdf", category="Funding schemes")]
+    service = RetrievalService(
+        dense_retriever=LabeledDenseRetriever(),
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+    )
+    results, matched_topics = service.retrieve("what is the grant form", category_override="Funding schemes")
+    # matched_topics still reflects the topic match itself — same
+    # invariant as the pre-FOCUSSED_CATEGORY design: a caller (e.g.
+    # response_processor) can tell what the query was about even when
+    # the match's own document didn't pan out.
+    assert [topic.topic for topic in matched_topics] == ["Grant Form"]
+    assert [chunk.source_file for chunk in results] == ["other.pdf"]
+
+
+def test_category_override_secondary_search_stays_scoped_to_the_category():
+    class LabeledDenseRetriever:
+        def __init__(self):
+            self.filters = []
+
+        def search(self, query_embedding, top_k, filter=None):
+            self.filters.append(filter)
+            if filter == {"source_file": {"$in": ["grant.pdf"]}}:
+                return [
+                    (FakeDocument(page_content="P1", metadata={"source_file": "grant.pdf", "page_number": 1, "chunk_index": 0}), 0.9),
+                ][:top_k]
+            return [
+                (FakeDocument(page_content="S1", metadata={"source_file": "other.pdf", "page_number": 1, "chunk_index": 0}), 0.7),
+            ][:top_k]
+
+    dense_retriever = LabeledDenseRetriever()
+    doc_topics = [DocTopic(topic="Grant Form", link="https://example.com/grant", docs_filename="grant.pdf", category="Funding schemes")]
+    service = RetrievalService(
+        dense_retriever=dense_retriever,
+        embedding_generator=FakeEmbeddingGenerator(),
+        top_k=2,
+        min_reranker_score=0.35,
+        doc_topics=doc_topics,
+    )
+    results, _ = service.retrieve("what is the grant form", category_override="Funding schemes")
+    assert [chunk.source_file for chunk in results] == ["grant.pdf", "other.pdf"]
+    # SECONDARY's own call (the second one) must be scoped to the category.
+    assert dense_retriever.filters[1] == {"category": "Funding schemes"}
+
+
+def test_all_categories_override_behaves_like_global_mode():
     dense_retriever = FakeDenseRetriever(
         distances=[0.1], metadatas=[{"source_file": "leave.pdf", "page_number": 1, "chunk_index": 0}]
     )
     doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
-    category_matcher = FakeCategoryMatcher(["Funding schemes"])
     service = RetrievalService(
         dense_retriever=dense_retriever,
         embedding_generator=FakeEmbeddingGenerator(),
         top_k=2,
         min_reranker_score=0.35,
         doc_topics=doc_topics,
-        category_matcher=category_matcher,
     )
-    _, matched_topic = service.retrieve("what is the leave policy", category_override=ALL_CATEGORIES)
-    assert matched_topic.topic == "Leave Policy"
-    assert category_matcher.match_call_count == 0
+    _, matched_topics = service.retrieve("what is the leave policy", category_override=ALL_CATEGORIES)
+    assert [topic.topic for topic in matched_topics] == ["Leave Policy"]
 
 
-def test_global_mode_scopes_search_to_a_single_matched_category():
-    dense_retriever = FakeDenseRetriever(
-        distances=[0.1],
-        metadatas=[{"source_file": "doc0.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
-    )
-    category_matcher = FakeCategoryMatcher(["Funding schemes"])
-    service = RetrievalService(
-        dense_retriever=dense_retriever,
-        embedding_generator=FakeEmbeddingGenerator(),
-        top_k=2,
-        min_reranker_score=0.35,
-        category_matcher=category_matcher,
-    )
-    results, matched_topic = service.retrieve("tell me about grants")
-    assert matched_topic is None
-    assert dense_retriever.last_filter == {"category": "Funding schemes"}
-    assert len(results) == 1
-
-
-def test_global_mode_scopes_search_to_multiple_matched_categories():
-    dense_retriever = FakeDenseRetriever(distances=[0.1])
-    category_matcher = FakeCategoryMatcher(["Funding schemes", "Approval and claim forms"])
-    service = RetrievalService(
-        dense_retriever=dense_retriever,
-        embedding_generator=FakeEmbeddingGenerator(),
-        top_k=2,
-        min_reranker_score=0.35,
-        category_matcher=category_matcher,
-    )
-    service.retrieve("tell me about grants and approvals")
-    assert dense_retriever.last_filter == {"category": {"$in": ["Funding schemes", "Approval and claim forms"]}}
-
-
-def test_global_mode_stays_unscoped_when_classifier_finds_no_match():
-    dense_retriever = FakeDenseRetriever(distances=[0.1])
-    category_matcher = FakeCategoryMatcher([])
-    service = RetrievalService(
-        dense_retriever=dense_retriever,
-        embedding_generator=FakeEmbeddingGenerator(),
-        top_k=2,
-        min_reranker_score=0.35,
-        category_matcher=category_matcher,
-    )
-    service.retrieve("some unrelated question")
-    assert dense_retriever.last_filter is None
-    assert category_matcher.match_call_count == 1
-
-
-def test_global_fallback_from_empty_primary_also_consults_category_matcher():
-    # The single candidate's source_file ("other.pdf") doesn't match
-    # the mapped document ("leave.pdf"), so PRIMARY comes back empty
-    # and retrieve() falls through to a GLOBAL search — which should
-    # still consult the category matcher, same as a query with no
-    # topic match at all.
-    dense_retriever = FakeDenseRetriever(
-        distances=[0.1],
-        metadatas=[{"source_file": "other.pdf", "page_number": 1, "chunk_index": 0, "category": "Funding schemes"}],
-    )
-    doc_topics = [DocTopic(topic="Leave Policy", link="https://example.com/leave", docs_filename="leave.pdf")]
-    category_matcher = FakeCategoryMatcher(["Funding schemes"])
-    service = RetrievalService(
-        dense_retriever=dense_retriever,
-        embedding_generator=FakeEmbeddingGenerator(),
-        top_k=2,
-        min_reranker_score=0.35,
-        doc_topics=doc_topics,
-        category_matcher=category_matcher,
-    )
-    results, matched_topic = service.retrieve("what is the leave policy")
-    assert matched_topic.topic == "Leave Policy"
-    assert dense_retriever.last_filter == {"category": "Funding schemes"}
-    assert len(results) == 1
-
-
-# --- match_topic institution-name stripping --------------------------------
+# --- match_topics institution-name stripping --------------------------------
 
 
 class TextSensitiveEmbeddingGenerator:
     """Unlike FakeEmbeddingGenerator, returns a different vector
     depending on whether "CMRIT" is still in the text, so these tests
-    can tell whether match_topic() matched against the original query
+    can tell whether match_topics() matched against the original query
     or the institution-name-stripped one."""
 
     def __init__(self):
@@ -781,7 +876,7 @@ class TextSensitiveEmbeddingGenerator:
         return [self.embed_query(text) for text in texts]
 
 
-def test_match_topic_strips_institution_name_before_matching():
+def test_match_topics_strips_institution_name_before_matching():
     embedding_generator = TextSensitiveEmbeddingGenerator()
     topic = DocTopic(topic="Some Topic", link="https://example.com/topic", docs_filename=["some.pdf"])
     service = RetrievalService(
@@ -793,13 +888,13 @@ def test_match_topic_strips_institution_name_before_matching():
     )
     # The query's own embedding (computed with "CMRIT" still in it)
     # would score 0 against the topic phrase's [1, 0, 0] embedding —
-    # matching only works because match_topic re-embeds the stripped text.
+    # matching only works because match_topics re-embeds the stripped text.
     original_embedding = embedding_generator.embed_query("about Some Topic at CMRIT")
-    matched = service.match_topic("about Some Topic at CMRIT", query_embedding=original_embedding)
-    assert matched is topic
+    matched = service.match_topics("about Some Topic at CMRIT", query_embedding=original_embedding)
+    assert matched == [topic]
 
 
-def test_match_topic_reuses_given_embedding_when_nothing_to_strip():
+def test_match_topics_reuses_given_embedding_when_nothing_to_strip():
     embedding_generator = TextSensitiveEmbeddingGenerator()
     topic = DocTopic(topic="Some Topic", link="https://example.com/topic", docs_filename=["some.pdf"])
     service = RetrievalService(
@@ -811,8 +906,8 @@ def test_match_topic_reuses_given_embedding_when_nothing_to_strip():
     )
     embedding_generator.embed_query_call_count = 0
     given_embedding = [1.0, 0.0, 0.0]
-    matched = service.match_topic("about Some Topic", query_embedding=given_embedding)
-    assert matched is topic
+    matched = service.match_topics("about Some Topic", query_embedding=given_embedding)
+    assert matched == [topic]
     # No "CMRIT" to strip, so the given embedding must be reused as-is
     # rather than paying for a second embed_query call.
     assert embedding_generator.embed_query_call_count == 0

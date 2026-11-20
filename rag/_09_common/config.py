@@ -106,15 +106,16 @@ class AdminConfig:
 @dataclass
 class DocumentsConfig:
     source_directory: str
-    metadata_file: str
+    # One record per document — category, upload time, active/archived
+    # status and supersession history, plus the topic/link fields used
+    # to detect which document a query is about. See
+    # rag._03_routing.document_metadata.
+    documents_file: str
     # Acronym -> full-phrase glossary, hand-maintained (see
     # rag._01_ingestion.glossary_extractor for the one-off extraction
     # tool it was seeded from). Used to expand jargon-free questions
     # before retrieval — see rag._03_routing.query_expander.
     glossary_file: str
-    # Upload-time bookkeeping (filename/category/upload_date/status) for
-    # documents added via the Admin UI — see rag._03_routing.document_registry.
-    registry_file: str
     # Subfolder name (under each category folder) that a superseded
     # document is moved into. Ingestion's directory scan skips any path
     # under a folder with this name, so an archived document stops being
@@ -155,7 +156,7 @@ class RetrievalConfig:
     top_k: int
     min_reranker_score: float
     min_relevance_score: float
-    mapped_document_primary_top_k: int
+    primary_top_k: int
     topic_match_threshold: float
     hybrid: HybridConfig
     rerank: RerankConfig
@@ -166,12 +167,34 @@ class RetrievalConfig:
     # score is at least this — below it, the query is treated as
     # genuinely unanswerable and no chunk is returned at all.
     low_confidence_min_score: float = 0.05
-    # Minimum cosine similarity a query must clear against a category
-    # name (see rag._03_routing.category_matcher.EmbeddingCategoryMatcher)
-    # for that category to scope an otherwise-GLOBAL search. An untuned
-    # starting default, unlike topic_match_threshold/min_reranker_score
-    # above — revisit once there's evaluation data for it.
-    category_match_threshold: float = 0.35
+    # Minimum embedding cosine similarity between a fresh "nothing
+    # found" question and a past question that already got a grounded
+    # answer (see rag._05_generation.similar_question_finder) for that
+    # past question to be suggested back to the user. High on purpose:
+    # this should only fire for near-duplicate phrasing, not a
+    # same-topic-but-different question.
+    similar_question_threshold: float = 0.90
+    # How far below the single best-matched topic's score another
+    # topic can fall and still count as matched alongside it (see
+    # topic_matcher.EmbeddingTopicMatcher.match_all) — without this, a
+    # query where several topics happen to individually clear
+    # topic_match_threshold admits all of them regardless of how much
+    # worse they scored than the best, diluting PRIMARY search across
+    # mostly-wrong documents.
+    topic_match_margin: float = 0.10
+    # Hard cap on how many topics match_all() ever returns, independent
+    # of the margin above.
+    topic_match_max_matches: int = 3
+    # Minimum dense cosine score among PRIMARY's own raw candidates for
+    # it to be trusted with its full primary_top_k budget — below this,
+    # a topic NAME match doesn't guarantee the document's CONTENT is
+    # actually strong for this question, so PRIMARY only gets
+    # primary_weak_match_top_k slots instead, leaving the rest of
+    # top_k for SECONDARY to fill with whatever's genuinely strongest.
+    primary_strong_match_threshold: float = 0.65
+    # How many PRIMARY slots a match below primary_strong_match_threshold
+    # still gets, instead of the full primary_top_k.
+    primary_weak_match_top_k: int = 1
 
 
 @dataclass
@@ -222,26 +245,6 @@ class DatabaseConfig:
 
 
 @dataclass
-class RedisConfig:
-    # Global cache of frequently-repeated questions' retrieved chunks
-    # (see rag/_04_retrieval/faq_cache.py) — off by default since it's
-    # optional infra (nothing else here requires a Redis server).
-    enabled: bool
-    host: str
-    port: int
-    db: int
-    password: str
-    # A question must be asked (exact match, after normalization) at
-    # least this many times before its chunks get cached.
-    faq_cache_min_hits: int
-    # Safety-net expiry for a cached entry. reset_if_enabled() (called
-    # after every ingestion run) is what normally invalidates the
-    # cache; this just bounds how stale an entry could get if that
-    # ever doesn't happen.
-    cache_ttl_seconds: int
-
-
-@dataclass
 class AppConfig:
     app: AppUiConfig
     admin: AdminConfig
@@ -254,7 +257,6 @@ class AppConfig:
     session: SessionConfig
     evaluation: EvaluationConfig
     database: DatabaseConfig
-    redis: RedisConfig
 
 
 def _resolve_path(value: str) -> str:
@@ -295,9 +297,8 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     documents_raw = raw["documents"]
     documents_cfg = DocumentsConfig(
         source_directory=_resolve_path(documents_raw["source_directory"]),
-        metadata_file=_resolve_path(documents_raw["metadata_file"]),
+        documents_file=_resolve_path(documents_raw["documents_file"]),
         glossary_file=_resolve_path(documents_raw["glossary_file"]),
-        registry_file=_resolve_path(documents_raw["registry_file"]),
         archived_subfolder_name=documents_raw.get("archived_subfolder_name", "_archived"),
         ingestion_stats_file=_resolve_path(
             documents_raw.get("ingestion_stats_file", "./config/ingestion_stats.json")
@@ -338,8 +339,6 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     database_raw["database"] = f"{slugify_app_name(app_cfg.name)}_sessions"
     database_cfg = DatabaseConfig(**database_raw)
 
-    redis_cfg = RedisConfig(**raw["redis"])
-
     return AppConfig(
         app=app_cfg,
         admin=admin_cfg,
@@ -352,5 +351,4 @@ def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         session=session_cfg,
         evaluation=evaluation_cfg,
         database=database_cfg,
-        redis=redis_cfg,
     )

@@ -42,6 +42,7 @@ import argparse
 import copy
 import hashlib
 import json
+import logging
 import subprocess
 import sys
 import tempfile
@@ -308,4 +309,12 @@ def main():
 
 
 if __name__ == "__main__":
+    # Previously inherited for free from helper_scripts.ingest's own
+    # module-level logging.basicConfig() — that side effect was removed
+    # (see ingest.py) since it also silently escalated the live Admin
+    # UI's console verbosity. This script still wants INFO-level
+    # visibility into a triggered re-ingest (see _ensure_matching_index),
+    # so it configures that for itself here instead.
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("rag").setLevel(logging.INFO)
     main()

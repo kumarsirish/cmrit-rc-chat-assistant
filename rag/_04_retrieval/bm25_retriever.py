@@ -52,8 +52,8 @@ def _search_text(document: "BM25Document") -> str:
 def _matches_filter(metadata: dict, metadata_filter: dict) -> bool:
     """Mirrors the subset of Chroma's `where` operators retrieval_service.py
     actually builds: a plain value means exact match, {"$in": [...]}
-    means membership (used for MAPPED_DOCUMENT mode's now-possibly-
-    multi-file scoped_filter)."""
+    means membership (used for PRIMARY search's possibly-multi-file
+    scoped_filter)."""
     if not metadata_filter:
         return True
     for key, value in metadata_filter.items():

@@ -3,9 +3,9 @@ https://sites.google.com/cmrit.ac.in/research-committee/downloads into
 knowledge_documents, so they can be ingested like any other document
 (see rag/_01_ingestion/document_loader.py). Every linked document is
 registered the same way the Admin UI's upload flow registers one (see
-rag/_03_routing/docs_metadata.py, rag/_03_routing/document_registry.py),
-so each downloaded form shows up in the Admin tab's document list and
-is individually topic-matchable at query time.
+rag/_03_routing/document_metadata.py), so each downloaded form shows
+up in the Admin tab's document list and is individually
+topic-matchable at query time.
 
 Run it, then `make ingest` (or the Admin tab's "Rebuild index" button)
 to actually index what it downloaded:
@@ -21,8 +21,8 @@ formats, whatever Drive serves for a generic uploaded file, usually
 actual content survives intact.
 
 Safe to re-run: a later run just re-downloads and overwrites each
-file in place and refreshes its document_registry upload_date (see
-DocumentRegistry.register_upload's overwrite handling) rather than
+file in place and refreshes its document record's upload_date (see
+document_metadata.register_upload's overwrite handling) rather than
 creating duplicates, so running this again after the page adds a new
 form, or a Google Doc on it is edited, picks up the change without
 hand-curating what's already there.
@@ -40,7 +40,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from rag._01_ingestion.document_loader import sanitize_topic_folder_name
-from rag._03_routing import docs_metadata, document_registry
+from rag._03_routing import document_metadata
 from rag._09_common.config import AppConfig, load_config
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -48,9 +48,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SOURCE_PAGE = "https://sites.google.com/cmrit.ac.in/research-committee/downloads"
 # Folder (under documents.source_directory) every downloaded file is
-# saved into. Each file is still registered under its own individual
-# docs-metadata.json topic (see _download_one) — this is just the
-# physical folder, not a grouping of what's topic-matchable together.
+# saved into. Each file still gets its own individual label/link (see
+# _download_one) — this is just the physical folder, not a grouping of
+# what's topic-matchable together.
 DEFAULT_CATEGORY = "Research Committee"
 
 _REQUEST_TIMEOUT_SECONDS = 60
@@ -83,7 +83,7 @@ _CONTENT_DISPOSITION_FILENAME_PATTERN = re.compile(r'filename="?([^";]+)"?')
 class DownloadLink:
     """One resolved document link: label is the human-readable text
     from the downloads page (used to name the saved file and as its
-    docs-metadata.json topic); source_url is the original page the
+    document record's label override); source_url is the original page the
     link pointed at (used as that topic's canonical link); export_url
     is where to actually fetch the file's bytes from; extension is
     known upfront for a native Google Docs/Sheets/Slides export, or
@@ -176,8 +176,8 @@ def _extension_from_response(response: requests.Response) -> str:
 
 def _download_one(config: AppConfig, session: requests.Session, link: DownloadLink, category: str) -> bool:
     """Downloads one link into documents.source_directory/category,
-    registers it under its own docs-metadata.json topic (link.label)
-    and in the document registry, and returns True on success. Logs
+    registers it as its own document record (labeled link.label, with
+    link.source_url as its canonical link), and returns True on success. Logs
     and returns False on any failure (network error, a Drive
     "can't scan this file for viruses" HTML interstitial instead of
     real content, or an unrecognized/unsupported resulting extension)
@@ -212,15 +212,14 @@ def _download_one(config: AppConfig, session: requests.Session, link: DownloadLi
     category_directory.mkdir(parents=True, exist_ok=True)
     (category_directory / filename).write_bytes(response.content)
 
-    docs_metadata.add_document_to_topic(
-        config.documents.metadata_file, topic=link.label, filename=filename, link=link.source_url
-    )
-    document_registry.register_upload(
-        config.documents.registry_file,
+    document_metadata.register_upload(
+        config.documents.documents_file,
         config.documents.source_directory,
         filename,
         category,
         archived_subfolder_name=config.documents.archived_subfolder_name,
+        link=link.source_url,
+        label=link.label,
     )
     logger.info("Downloaded '%s' -> %s", link.label, category_directory / filename)
     return True

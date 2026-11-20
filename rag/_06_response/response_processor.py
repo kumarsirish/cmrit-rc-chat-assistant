@@ -129,12 +129,6 @@ class RagAnswer:
     # rag._05_generation.rephrase_suggester. None whenever grounded is
     # True, or when generating a suggestion itself failed.
     rephrase_suggestion: str = None
-    # True when query_condenser.condense() actually rewrote the
-    # retrieval query — i.e. this question depended on the immediately
-    # preceding exchange, not a self-contained/unrelated one. Set by
-    # rag_pipeline.answer(); used by dashboard.py to count consecutive
-    # follow-ups toward its per-thread limit (see render_chat_page).
-    used_conversation_context: bool = False
 
     def __post_init__(self):
         if self.cited_indices is None:
@@ -142,33 +136,36 @@ class RagAnswer:
 
 
 def build_no_result_response(
-    matched_topic,
+    matched_topics: list,
     retrieval_seconds: float = None,
     total_seconds: float = None,
     no_match_message: str = NO_MATCH_MESSAGE,
 ) -> RagAnswer:
     """Builds the response for "nothing was retrieved".
 
-    matched_topic (see topic_matcher.EmbeddingTopicMatcher), if set,
-    means the question was recognized as being about a known topic
-    that simply has no locally-indexed document — the reply points at
-    that topic's official link instead of a bare refusal.
+    matched_topics (see topic_matcher.EmbeddingTopicMatcher), if
+    non-empty, means the question was recognized as being about one
+    or more known topics with nothing locally-indexed found relevant
+    — the reply points at the single best match's official link
+    instead of a bare refusal (several links would read as the system
+    being unsure, rather than giving one confident next step).
 
     no_match_message, if given, overrides the default refusal wording
     (see rag_pipeline, which sources it from config.app.no_match_message)
     for deployments indexing a different document set.
     """
-    if matched_topic:
+    if matched_topics:
+        topic = matched_topics[0]
         answer_text = (
-            f"I don't have \"{matched_topic.topic}\" indexed as searchable "
+            f"I don't have \"{topic.topic}\" indexed as searchable "
             "text, but here is the official resource for it:"
         )
         return RagAnswer(
             answer_text=answer_text,
             sources=[],
             grounded=False,
-            topic_name=matched_topic.topic,
-            topic_link=matched_topic.link,
+            topic_name=topic.topic,
+            topic_link=topic.link,
             retrieval_seconds=retrieval_seconds,
             total_seconds=total_seconds,
         )
@@ -184,7 +181,7 @@ def build_no_result_response(
 def process(
     raw_answer_text: str,
     chunks: list,
-    matched_topic,
+    matched_topics: list,
     retrieval_seconds: float = None,
     llm_seconds: float = None,
     total_seconds: float = None,
@@ -225,12 +222,13 @@ def process(
         if grounded
         else []
     )
+    topic = matched_topics[0] if matched_topics else None
     return RagAnswer(
         answer_text=answer_text,
         sources=sources,
         grounded=grounded,
-        topic_name=matched_topic.topic if matched_topic else None,
-        topic_link=matched_topic.link if matched_topic else None,
+        topic_name=topic.topic if topic else None,
+        topic_link=topic.link if topic else None,
         cited_indices=cited_indices if grounded else [],
         retrieval_seconds=retrieval_seconds,
         llm_seconds=llm_seconds,

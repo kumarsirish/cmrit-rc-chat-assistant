@@ -28,9 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pathlib import PurePosixPath
 
 from rag._09_common.config import AppConfig, load_config
-from rag._03_routing.docs_metadata import DocTopic, build_filename_topic_map, load_doc_topics
+from rag._03_routing.document_metadata import DocTopic, active_filename_topic_map, load_documents
 from rag._02_indexing.vector_store import VectorStore
-from rag._04_retrieval import faq_cache
 from rag._01_ingestion.chunker import Chunk, chunk_documents
 from rag._01_ingestion.document_loader import find_document_files, load_all_documents
 from rag._01_ingestion.embeddings import EmbeddingGenerator
@@ -40,9 +39,16 @@ from rag._01_ingestion.embeddings import EmbeddingGenerator
 # describing such a file in its documents listing.
 UNCATEGORIZED = "(uncategorized)"
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-logging.getLogger("rag").setLevel(logging.INFO)
-logging.getLogger(__name__).setLevel(logging.INFO)
+# Deliberately NOT configured at module level: admin_page.py imports
+# run_ingestion/load_ingestion_stats from this module for the Admin
+# UI's "Rebuild index" button, and a module-level logging.basicConfig()
+# call here would silently escalate the WHOLE live app's console
+# verbosity (including every other "rag.*" logger, not just this
+# module's) the moment that import happens. Verbose INFO-level console
+# output for this module is opt-in, under `if __name__ == "__main__":`
+# below, so it only applies to running this file directly as a CLI
+# script (`make ingest` / `python helper_scripts/ingest.py`) — the
+# Admin UI already shows this same progress in-browser instead.
 logger = logging.getLogger(__name__)
 
 
@@ -105,14 +111,14 @@ def build_chunk_metadata(config: AppConfig, chunks: list) -> tuple:
     """Stage 4 (build metadata): the single place chunk metadata is
     assembled for storage — ids, and one metadata dict per chunk
     carrying source file, page range, section, category/location, and
-    (when the source file matches a docs-metadata.json entry)
+    (when the source file matches an active document record)
     topic/canonical link.
 
     Returns (ids, metadatas), aligned index-for-index with chunks.
     """
-    logger.info("Loading topic metadata from %s ...", config.documents.metadata_file)
-    doc_topics = load_doc_topics(config.documents.metadata_file)
-    filename_topic_map = build_filename_topic_map(doc_topics)
+    logger.info("Loading topic metadata from %s ...", config.documents.documents_file)
+    records = load_documents(config.documents.documents_file)
+    filename_topic_map = active_filename_topic_map(records)
     location_map = _build_filename_location_map(
         config.documents.source_directory, config.documents.archived_subfolder_name
     )
@@ -137,8 +143,8 @@ def _build_filename_location_map(source_directory: str, archived_subfolder_name:
     A basename shared by files in two different categories collides
     here (whichever is scanned last wins) — not a new limitation this
     introduces: filename is already the sole cross-document identity
-    key everywhere else in this codebase (chunk IDs below, docs-
-    metadata.json's filename->topic map, MAPPED_DOCUMENT mode's
+    key everywhere else in this codebase (chunk IDs below, the
+    documents file's filename->topic map, PRIMARY search's
     source_file filter), just newly visible once category is tracked.
     """
     root = Path(source_directory)
@@ -178,7 +184,7 @@ def _chunk_metadata(chunk: Chunk, filename_topic_map: dict, location_map: dict) 
         # matched_topic.link can genuinely be None — e.g. a document
         # uploaded via the Admin tab (admin_page.py's
         # _register_single_upload) doesn't collect a link, so
-        # docs_metadata.add_document_to_topic never writes that key at
+        # document_metadata.register_upload never writes a link at
         # all. Chroma rejects None outright as a metadata value (same
         # reasoning as the "keywords" guard below), so this must be ""
         # not None whenever the topic has no link, same as an
@@ -192,8 +198,8 @@ def _chunk_metadata(chunk: Chunk, filename_topic_map: dict, location_map: dict) 
         # ever touching the chunk text shown to the LLM or in
         # citations. Chroma metadata values can't be None.
         "keywords": (matched_topic.keywords or "") if matched_topic else "",
-        # Category-aware retrieval (rag._03_routing.category_matcher /
-        # rag._04_retrieval.retrieval_service) filters on this.
+        # Category-aware retrieval (rag._04_retrieval.retrieval_service)
+        # filters on this.
         "category": category,
         # Same value as source_file, under the name an external
         # consumer of this metadata would expect.
@@ -348,8 +354,6 @@ def run_ingestion(config: AppConfig = None, progress_callback=None) -> None:
     vector_store = store_chunks(config, ids, chunks, embeddings, metadatas)
     _report("Wrote the vector index.", 0.97)
 
-    faq_cache.reset_if_enabled(config.redis)
-
     total_seconds = time.perf_counter() - start
     save_ingestion_stats(config, total_seconds)
 
@@ -358,4 +362,7 @@ def run_ingestion(config: AppConfig = None, progress_callback=None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("rag").setLevel(logging.INFO)
+    logging.getLogger(__name__).setLevel(logging.INFO)
     run_ingestion()

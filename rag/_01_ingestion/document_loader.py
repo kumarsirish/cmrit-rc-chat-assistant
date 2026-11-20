@@ -81,7 +81,7 @@ def find_document_files(source_directory: str, archived_subfolder_name: str = "_
     source_directory.
 
     Any path with a component named archived_subfolder_name is skipped
-    — a document moved there (see rag._03_routing.document_registry)
+    — a document moved there (see rag._03_routing.document_metadata)
     has been manually superseded by a newer upload and must stop being
     retrievable without needing to touch the vector store directly.
     """
@@ -102,10 +102,9 @@ def find_document_files(source_directory: str, archived_subfolder_name: str = "_
 def list_categories(source_directory: str) -> list:
     """Subfolder names directly under source_directory, each one an
     existing category a document has already been saved into — used
-    both by the Admin UI's category picker and by the category
-    classifier (rag._03_routing.category_matcher) built from this same
-    list. A brand-new deployment with nothing uploaded yet simply has
-    none."""
+    by the Admin UI's category picker and the Chat page's category
+    selector (dashboard.py). A brand-new deployment with nothing
+    uploaded yet simply has none."""
     directory = Path(source_directory)
     if not directory.exists():
         return []
