@@ -1,0 +1,777 @@
+{
+  "mean_scores": {
+    "recall": 0.9194444444444444,
+    "precision": 0.594047619047619,
+    "reciprocal_rank": 0.6538888888888889,
+    "ndcg": 0.7433362239407495
+  },
+  "mean_by_tag": {
+    "category=multi-doc": {
+      "recall": 0.7833333333333333,
+      "precision": 0.48624999999999996,
+      "reciprocal_rank": 0.45,
+      "ndcg": 0.5824739451251202
+    },
+    "difficulty=easy": {
+      "recall": 1.0,
+      "precision": 0.6375,
+      "reciprocal_rank": 0.6898550724637681,
+      "ndcg": 0.8119106416022884
+    },
+    "difficulty=medium": {
+      "recall": 0.5972222222222222,
+      "precision": 0.4674603174603174,
+      "reciprocal_rank": 0.5916666666666667,
+      "ndcg": 0.5151368503153647
+    },
+    "category=single-doc": {
+      "recall": 0.9871794871794872,
+      "precision": 0.6431929181929181,
+      "reciprocal_rank": 0.7495726495726496,
+      "ndcg": 0.8213070190972916
+    },
+    "difficulty=hard": {
+      "recall": 1.0,
+      "precision": 0.35416666666666663,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5353208594776601
+    },
+    "variant=abbreviation": {
+      "recall": 1.0,
+      "precision": 0.35416666666666663,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5353208594776601
+    },
+    "category=conflict": {
+      "recall": 1.0,
+      "precision": 0.8333333333333334,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.9197207891481876
+    }
+  },
+  "rows": [
+    {
+      "question": "how many working days before the actual submission should i send my work to the rc",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.42857142857142855,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5706417189553201,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what is the maximum plagiarism allowed for a paper sent for rc review",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.6131471927654584,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what affiliation should faculty use in research papers",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5508095940041026,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what address should be given when filing a patent",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "how much incentive is given for a scopus q1 or q2 paper",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.375,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5706417189553201,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what is the maximum number of journal papers per person per year that get incentives",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.14285714285714285,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "how much incentive is given when a patent is granted",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how is the patent grant incentive divided when there are multiple inventors",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "how many design registrations equal one mandatory patent load",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what are the conditions to claim e load for a startup",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.3333333333333333,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what percentage of participants must be external for an event to count as c load",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "how many units of excess core load can be carried over to the next year",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "how much can be claimed under other incentives each year",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.6666666666666666,
+      "precision": 0.75,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.5307212739772434,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "which expenses can be claimed under the other incentives category",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.375,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5706417189553201,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "how much can be claimed for extra papers published with students",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.2640681225725909,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what weightage do uba msme and gi proposals get for p load",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6934264036172708,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what is needed for a startup to count towards the entrepreneurship sub unit",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "can design patents be considered for i load",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.14285714285714285,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.3065735963827292,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "which quartile is used when scopus and scimago show different values",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "how long does it take for a published paper to appear in scopus",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "when can a faculty send only an abstract of a paper to the rc",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.7328286204777911,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what is required to send only an abstract of a proposal for review",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.375,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.6934264036172708,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what to do if drc or rc does not respond within the time limit",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "which activities are eligible for incentives under c and e load",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what are the important dates for uploading and verifying rcpie proofs",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what documents are needed to verify r load",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "when should the mandatory patent and mandatory paper be completed",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.43067655807339306,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what is the maximum funding under the seed fund for research projects",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how is the seed fund amount released to the investigator",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "who is on the proposal evaluation committee for the seed fund",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "who owns the ip created from research funded by the institute",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how are earnings from ip commercialization shared between inventors and the institute",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what is inventor privilege and how can it be requested",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "when are applications for the kapila scheme invited each year",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how many kapila committee members must recommend an application",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how many months of internship can a faculty member take in a year",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "who is eligible to apply for the faculty internship",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how long must a faculty member serve after completing an internship",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how is the salary paid during a faculty internship compensated",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what prior approval and documents are needed to claim field work expenses",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.4,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg": 0.5,
+      "first_hit_rank": 3
+    },
+    {
+      "question": "what are the daily accommodation and food rates for a pi during field work",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "can a faculty member hold equity in a startup incubated at the institute",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how long can a startup stay in the incubator",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what is not patentable in india according to the guidelines",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what should a patent abstract describe",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.8,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "which book publishers are recommended",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "where should an intern pay the internship fee",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.25,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.6131471927654584,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "which areas are the centers of excellence working on",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what are the responsibilities of the department research committee",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.6309297535714575,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "how much of the consultancy amount does the faculty get when no institute resources are used",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 0.5,
+      "precision": 0.5,
+      "reciprocal_rank": 0.5,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 2
+    },
+    {
+      "question": "what percentage of funded project money is given as incentive",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.2,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what is the approval process for a mega project or ie project",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.6,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "are incentives available to part time or faculty of practice",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.42857142857142855,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.6182885020492784,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what documents are needed for a phd no dues certificate",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.25,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what event types can be selected in the external event form",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "what should a good scientific abstract include",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "easy"
+      },
+      "recall": 1.0,
+      "precision": 0.75,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "q1 paper incentive amount",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "hard",
+        "variant": "abbreviation"
+      },
+      "recall": 1.0,
+      "precision": 0.375,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5706417189553201,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "drc review turnaround time",
+      "tags": {
+        "category": "single-doc",
+        "difficulty": "hard",
+        "variant": "abbreviation"
+      },
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "reciprocal_rank": 0.2,
+      "ndcg": 0.5,
+      "first_hit_rank": 5
+    },
+    {
+      "question": "what do i need before filing a patent and how much is reimbursed",
+      "tags": {
+        "category": "multi-doc",
+        "difficulty": "medium"
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1
+    },
+    {
+      "question": "how many days does the rc review process take",
+      "tags": {
+        "category": "conflict",
+        "difficulty": "medium"
+      },
+      "recall": 1.0,
+      "precision": 0.8333333333333334,
+      "reciprocal_rank": 1.0,
+      "ndcg": 0.9197207891481876,
+      "first_hit_rank": 1
+    }
+  ],
+  "baseline_comparison": null
+}

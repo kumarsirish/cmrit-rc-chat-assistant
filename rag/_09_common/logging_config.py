@@ -37,3 +37,8 @@ def configure_logging() -> None:
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     for name in _NOISY_THIRD_PARTY_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)
+    # transformers logs its legacy "*Fast" image-processor module aliasing
+    # (triggered just by discovering installed model types, not by anything
+    # this app does) at WARNING, one line per model — too noisy to show at
+    # the same level as warnings that actually mean something here.
+    logging.getLogger("transformers").setLevel(logging.ERROR)

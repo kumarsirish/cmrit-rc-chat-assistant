@@ -1,0 +1,927 @@
+{
+    "ground_truth_version": "RCPIE policy set as of AY2026-27 (RCPIE Targets.pdf, RC Norms.docx v7.0, RCPIE FAQ.docx)",
+    "last_verified": "2026-11-20",
+    "cases": [
+        {
+            "question": "how many working days before the actual submission should i send my work to the rc",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is the maximum plagiarism allowed for a paper sent for rc review",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "Checklist for RC Submission.docx",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "Format for Communication to RC Convenor.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what affiliation should faculty use in research papers",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Checklist for RC Submission.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what address should be given when filing a patent",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "CMRIT IPR Policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how much incentive is given for a scopus q1 or q2 paper",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is the maximum number of journal papers per person per year that get incentives",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how much incentive is given when a patent is granted",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "Pre-Approval Request Form for Patent Grant Support.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how is the patent grant incentive divided when there are multiple inventors",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how many design registrations equal one mandatory patent load",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "what are the conditions to claim e load for a startup",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE Verification Checklist.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what percentage of participants must be external for an event to count as c load",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how many units of excess core load can be carried over to the next year",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how much can be claimed under other incentives each year",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                },
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "which expenses can be claimed under the other incentives category",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "how much can be claimed for extra papers published with students",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what weightage do uba msme and gi proposals get for p load",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is needed for a startup to count towards the entrepreneurship sub unit",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "can design patents be considered for i load",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "which quartile is used when scopus and scimago show different values",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how long does it take for a published paper to appear in scopus",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "when can a faculty send only an abstract of a paper to the rc",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Checklist for RC Submission.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "what is required to send only an abstract of a proposal for review",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Checklist for RC Submission.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what to do if drc or rc does not respond within the time limit",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "which activities are eligible for incentives under c and e load",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what are the important dates for uploading and verifying rcpie proofs",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Verification Checklist.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what documents are needed to verify r load",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Verification Checklist.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "when should the mandatory patent and mandatory paper be completed",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "what is the maximum funding under the seed fund for research projects",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Seed Fund For Research Projects.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how is the seed fund amount released to the investigator",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Seed Fund For Research Projects.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "who is on the proposal evaluation committee for the seed fund",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Seed Fund For Research Projects.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "who owns the ip created from research funded by the institute",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Seed Fund For Research Projects.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "CMRIT IPR Policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how are earnings from ip commercialization shared between inventors and the institute",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT IPR Policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is inventor privilege and how can it be requested",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT IPR Policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "when are applications for the kapila scheme invited each year",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "KAPILA Scheme.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how many kapila committee members must recommend an application",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "KAPILA Scheme.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how many months of internship can a faculty member take in a year",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Faculty Internship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "who is eligible to apply for the faculty internship",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Faculty Internship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how long must a faculty member serve after completing an internship",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Faculty Internship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how is the salary paid during a faculty internship compensated",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Faculty Internship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what prior approval and documents are needed to claim field work expenses",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Institutional Policy for Claiming Reimbursement of Field-Work Expenses for ResearchNon-Research Externally Funded Projects.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "what are the daily accommodation and food rates for a pi during field work",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Institutional Policy for Claiming Reimbursement of Field-Work Expenses for ResearchNon-Research Externally Funded Projects.pdf",
+                    "page_number": 3
+                }
+            ]
+        },
+        {
+            "question": "can a faculty member hold equity in a startup incubated at the institute",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Innovation and Entrepreneurship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how long can a startup stay in the incubator",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Innovation and Entrepreneurship policy.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is not patentable in india according to the guidelines",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Guidelines for patent abstract.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what should a patent abstract describe",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Guidelines for patent abstract.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "which book publishers are recommended",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Recommended Book Publishers.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "where should an intern pay the internship fee",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "Interns Admit Approval Form.pdf",
+                    "page_number": 2
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "Interns Admit Approval Form.pdf",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "which areas are the centers of excellence working on",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what are the responsibilities of the department research committee",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "how much of the consultancy amount does the faculty get when no institute resources are used",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "Incentive Request Form.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what percentage of funded project money is given as incentive",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is the approval process for a mega project or ie project",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "MEPMEAI&E Project Proposal Form.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "are incentives available to part time or faculty of practice",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                },
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what documents are needed for a phd no dues certificate",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "Ph.D Internal NOC form.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what event types can be selected in the external event form",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "External Event Form.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what should a good scientific abstract include",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "easy"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT guidelines for effective scientific proposalpaper writing.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "q1 paper incentive amount",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "hard",
+                "variant": "abbreviation"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 1
+                }
+            ],
+            "nice_to_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "drc review turnaround time",
+            "tags": {
+                "category": "single-doc",
+                "difficulty": "hard",
+                "variant": "abbreviation"
+            },
+            "must_have": [
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ]
+        },
+        {
+            "question": "what is the cafeteria timing",
+            "tags": {
+                "category": "out-of-scope",
+                "difficulty": "easy"
+            },
+            "no_result_expected": true
+        },
+        {
+            "question": "what do i need before filing a patent and how much is reimbursed",
+            "tags": {
+                "category": "multi-doc",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "CMRIT Guidelines for patent abstract.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE Targets.pdf",
+                    "page_number": 2
+                }
+            ]
+        },
+        {
+            "question": "how many days does the rc review process take",
+            "tags": {
+                "category": "conflict",
+                "difficulty": "medium"
+            },
+            "must_have": [
+                {
+                    "source_file": "RC Norms.docx",
+                    "page_number": 1
+                },
+                {
+                    "source_file": "RCPIE FAQ.docx",
+                    "page_number": 1
+                }
+            ],
+            "_conflict_note": "RC Norms.docx and RCPIE FAQ.docx give different day breakdowns for the same review step (3+2 vs other splits) - retrieval should surface both so generation can be checked separately for which one it follows; this field is documentation only, not read by the test."
+        }
+    ]
+}

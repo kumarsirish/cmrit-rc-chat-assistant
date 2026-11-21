@@ -1,4 +1,7 @@
 streamlit
+# Required by st.login()/st.logout() (config.app.require_google_login)
+# for the OAuth/OIDC flow against Google's identity provider.
+Authlib>=1.3.2
 # Pinned: `chroma --version` on this machine reports "1.4.4", but that
 # is a CLI version-string quirk in this chromadb release, not a real
 # published package version (there is no chromadb==1.4.4 on PyPI).

@@ -4,13 +4,18 @@ are compared against.
 Usage:
     python helper_scripts/save_baseline.py deepeval
     python helper_scripts/save_baseline.py retrieval
+    python helper_scripts/save_baseline.py retrieval-functional
 
 Copies tests/test-results/judge_results.json -> tests/test-results/judge_baseline.json (or the
-retrieval equivalent), both read from config.yaml so this stays in
-sync with wherever evaluation.results_path/baseline_path actually
-point. Called by `make save-eval-baseline` right after a `make eval`
-run you want to treat as the reference point — every later `make eval`
-run will report its delta against this snapshot (see
+retrieval/retrieval-functional equivalent). deepeval/retrieval paths
+are read from config.yaml so they stay in sync with wherever
+evaluation.results_path/baseline_path actually point;
+retrieval-functional's are fixed (see tests/_07_evaluation/
+test_retrieval_functional.py, which isn't part of config.yaml's
+evaluation block). Called by `make save-eval-baseline` (deepeval +
+retrieval) or `make save-retrieval-functional-baseline` right after a
+run you want to treat as the reference point — every later run
+reports its delta against this snapshot (see
 rag/_07_evaluation/baseline.py).
 """
 
@@ -22,19 +27,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rag._09_common.config import load_config
 
+_TESTS_DIR = Path(__file__).resolve().parent.parent / "tests" / "test-results"
+
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ("deepeval", "retrieval"):
-        print("Usage: python helper_scripts/save_baseline.py [deepeval|retrieval]")
+    if len(sys.argv) != 2 or sys.argv[1] not in ("deepeval", "retrieval", "retrieval-functional"):
+        print("Usage: python helper_scripts/save_baseline.py [deepeval|retrieval|retrieval-functional]")
         sys.exit(1)
 
-    config = load_config()
-    if sys.argv[1] == "deepeval":
-        results_path = Path(config.evaluation.results_path)
-        baseline_path = Path(config.evaluation.baseline_path)
+    if sys.argv[1] == "retrieval-functional":
+        results_path = _TESTS_DIR / "retrieval_functional_results.json"
+        baseline_path = _TESTS_DIR / "retrieval_functional_baseline.json"
     else:
-        results_path = Path(config.evaluation.retrieval.results_path)
-        baseline_path = Path(config.evaluation.retrieval.baseline_path)
+        config = load_config()
+        if sys.argv[1] == "deepeval":
+            results_path = Path(config.evaluation.results_path)
+            baseline_path = Path(config.evaluation.baseline_path)
+        else:
+            results_path = Path(config.evaluation.retrieval.results_path)
+            baseline_path = Path(config.evaluation.retrieval.baseline_path)
 
     if not results_path.exists():
         print(f"No results file at {results_path} — run the evaluation first.")
