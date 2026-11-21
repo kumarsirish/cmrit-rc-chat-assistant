@@ -357,6 +357,25 @@ by `admin.password` in `config/config.yaml`, overridable via the
 `RAG_ADMIN_PASSWORD` environment variable so it doesn't have to live in
 the committed file.
 
+### 7. Google sign-in (optional)
+
+By default every chat session is attributed to `app.default_user_email`
+in `config/config.yaml` — a placeholder, not real authentication. To
+gate the app behind actual Google sign-in instead:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   create an OAuth client ID ("Web application" type).
+2. Add this app's URL + `/oauth2callback` (e.g.
+   `http://localhost:8502/oauth2callback` for `make run`) as an
+   authorized redirect URI.
+3. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
+   (already gitignored) and fill in the `client_id`/`client_secret`
+   from step 1, plus your own random `cookie_secret`.
+4. Set `app.require_google_login: true` in `config/config.yaml`.
+
+Users then see a "Sign in with Google" button instead of the chat
+page, and their chat history is attributed to their real Google email.
+
 ## Build the vector index
 
 Run this once, and again whenever files in `knowledge_documents/`

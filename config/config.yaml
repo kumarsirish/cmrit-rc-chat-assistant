@@ -11,9 +11,16 @@ app:
   example_queries: []
   # Shown when retrieval finds nothing above the relevance threshold.
   no_match_message: "I could not find any information about this query in the indexed documents."
-  # Every chat session is attributed to this identity since there is no
-  # real login yet — a placeholder, not a security boundary.
+  # Every chat session is attributed to this identity when
+  # require_google_login is false below — a placeholder, not a security
+  # boundary.
   default_user_email: "admin@example.com"
+  # Gates the whole app behind Google sign-in instead of the placeholder
+  # above. Requires .streamlit/secrets.toml's [auth] block to be set up
+  # first (see .streamlit/secrets.toml.example) — leave this false until
+  # that's done, since turning it on without configured credentials
+  # makes st.login() error.
+  require_google_login: false
 
 admin:
   # Shared password gating the Admin tab (document upload/supersede/
@@ -136,12 +143,12 @@ retrieval:
   # best — observed in practice matching 9-18 "relevant" topics for a
   # single-document question, diluting PRIMARY search across mostly-wrong
   # documents and crowding out the one correct answer.
-  topic_match_margin: 0.10
+  topic_match_margin: 0.13
   # Hard cap on how many topics match_all() ever returns, independent of
   # the margin above — a second line of defense against PRIMARY fanning
   # out across more documents than a single question could reasonably be
   # about.
-  topic_match_max_matches: 3
+  topic_match_max_matches: 4
   # Minimum dense cosine score among PRIMARY's own raw candidates for it
   # to be trusted with its full primary_top_k budget. Below this, a topic
   # NAME match doesn't guarantee the document's CONTENT is actually a

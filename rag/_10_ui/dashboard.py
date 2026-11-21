@@ -201,13 +201,30 @@ def render_session_countdown(session_store, config):
         )
 
 
+def render_login_page(config):
+    """Shown instead of the chat/admin pages when config.app.require_google_login
+    is true and the browser has no active st.login() session yet.
+    """
+    render_page_title(config.app.name, config.app.description)
+    st.write("")
+    _, center, _ = st.columns([1, 1, 1])
+    with center:
+        if st.button("Sign in with Google", use_container_width=True, type="primary"):
+            st.login()
+
+
 def render_sidebar(config, session_store):
     with st.sidebar:
         if DEBUG_ENABLED:
             st.caption("Debug mode: ON")
+        if config.app.require_google_login:
+            st.caption(st.session_state.user_email)
         if st.button("Sign out"):
             st.session_state.clear()
-            st.rerun()
+            if config.app.require_google_login:
+                st.logout()
+            else:
+                st.rerun()
 
 
 TOP_SOURCES_SHOWN = 2
@@ -832,7 +849,12 @@ def main():
         unsafe_allow_html=True,
     )
 
-    if "user_email" not in st.session_state:
+    if config.app.require_google_login:
+        if not st.user.is_logged_in:
+            render_login_page(config)
+            return
+        st.session_state.user_email = normalize_email(st.user.email)
+    elif "user_email" not in st.session_state:
         st.session_state.user_email = normalize_email(config.app.default_user_email)
 
     render_sidebar(config, get_session_store())

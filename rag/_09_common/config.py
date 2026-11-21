@@ -89,9 +89,16 @@ class AppUiConfig:
     # so it can be worded for whatever document set this deployment
     # indexes, instead of being locked to one domain's phrasing.
     no_match_message: str
-    # Every chat session is attributed to this identity since there is
-    # no real login — a placeholder, not a security boundary.
+    # Every chat session is attributed to this identity when
+    # require_google_login is False — a placeholder, not a security
+    # boundary.
     default_user_email: str
+    # Gates the whole app behind Google sign-in (st.login(), configured
+    # via .streamlit/secrets.toml's [auth] block — see
+    # .streamlit/secrets.toml.example) instead of the default_user_email
+    # placeholder above. False by default so a deployment that hasn't
+    # set up Google OAuth credentials yet keeps working unchanged.
+    require_google_login: bool = False
 
 
 @dataclass

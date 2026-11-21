@@ -1,4 +1,4 @@
-.PHONY: help install download-models ingest run run-debug test test-eval-failures eval save-eval-baseline experiment experiments-all mlflow-ui llm-test clean clean-eval-results
+.PHONY: help install download-models ingest run run-debug test test-retrieval-functional test-eval-failures eval eval-retrieval save-eval-baseline save-retrieval-functional-baseline experiment experiments-all mlflow-ui llm-test clean clean-eval-results
 
 .DEFAULT_GOAL := help
 
@@ -34,6 +34,22 @@ run-debug: ## Start the Streamlit app with debug logging and in-app debug panel
 test: ## Run the default test suite (excludes deepeval/retrieval_eval)
 	pytest tests/
 
+# Golden-file retrieval tests: pins exact expected post-rerank top_k
+# results (see tests/retrieval-functional-cases.json) for a small set
+# of hand-picked questions, so a regression on one specific question
+# fails that case instead of being averaged away by eval-retrieval's
+# mean-score thresholds. Needs an ingested Chroma store (`make ingest`).
+test-retrieval-functional: ## Run golden-file retrieval tests against pinned expected top_k
+	pytest tests/_07_evaluation/test_retrieval_functional.py -m retrieval_eval -v
+
+# Snapshots the latest tests/test-results/retrieval_functional_results.json
+# as the baseline future `make test-retrieval-functional` runs report
+# their recall/precision/MRR/NDCG delta against (see
+# rag/_07_evaluation/baseline.py). Re-run after a deliberate retrieval
+# change you want to become the new reference point.
+save-retrieval-functional-baseline: ## Save the latest retrieval-functional results as the baseline
+	python helper_scripts/save_baseline.py retrieval-functional
+
 # Re-runs the DeepEval judge only for questions that scored
 # faithfulness < 1 (or NaN, e.g. a timed-out judge call) in the last
 # tests/test-results/judge_results.json — a fast way to check, during debugging,
@@ -66,6 +82,12 @@ test-eval-failures: ## Re-run the judge only for questions with faithfulness < 1
 eval: ## Run retrieval IR metrics + the live DeepEval judge evaluation
 	pytest tests/_07_evaluation/test_retrieval_eval.py -m retrieval_eval -v
 	pytest tests/_07_evaluation/test_judge.py -m deepeval -v -s
+
+# Retrieval-only half of `make eval`: IR metrics (Recall/Precision/MRR/
+# NDCG @ top_k) scored against the real retriever, no LLM call — needs
+# an ingested Chroma store (`make ingest`).
+eval-retrieval: ## Run retrieval-only IR metrics (no LLM judge call)
+	pytest tests/_07_evaluation/test_retrieval_eval.py -m retrieval_eval -v
 
 # Snapshots the latest tests/test-results/retrieval_results.json and
 # tests/test-results/judge_results.json as the baselines that every later `make
